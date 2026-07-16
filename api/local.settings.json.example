@@ -1,0 +1,23 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+
+    "AZURE_OPENAI_ENDPOINT": "https://<dein-resource-name>.openai.azure.com",
+    "AZURE_OPENAI_API_KEY": "<dein-api-key>",
+    "AZURE_OPENAI_DEPLOYMENT": "<dein-deployment-name>",
+    "AZURE_OPENAI_API_VERSION": "2024-10-21",
+
+    "DEMO_EXPIRES_AT": "2026-09-30T23:59:59Z",
+
+    "PILOT_ACCESS_CODES": "[{\"name\":\"Beispiel CEO\",\"code\":\"tavyro-beispiel-482\"}]",
+    "PILOT_WEEKLY_LIMIT": "5",
+
+    "NOTIFY_WEBHOOK_URL": ""
+  },
+  "Host": {
+    "CORS": "http://localhost:5173",
+    "CORSCredentials": false
+  }
+}
