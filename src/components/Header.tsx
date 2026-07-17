@@ -14,7 +14,7 @@ export function Header({ stage, onReset }: HeaderProps) {
         >
           <img src="/tavyro-logo.png" alt="TaVyro" className="h-9 w-auto" />
           <span className="hidden font-sans text-[13px] text-paper-dim sm:inline">
-            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI<sup className="text-[8px]">®</sup>)
+            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI)
           </span>
         </button>
 

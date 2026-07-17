@@ -23,18 +23,12 @@ export function Landing({ onStart, onViewExamples }: LandingProps) {
           TEI® Trust Room
         </p>
 
-        <h1 className="mt-6 font-display text-[3.25rem] font-medium leading-[1.06] text-paper sm:text-[4.5rem]">
-          Executive
-          <br />
-          Intelligence
-          <span className="bg-gradient-to-r from-brass-light via-brass to-brass-light bg-clip-text text-transparent">
+        <h1 className="mt-6 font-display text-[2rem] font-medium leading-[1.18] text-paper sm:text-[2.75rem]">
+          TaVyro Executive Intelligence
+          <sup className="bg-gradient-to-r from-brass-light via-brass to-brass-light bg-clip-text text-[0.9rem] text-transparent sm:text-[1.1rem]">
             ®
-          </span>{' '}
-          (TEI
-          <span className="bg-gradient-to-r from-brass-light via-brass to-brass-light bg-clip-text text-transparent">
-            ®
-          </span>
-          )
+          </sup>{' '}
+          – Trust Room
         </h1>
 
         <p className="mt-7 max-w-xl font-sans text-[19px] leading-relaxed text-paper">
@@ -43,10 +37,12 @@ export function Landing({ onStart, onViewExamples }: LandingProps) {
 
         <div className="mt-10 max-w-xl border-l border-brass-dim/60 pl-6">
           <p className="font-sans text-[16px] leading-relaxed text-paper-dim">
-            Beschreiben Sie eine Führungs- oder Organisationsfrage. Der TEI® Trust Room
-            strukturiert die Situation und erkennt mögliche Ursachenmuster — als vertrauliche
-            Vorschau auf die TEI®-Methodik. Die vollständige Analyse mit echten
-            Unternehmensdaten entsteht im persönlichen Gespräch mit Tam.
+            Es gibt Fragen, die sich in keinem internen KI-System stellen lassen: Kann ich meinem
+            CFO noch vertrauen? Verschweigt mir die Geschäftsleitung etwas? Muss ich mich von
+            einer Führungskraft trennen? Der TEI® Trust Room ist ein unabhängiger, vertraulicher
+            Raum ausserhalb Ihrer eigenen Systeme — für genau diese Fragen, einfühlsam begleitet
+            durch TaVyro Executive Intelligence®. Die volle Tiefe dieser Methodik entsteht im
+            persönlichen Gespräch mit Tam Nguyen.
           </p>
         </div>
 

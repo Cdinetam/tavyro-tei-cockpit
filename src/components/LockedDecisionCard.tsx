@@ -55,7 +55,7 @@ export function LockedDecisionCard({ teaser, question }: Props) {
         <form onSubmit={handleSubmit} className="flex w-full max-w-xs flex-col gap-2 sm:items-end">
           {status === 'sent' ? (
             <p className="font-sans text-[13px] text-paper-dim">
-              Danke. Tam meldet sich persönlich bei Ihnen.
+              Danke. Tam Nguyen meldet sich persönlich bei Ihnen.
             </p>
           ) : (
             <>

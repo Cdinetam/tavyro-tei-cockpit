@@ -31,7 +31,7 @@ export function AccessGate({ children }: Props) {
         <div className="flex items-center gap-3">
           <img src="/tavyro-logo.png" alt="TaVyro" className="h-10 w-auto" />
           <span className="font-sans text-[12px] text-paper-faint">
-            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI<sup className="text-[8px]">®</sup>)
+            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI)
           </span>
         </div>
 
