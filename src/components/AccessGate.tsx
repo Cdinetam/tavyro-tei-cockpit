@@ -29,9 +29,9 @@ export function AccessGate({ children }: Props) {
     <div className="grain flex min-h-screen items-center justify-center bg-ink-900 px-6">
       <div className="w-full max-w-sm fade-in">
         <div className="flex items-center gap-3">
-          <img src="/tavyro-logo.png" alt="TaVyro" className="h-7 w-auto" />
+          <img src="/tavyro-logo.png" alt="TaVyro" className="h-10 w-auto" />
           <span className="font-sans text-[12px] text-paper-faint">
-            Executive Intelligence<sup className="text-[8px]">®</sup> (TEI<sup className="text-[8px]">®</sup>) — Trust Room
+            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI<sup className="text-[8px]">®</sup>)
           </span>
         </div>
 

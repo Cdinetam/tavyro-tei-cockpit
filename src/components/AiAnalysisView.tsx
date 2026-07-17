@@ -35,7 +35,7 @@ export function AiLoadingState({ question }: { question: string }) {
       <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
         TEI® hört zu
       </p>
-      <p className="mt-4 max-w-lg font-display text-xl italic leading-snug text-paper-dim">
+      <p className="mt-4 max-w-lg font-display text-[18px] italic leading-relaxed text-paper-dim">
         „{question}"
       </p>
       <div className="mt-8 flex gap-1.5">

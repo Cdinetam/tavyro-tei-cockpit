@@ -12,9 +12,9 @@ export function Header({ stage, onReset }: HeaderProps) {
           className="group flex items-center gap-3 text-left"
           aria-label="Zur Startseite"
         >
-          <img src="/tavyro-logo.png" alt="TaVyro" className="h-6 w-auto" />
+          <img src="/tavyro-logo.png" alt="TaVyro" className="h-9 w-auto" />
           <span className="hidden font-sans text-[13px] text-paper-dim sm:inline">
-            Executive Intelligence<sup className="text-[8px]">®</sup> (TEI<sup className="text-[8px]">®</sup>) — Trust Room
+            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI<sup className="text-[8px]">®</sup>)
           </span>
         </button>
 

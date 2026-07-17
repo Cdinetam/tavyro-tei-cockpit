@@ -31,7 +31,7 @@ export function LockedDecisionCard({ teaser, question }: Props) {
         </span>
       </div>
 
-      <p className="mt-4 max-w-xl font-display text-[17px] italic leading-relaxed text-paper-dim">
+      <p className="mt-4 max-w-xl font-display text-[18px] italic leading-relaxed text-paper-dim">
         {teaser}
       </p>
 

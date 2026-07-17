@@ -10,13 +10,13 @@ export function EmpathicReflectionSection({ verstaendnis, einordnung, rueckfrage
   return (
     <>
       <SectionShell id="verstaendnis" title="Was ich verstanden habe">
-        <p className="max-w-2xl font-display text-[19px] italic leading-relaxed text-paper">
+        <p className="max-w-2xl font-display text-[18px] italic leading-relaxed text-paper">
           {verstaendnis}
         </p>
       </SectionShell>
 
       <SectionShell id="einordnung" title="Einordnung">
-        <p className="max-w-2xl font-sans text-[16px] leading-relaxed text-paper-dim">
+        <p className="max-w-2xl font-sans text-[18px] leading-relaxed text-paper-dim">
           {einordnung}
         </p>
       </SectionShell>
@@ -31,7 +31,7 @@ export function EmpathicReflectionSection({ verstaendnis, einordnung, rueckfrage
             {rueckfragen.map((frage, i) => (
               <li
                 key={i}
-                className="border-l border-brass-dim/60 pl-5 font-display text-[17px] italic leading-relaxed text-paper-dim"
+                className="border-l border-brass-dim/60 pl-5 font-display text-[18px] italic leading-relaxed text-paper-dim"
               >
                 {frage}
               </li>

@@ -26,9 +26,9 @@ export function AiScenarioInput({ onSubmit, initialValue }: Props) {
           Was beschäftigt Sie im Moment am meisten?
         </h2>
         <p className="mt-4 max-w-lg font-sans text-[15.5px] leading-relaxed text-paper-dim">
-          TEI® strukturiert Ihre Situation in Echtzeit. Ihr persönlicher Zugang erlaubt eine
-          begrenzte Zahl vertiefter Analysen — für die eigentliche Entscheidungsfrage
-          empfiehlt TEI® ein vertrauliches Gespräch.
+          TEI® hört zu und antwortet in Echtzeit. Ihr persönlicher Zugang erlaubt eine begrenzte
+          Zahl an Anfragen pro Woche — für alles, was mehr Raum braucht, empfiehlt TEI® ein
+          persönliches Gespräch.
         </p>
 
         <form
