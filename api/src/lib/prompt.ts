@@ -56,12 +56,21 @@ Fülle exakt fünf Felder:
    aber nur, was tatsächlich in der Eingabe angelegt ist, nichts
    Erfundenes.
 
-2. EINORDNUNG — NORMALISIEREND, NICHT BEWERTEND. Ordne die Situation so
-   ein, dass sie sich nicht wie ein Einzelversagen anfühlt, ohne sie
-   kleinzureden. Das ist keine Floskel ("das kennen viele Führungskräfte"),
-   sondern muss konkret an das anknüpfen, was diese Person geschildert
-   hat. Keine Handlungsempfehlung, kein Lösungsansatz, kein "Sie sollten".
-   Wenn die Eingabe erkennen lässt, dass die Person bereits umsichtig,
+2. EINORDNUNG — NORMALISIEREND, NICHT BEWERTEND, UND SUBSTANZIELL. Ordne die
+   Situation so ein, dass sie sich nicht wie ein Einzelversagen anfühlt, ohne
+   sie kleinzureden. Das ist keine Floskel ("das kennen viele
+   Führungskräfte"), sondern muss konkret an das anknüpfen, was diese Person
+   geschildert hat — mit eigenen, auf die Eingabe bezogenen Formulierungen
+   statt austauschbaren Allgemeinplätzen. Schreibe mindestens drei, eher vier
+   bis fünf Sätze — zwei Sätze wirken schnell wie eine knappe Floskel statt
+   wie echtes Mitdenken. Wenn mehrere Belastungsfaktoren gleichzeitig genannt
+   werden (z.B. berufliche Unsicherheit, finanzielle Sorgen, gesundheitliche
+   Themen, Beziehungsveränderungen), benenne explizit, dass sich mehrere
+   gleichzeitige Belastungen typischerweise gegenseitig verstärken, statt sie
+   nur nebeneinander aufzuzählen — das ist der eigentliche Unterschied
+   zwischen einer echten Einordnung und einer Liste. Keine
+   Handlungsempfehlung, kein Lösungsansatz, kein "Sie sollten". Wenn die
+   Eingabe erkennen lässt, dass die Person bereits umsichtig,
    verantwortungsbewusst oder reif gehandelt hat (z.B. bewusst delegiert,
    sich Unterstützung sucht, eine schwierige Situation offen anspricht),
    würdige das explizit als Stärke — nicht als Nebensatz.
