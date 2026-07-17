@@ -12,9 +12,9 @@ interface SectionShellProps {
 export function SectionShell({ id, title, description, children, delayClass }: SectionShellProps) {
   return (
     <section id={id} className={`scroll-mt-24 border-t border-line-soft py-12 fade-in ${delayClass ?? ''}`}>
-      <h2 className="font-display text-xl font-medium text-paper sm:text-2xl">{title}</h2>
+      <h2 className="font-display text-2xl font-medium text-paper sm:text-[1.75rem]">{title}</h2>
       {description && (
-        <p className="mt-2 max-w-2xl font-sans text-[13.5px] leading-relaxed text-paper-faint">
+        <p className="mt-2.5 max-w-2xl font-sans text-[14.5px] leading-relaxed text-paper-dim">
           {description}
         </p>
       )}

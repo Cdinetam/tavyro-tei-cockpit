@@ -1,11 +1,6 @@
 import type { AiAnalysisResult } from '../types'
 import { isMockMode } from '../lib/aiClient'
-import { DimensionRadar } from './DimensionRadar'
-import { ExecutiveSituationSection } from './ExecutiveSituation'
-import { OrganisationSignalsSection } from './OrganisationSignals'
-import { HypothesesSection } from './Hypotheses'
-import { RecommendedNextEvidence } from './RecommendedNextEvidence'
-import { RootCauseTreeSection } from './RootCauseTree'
+import { EmpathicReflectionSection } from './EmpathicReflection'
 import { LockedDecisionCard } from './LockedDecisionCard'
 import { AdvisoryNoteSection } from './AdvisoryNote'
 
@@ -38,7 +33,7 @@ export function AiLoadingState({ question }: { question: string }) {
     <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-2xl flex-col justify-center px-6">
       <ModeBadge />
       <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
-        TEI® strukturiert Ihre Situation
+        TEI® hört zu
       </p>
       <p className="mt-4 max-w-lg font-display text-xl italic leading-snug text-paper-dim">
         „{question}"
@@ -77,13 +72,13 @@ export function AiLimitReachedState({ onReset }: { onReset: () => void }) {
   return (
     <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-xl flex-col justify-center px-6">
       <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
-        Vertiefte Analyse abgeschlossen
+        Kontingent erreicht
       </p>
       <h2 className="mt-4 font-display text-2xl font-medium text-paper">
-        Ihr Kontingent an vertieften Analysen ist erreicht.
+        Ihr Kontingent im TEI® Trust Room ist für diese Woche erreicht.
       </h2>
       <p className="mt-4 font-sans text-[14.5px] leading-relaxed text-paper-dim">
-        Das ist bewusst so begrenzt: eine erste Einordnung, alles Weitere gehört in ein echtes
+        Das ist bewusst so begrenzt: ein erstes Zuhören, alles Weitere gehört in ein echtes
         Gespräch — nicht in eine endlose Demo-Schleife.
       </p>
       <div className="mt-7 flex flex-wrap gap-4">
@@ -152,29 +147,39 @@ export function AiResultView({ result, onReset }: { result: AiAnalysisResult; on
             „{result.eingabeText}"
           </p>
         </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-lg font-sans text-[13px] leading-relaxed text-paper-faint">
+            Dies ist eine erste, allgemeine Einordnung auf Basis Ihrer Eingabe. Die vertiefte
+            Analyse mit Ihren echten Daten entsteht im persönlichen Erstgespräch.
+          </p>
+          <a
+            href={BOOKING_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 font-mono text-[11px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper"
+          >
+            Erstgespräch buchen →
+          </a>
+        </div>
       </div>
 
-      <DimensionRadar signale={result.organisationssignale} ursachenbaum={result.ursachenbaum} />
-
-      <ExecutiveSituationSection situation={result.situation} symptome={result.symptome} />
-      <OrganisationSignalsSection signale={result.organisationssignale} />
-      <HypothesesSection hypothesen={result.hypothesen} />
-      <RecommendedNextEvidence hypothesen={result.hypothesen} />
-      <RootCauseTreeSection
-        ursachenbaum={result.ursachenbaum}
-        description="Symptom → mögliche Ursache → vertiefende Ursache. Die vierte Ebene — die Entscheidungsfrage — folgt bewusst unten, nicht im Baum."
-        afterTree={<LockedDecisionCard teaser={result.gesperrteEntscheidungsfrage} question={result.eingabeText} />}
+      <EmpathicReflectionSection
+        verstaendnis={result.verstaendnis}
+        einordnung={result.einordnung}
+        rueckfragen={result.rueckfragen}
       />
+
+      <LockedDecisionCard teaser={result.teaserGespraech} question={result.eingabeText} />
+
       <AdvisoryNoteSection note={result.advisoryNote} />
 
       {!isMockMode && (
         <div className="border-t border-line-soft py-8">
           <p className="max-w-2xl font-sans text-[13.5px] leading-relaxed text-paper-faint">
-            Um diese Einschätzung zu validieren, verknüpft TaVyro in der Vollversion die Signale
-            aus Ihren Systemen über alle sechs Dimensionen der Organisationsintelligenz (People,
-            Organisation, Workforce, Governance, Business &amp; Decision Intelligence). Im
-            Erstgespräch zeigen wir Ihnen, wie wir diese Datenströme in Ihrer Azure-OpenAI-Umgebung
-            sicher zusammenführen.
+            Was Sie hier teilen, bleibt vertraulich innerhalb TaVyros geschützter Azure-OpenAI-
+            Umgebung — nichts davon wird zum Training von Modellen verwendet oder Dritten
+            zugänglich gemacht.
           </p>
         </div>
       )}

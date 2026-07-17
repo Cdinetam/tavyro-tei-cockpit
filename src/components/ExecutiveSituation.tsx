@@ -27,7 +27,7 @@ export function ExecutiveSituationSection({ situation, symptome }: Props) {
             <p className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">
               {label}
             </p>
-            <p className="mt-3 font-sans text-[14.5px] leading-relaxed text-paper-dim">{text}</p>
+            <p className="mt-3 font-sans text-[15px] leading-relaxed text-paper-dim">{text}</p>
           </div>
         ))}
       </div>

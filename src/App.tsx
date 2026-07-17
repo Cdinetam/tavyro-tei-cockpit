@@ -18,12 +18,14 @@ type View = 'landing' | 'ai' | 'static'
 
 export default function App() {
   const [view, setView] = useState<View>('landing')
+  const [prefill, setPrefill] = useState('')
 
   const staticFlow = useAnalysis()
   const aiFlow = useAiSession()
 
   function resetAll() {
     setView('landing')
+    setPrefill('')
     staticFlow.reset()
     aiFlow.reset()
   }
@@ -43,7 +45,10 @@ export default function App() {
       <div className="pt-14">
         {view === 'landing' && (
           <Landing
-            onStart={() => setView('ai')}
+            onStart={(text) => {
+              setPrefill(text ?? '')
+              setView('ai')
+            }}
             onViewExamples={() => {
               setView('static')
               staticFlow.goToInput()
@@ -53,7 +58,9 @@ export default function App() {
 
         {view === 'ai' && (
           <>
-            {aiFlow.status === 'idle' && <AiScenarioInput onSubmit={aiFlow.submit} />}
+            {aiFlow.status === 'idle' && (
+              <AiScenarioInput onSubmit={aiFlow.submit} initialValue={prefill} />
+            )}
             {aiFlow.status === 'loading' && <AiLoadingState question={aiFlow.question} />}
             {aiFlow.status === 'result' && aiFlow.result && (
               <AiResultView result={aiFlow.result} onReset={aiFlow.reset} />

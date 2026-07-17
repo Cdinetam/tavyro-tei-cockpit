@@ -1,6 +1,5 @@
 import type { OrganisationSignal } from '../types'
 import { SectionShell } from './SectionShell'
-import { DimensionBadge } from './DimensionBadge'
 
 interface Props {
   signale: OrganisationSignal[]
@@ -34,10 +33,9 @@ export function OrganisationSignalsSection({ signale }: Props) {
             className="grid grid-cols-1 gap-3 py-5 sm:grid-cols-[220px_1fr_100px] sm:items-center sm:gap-6"
           >
             <span className="flex flex-col items-start gap-2">
-              <span className="font-sans text-[14px] font-medium text-paper">{sig.label}</span>
-              <DimensionBadge dimension={sig.dimension} size="xs" />
+              <span className="font-sans text-[15.5px] font-medium text-paper">{sig.label}</span>
             </span>
-            <span className="font-sans text-[13.5px] leading-relaxed text-paper-faint">
+            <span className="font-sans text-[14.5px] leading-relaxed text-paper-dim">
               {sig.beschreibung}
             </span>
             <div className="sm:justify-self-end">

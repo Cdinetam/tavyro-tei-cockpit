@@ -65,48 +65,29 @@ export interface Scenario {
 }
 
 // ---------------------------------------------------------------------------
-// KI-Assistent (Azure OpenAI) — bewusst eingeschränktes Schema.
+// TEI® Trust Room (Azure OpenAI) — kein Analyse-Schema mehr.
 //
-// Unterschied zum statischen Fall-Schema oben:
-// - Konfidenz ist auf 'niedrig' | 'mittel' gedeckelt. 'hoch' ist für den
-//   KI-Pfad nicht erreichbar, weder im Prompt noch — als zweite Sicherung —
-//   serverseitig (siehe api/src/lib/schema.ts).
-// - Der Ursachenbaum endet strukturell bei 'tiefenursache'. Es gibt keinen
-//   AiRootCauseNode vom Typ 'entscheidungsfrage': die Entscheidungsfrage ist
-//   kein Baum-Blatt, sondern ein separates, bewusst gesperrtes Feld
-//   (gesperrteEntscheidungsfrage), das im Cockpit als Cliffhanger gerendert
-//   wird statt als Antwort.
+// Produktentscheidung: keine Einordnung mehr nach Situation, Symptomen,
+// Organisationssignalen, Hypothesen, Ursachenbaum oder den sechs Intelligence-
+// Dimensionen. Stattdessen eine kurze, einfühlsame Reflexion der Eingabe —
+// psychologische Sicherheit statt Beratung. Siehe api/src/lib/prompt.ts für
+// die inhaltliche Haltung dahinter. Der statische Referenzfall-Bereich oben
+// (ExecutiveSituation, OrganisationSignal, RootCauseHypothesis, RootCauseNode,
+// Scenario) bleibt davon unberührt — er zeigt weiterhin die volle,
+// strukturierte TEI®-Methodik als Beispiel, unabhängig vom Live-KI-Flow.
 // ---------------------------------------------------------------------------
-
-export type AiConfidence = 'niedrig' | 'mittel'
-
-export interface AiHypothesis {
-  id: string
-  hypothese: string
-  begruendung: string
-  evidenzsignale: string[]
-  konfidenz: AiConfidence
-  zusatzinformation: string
-}
-
-export interface AiRootCauseNode {
-  id: string
-  label: string
-  ebene: 'symptom' | 'ursache' | 'tiefenursache'
-  detail: string
-  dimension?: TeiDimension
-  children?: AiRootCauseNode[]
-}
 
 export interface AiAnalysisResult {
   eingabeText: string
-  situation: ExecutiveSituation
-  symptome: string[]
-  organisationssignale: OrganisationSignal[]
-  hypothesen: AiHypothesis[]
-  ursachenbaum: AiRootCauseNode
-  /** Ein Satz, der benennt, was zur Beantwortung fehlt — beantwortet die Frage nicht. */
-  gesperrteEntscheidungsfrage: string
+  /** Empathische Reflexion: was wurde gehört, in eigenen Worten gespiegelt. */
+  verstaendnis: string
+  /** Unterstützende, normalisierende Einordnung — keine Bewertung, keine Diagnose, keine Lösung. */
+  einordnung: string
+  /** 2–4 offene, einfühlsame Rückfragen zum Weiterdenken, keine Checkliste. */
+  rueckfragen: string[]
+  /** Ein Satz: was sich nur im persönlichen Gespräch tragen/klären lässt — beantwortet nichts. */
+  teaserGespraech: string
+  /** Kurzer Hinweis auf die Grenzen dieser automatisierten Ersteinschätzung. */
   advisoryNote: string
 }
 

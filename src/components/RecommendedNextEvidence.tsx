@@ -1,7 +1,12 @@
-import type { AiHypothesis, RootCauseHypothesis } from '../types'
+import type { RootCauseHypothesis } from '../types'
 import { evidenceScoreLabel } from '../lib/evidenceScore'
 
-type HypothesisLike = Pick<AiHypothesis | RootCauseHypothesis, 'konfidenz' | 'zusatzinformation'>
+/**
+ * Nicht mehr im KI-Flow verwendet (TEI® Trust Room liefert dort keine
+ * Hypothesen mehr) — nur noch von der statischen Referenzfälle-Ansicht
+ * genutzt, falls dort referenziert.
+ */
+type HypothesisLike = Pick<RootCauseHypothesis, 'konfidenz' | 'zusatzinformation'>
 
 interface Props {
   hypothesen: HypothesisLike[]

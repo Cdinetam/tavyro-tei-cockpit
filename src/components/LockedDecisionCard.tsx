@@ -27,7 +27,7 @@ export function LockedDecisionCard({ teaser, question }: Props) {
           ⊘
         </span>
         <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">
-          Entscheidungsfrage · nicht automatisiert beantwortbar
+          Für das persönliche Gespräch
         </span>
       </div>
 

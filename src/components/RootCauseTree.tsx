@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { RootCauseNode } from '../types'
 import { SectionShell } from './SectionShell'
-import { DimensionBadge } from './DimensionBadge'
 
 const ebeneMeta: Record<RootCauseNode['ebene'], { label: string; tag: string }> = {
   symptom: { label: 'Symptom', tag: 'S' },
@@ -50,7 +49,6 @@ function NodeButton({
           <span className="font-mono text-[9.5px] uppercase tracking-widest2 text-paper-faint">
             {meta.label}
           </span>
-          {node.dimension && <DimensionBadge dimension={node.dimension} size="xs" />}
         </span>
       </span>
     </button>
@@ -124,11 +122,6 @@ export function RootCauseTreeSection({ ursachenbaum, description, afterTree }: P
             <p className="mt-4 font-display text-[16px] leading-snug text-paper">
               {selected.label}
             </p>
-            {selected.dimension && (
-              <div className="mt-3">
-                <DimensionBadge dimension={selected.dimension} />
-              </div>
-            )}
             <div className="mt-4 h-px bg-line-soft" />
             <p className="mt-4 font-sans text-[13.5px] leading-relaxed text-paper-dim">
               {selected.detail}

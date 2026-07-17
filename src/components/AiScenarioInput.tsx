@@ -3,6 +3,7 @@ import { isMockMode } from '../lib/aiClient'
 
 interface Props {
   onSubmit: (text: string) => void
+  initialValue?: string
 }
 
 const inspirations = [
@@ -12,8 +13,8 @@ const inspirations = [
   'Wir haben gute Leute, aber die Zusammenarbeit funktioniert nicht.',
 ]
 
-export function AiScenarioInput({ onSubmit }: Props) {
-  const [value, setValue] = useState('')
+export function AiScenarioInput({ onSubmit, initialValue }: Props) {
+  const [value, setValue] = useState(initialValue ?? '')
 
   return (
     <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-[1400px] flex-col justify-center px-6 py-16 lg:px-10">
@@ -21,10 +22,10 @@ export function AiScenarioInput({ onSubmit }: Props) {
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
           TEI® Trust Room · vertraulich
         </p>
-        <h2 className="mt-4 font-display text-3xl font-medium text-paper sm:text-4xl">
+        <h2 className="mt-4 font-display text-4xl font-medium text-paper sm:text-5xl">
           Was beschäftigt Sie im Moment am meisten?
         </h2>
-        <p className="mt-3 max-w-lg font-sans text-[14px] leading-relaxed text-paper-faint">
+        <p className="mt-4 max-w-lg font-sans text-[15.5px] leading-relaxed text-paper-dim">
           TEI® strukturiert Ihre Situation in Echtzeit. Ihr persönlicher Zugang erlaubt eine
           begrenzte Zahl vertiefter Analysen — für die eigentliche Entscheidungsfrage
           empfiehlt TEI® ein vertrauliches Gespräch.

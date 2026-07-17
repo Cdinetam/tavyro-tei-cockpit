@@ -61,9 +61,9 @@ export function HypothesesSection({ hypothesen }: Props) {
                 <span className="case-number mt-1 shrink-0 font-mono text-[11px] text-brass-dim">
                   H{i + 1}
                 </span>
-                <p className="font-display text-[17px] leading-snug text-paper">{h.hypothese}</p>
+                <p className="font-display text-[19px] leading-snug text-paper">{h.hypothese}</p>
               </div>
-              <p className="mt-3 pl-7 font-sans text-[13.5px] leading-relaxed text-paper-dim">
+              <p className="mt-3 pl-7 font-sans text-[14.5px] leading-relaxed text-paper-dim">
                 {h.begruendung}
               </p>
               <div className="mt-4 pl-7">
