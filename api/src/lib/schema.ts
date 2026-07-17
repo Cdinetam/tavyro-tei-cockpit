@@ -14,14 +14,21 @@
  * die inhaltliche Haltung dahinter.
  */
 
+export interface AiRueckfrage {
+  /** Offene, einfühlsame Frage zum Weiterdenken — keine Checkliste, kein Ja/Nein. */
+  frage: string
+  /** Kurze, eigenständige Reflexion zu WARUM diese Frage etwas trägt — keine Antwort auf die Frage selbst. */
+  reflexion: string
+}
+
 export interface AiAnalysisResult {
   eingabeText: string
   /** Empathische Reflexion: was wurde gehört, in eigenen Worten gespiegelt. */
   verstaendnis: string
   /** Unterstützende, normalisierende Einordnung — keine Bewertung, keine Diagnose, keine Lösung. */
   einordnung: string
-  /** 2–4 offene, einfühlsame Rückfragen zum Weiterdenken, keine Checkliste. */
-  rueckfragen: string[]
+  /** 2–5 offene, einfühlsame Rückfragen mit kurzer Reflexion, keine Checkliste. */
+  rueckfragen: AiRueckfrage[]
   /** Ein Satz: was sich nur im persönlichen Gespräch tragen/klären lässt — beantwortet nichts. */
   teaserGespraech: string
   /** Kurzer Hinweis auf die Grenzen dieser automatisierten Ersteinschätzung. */
@@ -58,11 +65,29 @@ export const aiAnalysisJsonSchema = {
       rueckfragen: {
         type: 'array',
         minItems: 2,
-        maxItems: 4,
-        items: { type: 'string' },
+        maxItems: 5,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['frage', 'reflexion'],
+          properties: {
+            frage: {
+              type: 'string',
+              description:
+                'Offene, einfühlsame Frage, die zum Weiterdenken einlädt — keine Checkliste, ' +
+                'keine Ja/Nein-Frage, keine eingebettete Antwort oder Wertung.',
+            },
+            reflexion: {
+              type: 'string',
+              description:
+                'Ein bis zwei Sätze, die einordnen, warum diese Frage für die Situation etwas ' +
+                'trägt — keine Antwort auf die Frage selbst, keine Empfehlung, kein Lösungsansatz.',
+            },
+          },
+        },
         description:
-          'Offene, einfühlsame Fragen, die zum Weiterdenken einladen — keine Checkliste, keine ' +
-          'Ja/Nein-Fragen, keine eingebettete Antwort oder Wertung.',
+          'Offene, einfühlsame Fragen mit kurzer Reflexion, die zum Weiterdenken einladen — keine ' +
+          'Checkliste, keine Ja/Nein-Fragen, keine eingebettete Antwort oder Wertung.',
       },
       teaserGespraech: {
         type: 'string',
@@ -85,7 +110,7 @@ export function clampAiAnalysis(raw: AiAnalysisResult, eingabeText: string): AiA
     eingabeText,
     verstaendnis: raw.verstaendnis,
     einordnung: raw.einordnung,
-    rueckfragen: (raw.rueckfragen ?? []).slice(0, 4),
+    rueckfragen: (raw.rueckfragen ?? []).slice(0, 5),
     teaserGespraech: raw.teaserGespraech,
     advisoryNote: raw.advisoryNote,
   }

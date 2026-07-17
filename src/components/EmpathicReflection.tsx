@@ -1,9 +1,10 @@
+import type { AiRueckfrage } from '../types'
 import { SectionShell } from './SectionShell'
 
 interface Props {
   verstaendnis: string
   einordnung: string
-  rueckfragen: string[]
+  rueckfragen: AiRueckfrage[]
 }
 
 export function EmpathicReflectionSection({ verstaendnis, einordnung, rueckfragen }: Props) {
@@ -27,13 +28,15 @@ export function EmpathicReflectionSection({ verstaendnis, einordnung, rueckfrage
           title="Zum Weiterdenken"
           description="Keine Checkliste — Fragen, die Sie für sich mitnehmen können, nicht beantworten müssen."
         >
-          <ul className="flex flex-col gap-5">
-            {rueckfragen.map((frage, i) => (
-              <li
-                key={i}
-                className="border-l border-brass-dim/60 pl-5 font-display text-[18px] italic leading-relaxed text-paper-dim"
-              >
-                {frage}
+          <ul className="flex flex-col gap-6">
+            {rueckfragen.map((rf, i) => (
+              <li key={i} className="border-l border-brass-dim/60 pl-5">
+                <p className="font-display text-[18px] italic leading-relaxed text-paper-dim">
+                  {rf.frage}
+                </p>
+                <p className="mt-2 font-sans text-[14px] leading-relaxed text-paper-faint">
+                  {rf.reflexion}
+                </p>
               </li>
             ))}
           </ul>

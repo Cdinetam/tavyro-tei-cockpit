@@ -25,8 +25,18 @@ export async function mockAnalyze(question: string): Promise<AiAnalysisResult> {
       'und sich dafür einen Moment nehmen, ist bereits ein guter Ausgangspunkt — unabhängig davon, ' +
       'ob dieser Demo-Modus die Situation gerade inhaltlich erfassen kann oder nicht.',
     rueckfragen: [
-      'Was hat Sie dazu bewogen, genau jetzt eine Antwort auf diese Frage zu suchen?',
-      'Wie würde es sich anfühlen, wenn diese Situation gelöst wäre?',
+      {
+        frage: 'Was hat Sie dazu bewogen, genau jetzt eine Antwort auf diese Frage zu suchen?',
+        reflexion:
+          'Der Zeitpunkt einer Frage verrät oft mehr über die eigentliche Dringlichkeit als die ' +
+          'Frage selbst — im Demo-Modus ist das aber nur ein Platzhaltersatz.',
+      },
+      {
+        frage: 'Wie würde es sich anfühlen, wenn diese Situation gelöst wäre?',
+        reflexion:
+          'Diese Vorstellung macht oft sichtbar, was eigentlich auf dem Spiel steht — auch das ' +
+          'ersetzt hier keine echte, auf Ihre Eingabe eingehende Reflexion.',
+      },
     ],
     teaserGespraech:
       'Was diese Situation für Sie persönlich schwierig macht, lässt sich nur in einem echten ' +

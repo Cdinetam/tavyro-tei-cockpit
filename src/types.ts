@@ -77,14 +77,21 @@ export interface Scenario {
 // strukturierte TEI®-Methodik als Beispiel, unabhängig vom Live-KI-Flow.
 // ---------------------------------------------------------------------------
 
+export interface AiRueckfrage {
+  /** Offene, einfühlsame Frage zum Weiterdenken — keine Checkliste, kein Ja/Nein. */
+  frage: string
+  /** Kurze, eigenständige Reflexion zu WARUM diese Frage etwas trägt — keine Antwort auf die Frage selbst. */
+  reflexion: string
+}
+
 export interface AiAnalysisResult {
   eingabeText: string
   /** Empathische Reflexion: was wurde gehört, in eigenen Worten gespiegelt. */
   verstaendnis: string
   /** Unterstützende, normalisierende Einordnung — keine Bewertung, keine Diagnose, keine Lösung. */
   einordnung: string
-  /** 2–4 offene, einfühlsame Rückfragen zum Weiterdenken, keine Checkliste. */
-  rueckfragen: string[]
+  /** 2–5 offene, einfühlsame Rückfragen mit kurzer Reflexion, keine Checkliste. */
+  rueckfragen: AiRueckfrage[]
   /** Ein Satz: was sich nur im persönlichen Gespräch tragen/klären lässt — beantwortet nichts. */
   teaserGespraech: string
   /** Kurzer Hinweis auf die Grenzen dieser automatisierten Ersteinschätzung. */
