@@ -13,8 +13,8 @@ export function Header({ stage, onReset }: HeaderProps) {
           aria-label="Zur Startseite"
         >
           <img src="/tavyro-logo.png" alt="TaVyro" className="h-9 w-auto" />
-          <span className="hidden font-sans text-[13px] text-paper-dim sm:inline">
-            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI)
+          <span className="hidden font-display text-[16px] font-semibold text-paper sm:inline">
+            TaVyro Executive Intelligence<sup className="text-[9px]">®</sup> (TEI)
           </span>
         </button>
 
