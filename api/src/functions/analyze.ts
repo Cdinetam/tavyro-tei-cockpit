@@ -5,6 +5,7 @@ import { getUsageCount, recordUsage, getWeeklyLimit } from '../lib/quotaStore.js
 import { isDemoExpired, getDemoExpiresAt } from '../lib/pilotWindow.js'
 import { notify } from '../lib/notify.js'
 import { checkAccessCode } from '../lib/accessGate.js'
+import { getClientIp } from '../lib/clientIp.js'
 
 interface AnalyzeRequestBody {
   question?: string
@@ -55,13 +56,14 @@ export async function analyze(req: HttpRequest, context: InvocationContext): Pro
     }
   }
 
-  // Limit gilt pro Person (Zugangscode), nicht pro Browser-Sitzung — ein
+  // Limit gilt pro Besucher-IP-Adresse, nicht pro Browser-Sitzung — ein
   // neuer Tab oder privates Fenster darf das Limit nicht umgehen können.
-  // Ist die Zugangskontrolle deaktiviert (kein PILOT_ACCESS_CODES gesetzt),
-  // greift der Fallback-Schlüssel "no-access-control", d.h. dann gilt das
-  // Limit global über alle Besucher hinweg — das ist in dem Fall gewollt,
-  // da ohne individuelle Codes keine sinnvollere Zuordnung möglich ist.
-  const quotaKey = access.code || 'no-access-control'
+  // Wichtig seit die Demo öffentlich von der TaVyro-Homepage aus verlinkt
+  // ist (nicht mehr nur über persönliche Zugangscodes erreichbar): ohne
+  // IP-Bindung könnte ein einzelner Besucher beliebig viele Azure-OpenAI-
+  // Anfragen auslösen. Ein zusätzlich aktiver Zugangscode (falls
+  // PILOT_ACCESS_CODES gesetzt ist) bleibt davon unberührt und gilt vorher.
+  const quotaKey = getClientIp(req)
   const limit = getWeeklyLimit()
   const used = await getUsageCount(quotaKey)
 
@@ -72,7 +74,7 @@ export async function analyze(req: HttpRequest, context: InvocationContext): Pro
         status: 'limit_reached',
         sessionAnalysesUsed: used,
         sessionAnalysesLimit: limit,
-        message: `Das Limit von ${limit} Analysen für diesen Zugang ist erreicht.`,
+        message: `Das Limit von ${limit} Analysen für diese IP-Adresse ist erreicht.`,
       },
     }
   }
