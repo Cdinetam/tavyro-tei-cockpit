@@ -44,6 +44,9 @@ export function AccessGate({ children }: Props) {
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">
           Den Zugangscode haben Sie von Tam Nguyen persönlich erhalten.
         </p>
+        <p className="mt-2 font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
+          Kein Zugangscode? Kontakt: hello@tavyro.ch
+        </p>
 
         <form onSubmit={handleSubmit} className="mt-8">
           <input
@@ -71,10 +74,7 @@ export function AccessGate({ children }: Props) {
           </button>
         </form>
 
-        <p className="mt-8 font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
-          Kein Zugangscode? Kontakt: hello@tavyro.ch
-        </p>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
+        <p className="mt-8 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
           Processed within TaVyro's protected Azure OpenAI environment
         </p>
       </div>
