@@ -15,7 +15,7 @@
  */
 
 interface NotifyPayload {
-  kind: 'analyse' | 'lead'
+  kind: 'analyse' | 'lead' | 'chat'
   sessionId: string
   question: string
   /** Name laut PILOT_ACCESS_CODES, falls Zugangskontrolle aktiv ist. */
@@ -38,9 +38,11 @@ export async function notify(payload: NotifyPayload): Promise<void> {
         text:
           payload.kind === 'analyse'
             ? `TEI®-Sparring-Session · ${who} · Frage: "${payload.question}"`
-            : `TEI®-Kontaktanfrage · ${who} · ${payload.email} · Frage: "${payload.question}"${
-                payload.note ? ` · Notiz: ${payload.note}` : ''
-              }`,
+            : payload.kind === 'chat'
+              ? `TEI®-Gespräch begonnen · ${who} · Erste Nachricht: "${payload.question}"`
+              : `TEI®-Kontaktanfrage · ${who} · ${payload.email} · Frage: "${payload.question}"${
+                  payload.note ? ` · Notiz: ${payload.note}` : ''
+                }`,
         ...payload,
         timestamp: new Date().toISOString(),
       }),

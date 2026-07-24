@@ -51,7 +51,7 @@ export function Landing({ onStart, onViewExamples }: LandingProps) {
             onClick={() => onStart()}
             className="group inline-flex items-center gap-3 border border-brass-dim bg-gradient-to-b from-brass/[0.14] to-brass/[0.06] px-7 py-3.5 font-sans text-[14.5px] font-medium tracking-wide text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:from-brass/[0.2] hover:to-brass/[0.1]"
           >
-            Analyse starten
+            Gespräch beginnen
             <span className="transition-transform duration-300 ease-editorial group-hover:translate-x-1">
               →
             </span>

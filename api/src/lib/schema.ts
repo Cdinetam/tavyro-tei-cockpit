@@ -14,6 +14,62 @@
  * die inhaltliche Haltung dahinter.
  */
 
+/**
+ * Eine einzelne Nachricht im echten, mehrteiligen Trust-Room-Gespräch
+ * (api/src/functions/chat.ts) — im Unterschied zur Einmal-Analyse unten,
+ * die kein Gesprächsverlauf ist, sondern ein festes 5-Felder-Ergebnis.
+ */
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  /**
+   * Nur bei role: 'assistant' gesetzt — markiert eine Antwort, die bewusst
+   * mit einem klaren Cliffhanger Richtung echtes Gespräch abschliesst (siehe
+   * CLIFFHANGER-Logik in chat.ts/prompt.ts). Rein für die Darstellung im
+   * Frontend, hat keine Bedeutung für das Modell selbst.
+   */
+  cliffhanger?: boolean
+}
+
+/**
+ * Strukturierte Antwort des Modells für eine einzelne Nachricht im
+ * mehrteiligen Gespräch-Flow (chat.ts) — anders als bei der Einmal-Analyse
+ * ist "reply" weiterhin natürlicher Fliesstext, nur das Antwort-Envelope
+ * selbst ist JSON, damit "themenwechsel" strukturiert mitgeliefert wird.
+ */
+export interface ChatReplyResult {
+  reply: string
+  /**
+   * true, wenn die neueste Nutzer-Nachricht ein inhaltlich neues,
+   * eigenständiges Thema einführt statt das bisherige Gespräch fortzusetzen.
+   */
+  themenwechsel: boolean
+}
+
+export const chatReplyJsonSchema = {
+  name: 'tei_chat_reply',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['reply', 'themenwechsel'],
+    properties: {
+      reply: {
+        type: 'string',
+        description:
+          'Eine einzelne, natürliche Chat-Nachricht als Fliesstext — keine Feldstruktur, kein ' +
+          'Markdown, kein eingebettetes JSON.',
+      },
+      themenwechsel: {
+        type: 'boolean',
+        description:
+          'true, wenn die neueste Nutzer-Nachricht ein inhaltlich neues, eigenständiges Thema ' +
+          'einführt statt das bisherige Gespräch fortzusetzen; sonst false.',
+      },
+    },
+  },
+} as const
+
 export interface AiRueckfrage {
   /** Offene, einfühlsame Frage zum Weiterdenken — keine Checkliste, kein Ja/Nein. */
   frage: string

@@ -21,3 +21,18 @@ export function getClientIp(req: HttpRequest): string {
 
   return 'unknown-ip'
 }
+
+/**
+ * IP-Adressen, die vom Wochenlimit ausgenommen sind (z.B. für internes
+ * Testen). Kommagetrennte Liste in der Umgebungsvariable
+ * PILOT_UNLIMITED_IPS, z.B. "203.0.113.5,203.0.113.6". Ist die Variable
+ * nicht gesetzt, ist niemand ausgenommen.
+ */
+export function isUnlimitedIp(ip: string): boolean {
+  const raw = process.env.PILOT_UNLIMITED_IPS ?? ''
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .includes(ip)
+}

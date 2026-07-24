@@ -1,5 +1,5 @@
 interface HeaderProps {
-  stage: 'landing' | 'input' | 'analysis'
+  stage: 'landing' | 'input' | 'analysis' | 'room'
   onReset: () => void
 }
 
@@ -9,12 +9,12 @@ export function Header({ stage, onReset }: HeaderProps) {
       <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-4 px-6 lg:px-10">
         <button
           onClick={onReset}
-          className="group flex items-center gap-3 text-left"
+          className="group flex items-center gap-5 text-left"
           aria-label="Zur Startseite"
         >
-          <img src="/tavyro-logo.png" alt="TaVyro" className="h-9 w-auto" />
-          <span className="hidden font-display text-[16px] font-semibold text-paper sm:inline">
-            TaVyro Executive Intelligence<sup className="text-[9px]">®</sup> (TEI)
+          <img src="/tavyro-logo.png" alt="TaVyro" className="h-9 w-auto shrink-0" />
+          <span className="hidden text-center font-display text-[17px] font-semibold leading-snug text-paper sm:inline">
+            TaVyro Executive Intelligence<sup className="text-[9px]">®</sup> (TEI) – Trust Room
           </span>
         </button>
 

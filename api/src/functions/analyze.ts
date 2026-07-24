@@ -5,7 +5,7 @@ import { getUsageCount, recordUsage, getWeeklyLimit } from '../lib/quotaStore.js
 import { isDemoExpired, getDemoExpiresAt } from '../lib/pilotWindow.js'
 import { notify } from '../lib/notify.js'
 import { checkAccessCode } from '../lib/accessGate.js'
-import { getClientIp } from '../lib/clientIp.js'
+import { getClientIp, isUnlimitedIp } from '../lib/clientIp.js'
 
 interface AnalyzeRequestBody {
   question?: string
@@ -65,9 +65,10 @@ export async function analyze(req: HttpRequest, context: InvocationContext): Pro
   // PILOT_ACCESS_CODES gesetzt ist) bleibt davon unberührt und gilt vorher.
   const quotaKey = getClientIp(req)
   const limit = getWeeklyLimit()
-  const used = await getUsageCount(quotaKey)
+  const exempt = isUnlimitedIp(quotaKey)
+  const used = exempt ? 0 : await getUsageCount(quotaKey)
 
-  if (used >= limit) {
+  if (!exempt && used >= limit) {
     return {
       status: 200,
       jsonBody: {
@@ -82,7 +83,7 @@ export async function analyze(req: HttpRequest, context: InvocationContext): Pro
   try {
     const raw = await requestAiAnalysis(question)
     const result = clampAiAnalysis(raw, question)
-    const newUsed = await recordUsage(quotaKey)
+    const newUsed = exempt ? 0 : await recordUsage(quotaKey)
 
     // Bewusst nicht awaited-blockierend für die Antwortzeit relevant, aber
     // hier trotzdem awaited, da Azure Functions Consumption Plan Prozesse

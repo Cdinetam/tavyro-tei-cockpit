@@ -1,4 +1,4 @@
-import type { AiAnalysisResult } from '../types'
+import type { AiAnalysisResult, ChatMessage } from '../types'
 
 /**
  * Simuliert eine TEI® Trust Room-Antwort lokal, ohne Azure OpenAI aufzurufen.
@@ -46,4 +46,26 @@ export async function mockAnalyze(question: string): Promise<AiAnalysisResult> {
       'Ihrer Eingabe, sondern ein technischer Platzhalter. Sobald Azure OpenAI verdrahtet ist ' +
       '(siehe api/README.md), verschwindet dieser Hinweis und jede Eingabe wird echt gespiegelt.',
   }
+}
+
+/**
+ * Simuliert eine Antwort im echten, mehrteiligen Gespräch-Flow lokal, ohne
+ * Azure OpenAI aufzurufen — analog zu mockAnalyze oben, siehe dortigen
+ * Kommentar zur Begründung.
+ */
+export async function mockChatReply(messages: ChatMessage[]): Promise<string> {
+  await new Promise((resolve) => setTimeout(resolve, 900 + Math.random() * 700))
+
+  const turnCount = messages.filter((m) => m.role === 'user').length
+  if (turnCount <= 1) {
+    return (
+      'Im lokalen Demo-Modus ohne Azure-OpenAI-Anbindung kann TEI® nicht wirklich auf das eingehen, ' +
+      'was Sie geschrieben haben — mit angebundenem Azure OpenAI würde hier eine Antwort stehen, die ' +
+      'erkennbar auf Ihre Nachricht reagiert, statt auf diesen Platzhaltertext.'
+    )
+  }
+  return (
+    'Auch diese Antwort ist nur ein technischer Platzhalter des lokalen Demo-Modus — sobald Azure ' +
+    'OpenAI verdrahtet ist, reagiert TEI® hier echt auf den bisherigen Gesprächsverlauf.'
+  )
 }

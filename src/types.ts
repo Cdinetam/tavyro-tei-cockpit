@@ -109,6 +109,37 @@ export interface AnalyzeResponse {
   message?: string
 }
 
+// ---------------------------------------------------------------------------
+// Echter, mehrteiliger Trust-Room-Gespräch-Flow (api/src/functions/chat.ts) —
+// bewusst getrennt vom AiAnalysisResult oben, das ein festes Ein-Antwort-
+// Ergebnis ist. Hier gibt es stattdessen einen Nachrichtenverlauf.
+// ---------------------------------------------------------------------------
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  /**
+   * Nur bei role: 'assistant' gesetzt — markiert eine Antwort, die bewusst
+   * mit einem klaren Cliffhanger Richtung echtes Gespräch abschliesst
+   * (spätestens ab der 5. Nachricht zum selben Thema, oder sofort bei
+   * einem erkannten Themenwechsel). Steuert nur die Darstellung im
+   * Frontend (siehe TrustRoomChat.tsx).
+   */
+  cliffhanger?: boolean
+}
+
+export type ChatResponseStatus = 'ok' | 'limit_reached' | 'demo_expired' | 'error'
+
+export interface ChatResponse {
+  status: ChatResponseStatus
+  reply?: string
+  cliffhanger?: boolean
+  sessionAnalysesUsed?: number
+  sessionAnalysesLimit?: number
+  demoExpiresAt?: string
+  message?: string
+}
+
 export interface LeadRequest {
   sessionId: string
   email: string

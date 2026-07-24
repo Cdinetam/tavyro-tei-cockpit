@@ -1,5 +1,5 @@
-import type { AnalyzeResponse, LeadRequest, LeadResponse } from '../types'
-import { mockAnalyze } from './aiMock'
+import type { AnalyzeResponse, ChatMessage, ChatResponse, LeadRequest, LeadResponse } from '../types'
+import { mockAnalyze, mockChatReply } from './aiMock'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
@@ -72,6 +72,39 @@ export async function analyzeQuestion(question: string): Promise<AnalyzeResponse
   }
 
   return (await response.json()) as AnalyzeResponse
+}
+
+/**
+ * Sendet eine Nachricht im echten, mehrteiligen Gespräch-Flow. Anders als
+ * analyzeQuestion oben wird hier bei jedem Aufruf der gesamte bisherige
+ * Verlauf mitgeschickt (inkl. der neuesten Nutzer-Nachricht) — das Backend
+ * ist bewusst zustandslos, der Verlauf lebt nur im Browser (siehe
+ * useTrustRoomChat). topicTurnHint steuert die Cliffhanger-Regel im
+ * Backend/Prompt (siehe dort).
+ */
+export async function sendChatMessage(
+  messages: ChatMessage[],
+  topicTurnHint: number,
+): Promise<ChatResponse> {
+  if (!API_BASE_URL) {
+    const reply = await mockChatReply(messages)
+    return { status: 'ok', reply, cliffhanger: topicTurnHint >= 5 }
+  }
+
+  const response = await fetch(`${API_BASE_URL}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...accessHeaders() },
+    body: JSON.stringify({ sessionId: getSessionId(), messages, topicTurnHint }),
+  })
+
+  if (response.status === 401) {
+    return { status: 'error', message: 'Zugangscode ungültig oder abgelaufen. Bitte Seite neu laden.' }
+  }
+  if (!response.ok && response.status !== 400) {
+    return { status: 'error', message: 'Der Trust Room ist gerade nicht erreichbar. Bitte später erneut versuchen.' }
+  }
+
+  return (await response.json()) as ChatResponse
 }
 
 export async function submitLead(payload: Omit<LeadRequest, 'sessionId'>): Promise<LeadResponse> {
