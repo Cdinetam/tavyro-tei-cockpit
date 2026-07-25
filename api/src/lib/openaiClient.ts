@@ -6,7 +6,12 @@ import {
   type ChatReplyResult,
 } from './schema.js'
 import { SYSTEM_PROMPT, buildUserPrompt, CHAT_SYSTEM_PROMPT } from './prompt.js'
-import { ADVICE_REINFORCEMENT, isEvasiveReply, isExplicitAdviceRequest } from './adviceGuard.js'
+import {
+  ADVICE_REINFORCEMENT,
+  isEvasiveReply,
+  isExplicitAdviceRequest,
+  stripLeadingBannedOpener,
+} from './adviceGuard.js'
 
 interface AzureOpenAiConfig {
   endpoint: string
@@ -251,6 +256,19 @@ export async function requestChatReply(
     // der Anweisung zu folgen, statt erneut auf Sampling-Varianz zu hoffen.
     const temperature = attempt === MAX_REINFORCED_ATTEMPTS ? 0.2 : undefined
     result = await callOnce(ADVICE_REINFORCEMENT, temperature)
+  }
+
+  // Letzte, deterministische Absicherung: bleibt die verbotene Eröffnung
+  // ("Sie stehen vor einer komplexen Situation" o.ä.) trotz aller
+  // Nachforderungs-Versuche im ersten Satz bestehen, wird sie mechanisch
+  // entfernt statt die Person damit zu konfrontieren — siehe
+  // stripLeadingBannedOpener in adviceGuard.ts für die Begründung.
+  if (isEvasiveReply(result.reply)) {
+    const stripped = stripLeadingBannedOpener(result.reply)
+    if (stripped !== result.reply) {
+      log?.('TEI chat: verbotene Eröffnung auch nach Nachforderungs-Versuchen vorhanden — erster Satz mechanisch entfernt.')
+      result = { ...result, reply: stripped }
+    }
   }
 
   return result

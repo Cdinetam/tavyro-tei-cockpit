@@ -132,6 +132,32 @@ export function isEvasiveReply(reply: string): boolean {
   return !COMMITMENT_PATTERNS.some((re) => re.test(reply))
 }
 
+/**
+ * Letzte, deterministische Absicherung — greift, falls die verbotene
+ * Eröffnung ("Sie stehen vor einer komplexen Situation" o.ä.) auch nach
+ * allen Nachforderungs-Versuchen im ersten Satz bestehen bleibt. Live hat
+ * sich gezeigt, dass diese Formulierung eine derart starke Neigung des
+ * Modells ist, dass selbst mehrere verschärfte Retries (inkl. niedrigerer
+ * Temperatur) sie nicht zuverlässig verhindern. Statt endlos weiter zu
+ * versuchen (Kosten/Latenz), wird der ausweichende erste Satz mechanisch
+ * entfernt — der Rest der Antwort ist in der Praxis meist bereits
+ * eigenständig substanziell und verliert dadurch nichts Wesentliches.
+ * Greift nur, wenn ein zweiter Satz übrig bleibt (sonst bliebe nichts
+ * Sinnvolles stehen, dann wird die Antwort unverändert gelassen).
+ */
+export function stripLeadingBannedOpener(reply: string): string {
+  const match = reply.match(/^(.+?[.!?])\s+([\s\S]+)$/)
+  if (!match) return reply
+
+  const [, firstSentence, rest] = match
+  const firstIsBanned =
+    GENERIC_OPENER_NEAR_START.test(firstSentence) || BANNED_PHRASE_PATTERNS.some((re) => re.test(firstSentence))
+  if (!firstIsBanned || !rest.trim()) return reply
+
+  const trimmedRest = rest.trim()
+  return trimmedRest.charAt(0).toUpperCase() + trimmedRest.slice(1)
+}
+
 /** Wird als zusätzlicher, nur für den Nachforderungs-Versuch geltender
  * Hinweis an den System-Prompt angehängt (siehe requestChatReply). */
 export const ADVICE_REINFORCEMENT = `VERSTÄRKUNGS-HINWEIS FÜR DIESEN NACHFORDERUNGS-VERSUCH (interner Kontext,
