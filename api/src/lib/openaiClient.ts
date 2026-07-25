@@ -6,6 +6,7 @@ import {
   type ChatReplyResult,
 } from './schema.js'
 import { SYSTEM_PROMPT, buildUserPrompt, CHAT_SYSTEM_PROMPT } from './prompt.js'
+import { ADVICE_REINFORCEMENT, isEvasiveReply, isExplicitAdviceRequest } from './adviceGuard.js'
 
 interface AzureOpenAiConfig {
   endpoint: string
@@ -116,6 +117,7 @@ async function callChatReplyCompletion(
   history: ChatMessage[],
   topicTurnHint: number,
   useStructuredOutput: boolean,
+  reinforcement?: string,
 ): Promise<string> {
   const url = `${config.endpoint}/openai/deployments/${config.deployment}/chat/completions?api-version=${config.apiVersion}`
 
@@ -123,7 +125,14 @@ async function callChatReplyCompletion(
   // angehängt statt als eigene Chat-Nachricht eingefügt — so bleibt die
   // Nachrichtenliste sauber (System zuerst, dann abwechselnd User/Assistant)
   // und der Hinweis ist eindeutig dem aktuellen Turn zugeordnet.
-  const systemContent = `${CHAT_SYSTEM_PROMPT}\n\nAKTUELLER TURN-HINWEIS (interner Kontext, nicht für die Person sichtbar): Falls die neueste Nutzer-Nachricht das bisherige Thema fortsetzt, wäre sie die ${topicTurnHint}. Nachricht zu diesem Thema — siehe CLIFFHANGER-HINWEIS FÜR DIESE ANTWORT oben.`
+  let systemContent = `${CHAT_SYSTEM_PROMPT}\n\nAKTUELLER TURN-HINWEIS (interner Kontext, nicht für die Person sichtbar): Falls die neueste Nutzer-Nachricht das bisherige Thema fortsetzt, wäre sie die ${topicTurnHint}. Nachricht zu diesem Thema — siehe CLIFFHANGER-HINWEIS FÜR DIESE ANTWORT oben.`
+  // Nur beim automatischen Nachforderungs-Versuch gesetzt (siehe
+  // requestChatReply/adviceGuard.ts) — verschärft die RATSCHLÄGE-Regel
+  // gezielt für diesen einen Retry, statt den Haupt-Prompt dauerhaft zu
+  // verändern.
+  if (reinforcement) {
+    systemContent = `${systemContent}\n\n${reinforcement}`
+  }
 
   const body: Record<string, unknown> = {
     messages: [
@@ -131,7 +140,12 @@ async function callChatReplyCompletion(
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ],
     temperature: 0.5,
-    max_tokens: 700,
+    // Die direktivere Antwortlogik (Kernbeobachtung, Differenzierung,
+    // Herausforderung, Vorläufige Einschätzung, Handlungssequenz,
+    // Entscheidungsregel, Reflexionsfrage) ist deutlich länger als die
+    // frühere reflektierende Kurzantwort — 700 Tokens reichten dafür nicht
+    // zuverlässig aus und liefen Gefahr, Antworten abzuschneiden.
+    max_tokens: 1500,
   }
 
   if (useStructuredOutput) {
@@ -172,31 +186,62 @@ async function callChatReplyCompletion(
  * und gibt an, die wievielte Nachricht zum selben Thema die neueste
  * Nachricht wäre, falls sie das bisherige Thema fortsetzt — Grundlage für
  * die Cliffhanger-Regel im Prompt (siehe CHAT_SYSTEM_PROMPT).
+ *
+ * Sicherheitsnetz (siehe adviceGuard.ts): fragt die Person ausdrücklich nach
+ * einer Handlungsempfehlung und wirkt die Antwort trotzdem ausweichend,
+ * wird automatisch EIN Nachforderungs-Versuch mit einem verschärften
+ * Zusatz-Hinweis unternommen, bevor die Antwort zurückgegeben wird. log
+ * (optional) protokolliert, wenn das greift — siehe chat.ts.
  */
 export async function requestChatReply(
   history: ChatMessage[],
   topicTurnHint: number,
+  log?: (message: string) => void,
 ): Promise<ChatReplyResult> {
   const config = readConfig()
 
-  let raw: string
-  try {
-    raw = await callChatReplyCompletion(config, history, topicTurnHint, true)
-  } catch {
-    // Fällt zurück auf json_object, falls das Deployment strict structured
-    // outputs (json_schema) nicht unterstützt.
-    raw = await callChatReplyCompletion(config, history, topicTurnHint, false)
+  async function callOnce(reinforcement?: string): Promise<ChatReplyResult> {
+    let raw: string
+    try {
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, reinforcement)
+    } catch {
+      // Fällt zurück auf json_object, falls das Deployment strict structured
+      // outputs (json_schema) nicht unterstützt.
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, reinforcement)
+    }
+
+    let parsed: Partial<ChatReplyResult>
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      throw new Error('Antwort von Azure OpenAI war kein valides JSON.')
+    }
+
+    return {
+      reply: (parsed.reply ?? '').toString().trim(),
+      themenwechsel: Boolean(parsed.themenwechsel),
+    }
   }
 
-  let parsed: Partial<ChatReplyResult>
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    throw new Error('Antwort von Azure OpenAI war kein valides JSON.')
+  const result = await callOnce()
+
+  // Die aktuelle Antwortlogik (siehe CHAT_SYSTEM_PROMPT) verlangt bei JEDER
+  // Antwort eine "Vorläufige Einschätzung" (Schritt 4), nicht mehr nur bei
+  // ausdrücklicher Nachfrage wie in der Vorgänger-Fassung des Prompts —
+  // die Prüfung läuft deshalb auf jede Antwort, unabhängig davon, ob
+  // isExplicitAdviceRequest zusätzlich zutrifft (bleibt für Logging/
+  // Diagnose erhalten, siehe adviceGuard.ts).
+  const lastUserMessage = [...history].reverse().find((m) => m.role === 'user')
+  const adviceWasRequested = !!lastUserMessage && isExplicitAdviceRequest(lastUserMessage.content)
+
+  if (isEvasiveReply(result.reply)) {
+    log?.(
+      `TEI chat: keine erkennbare vorläufige Einschätzung in der Antwort${
+        adviceWasRequested ? ' (trotz expliziter Nachfrage)' : ''
+      } — fordere automatisch strenger nach.`,
+    )
+    return callOnce(ADVICE_REINFORCEMENT)
   }
 
-  return {
-    reply: (parsed.reply ?? '').toString().trim(),
-    themenwechsel: Boolean(parsed.themenwechsel),
-  }
+  return result
 }

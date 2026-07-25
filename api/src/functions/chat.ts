@@ -105,7 +105,7 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   }
 
   try {
-    const result = await requestChatReply(messages, topicTurnHint)
+    const result = await requestChatReply(messages, topicTurnHint, (msg) => context.log(msg))
     const cliffhanger = topicTurnHint >= CLIFFHANGER_TOPIC_TURN_THRESHOLD || result.themenwechsel
 
     if (isFirstTurn && !exempt) {
