@@ -58,6 +58,10 @@ export function useTrustRoomChat() {
   // chat.ts). Wird auf 0 zurückgesetzt, sobald ein Cliffhanger ausgelöst
   // wurde (neues Kapitel beginnt) oder ein neues Gespräch startet.
   const [topicStreak, setTopicStreak] = useState(0)
+  // Erst bekannt, sobald das Backend einmal "limit_reached" zurückgibt (mit
+  // der tatsächlich konfigurierten Wochengrenze, siehe PILOT_WEEKLY_LIMIT) —
+  // vorher zeigt die UI nur allgemein "Demo-Version", ohne konkrete Zahl.
+  const [weeklyLimit, setWeeklyLimit] = useState<number | null>(null)
 
   async function send(text: string) {
     const trimmed = text.trim()
@@ -77,6 +81,9 @@ export function useTrustRoomChat() {
       setTopicStreak(cliffhanger ? 0 : topicTurnHint)
       setStatus('idle')
     } else if (response.status === 'limit_reached') {
+      if (typeof response.sessionAnalysesLimit === 'number') {
+        setWeeklyLimit(response.sessionAnalysesLimit)
+      }
       setStatus('limit_reached')
     } else if (response.status === 'demo_expired') {
       setStatus('demo_expired')
@@ -147,6 +154,7 @@ export function useTrustRoomChat() {
     status,
     errorMessage,
     savedConversations,
+    weeklyLimit,
     send,
     reset,
     saveAndReset,

@@ -141,6 +141,12 @@ interface Props {
   errorMessage: string
   savedConversations: SavedConversation[]
   initialDraft?: string
+  /**
+   * Die tatsächlich konfigurierte Wochengrenze (PILOT_WEEKLY_LIMIT), erst
+   * bekannt nachdem das Backend einmal "limit_reached" gemeldet hat. Bis
+   * dahin null — die UI zeigt dann nur allgemein "Demo-Version" ohne Zahl.
+   */
+  weeklyLimit: number | null
   send: (text: string) => void
   resumeConversation: (id: string) => void
   deleteSavedConversation: (id: string) => void
@@ -154,6 +160,7 @@ export function TrustRoomChat({
   errorMessage,
   savedConversations,
   initialDraft,
+  weeklyLimit,
   send,
   resumeConversation,
   deleteSavedConversation,
@@ -180,10 +187,12 @@ export function TrustRoomChat({
     return (
       <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-xl flex-col justify-center px-6">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
-          Kontingent erreicht
+          Demo-Version · Kontingent erreicht
         </p>
         <h2 className="mt-4 font-display text-2xl font-medium text-paper">
-          Ihr Kontingent im TEI® Trust Room ist für diese Woche erreicht.
+          {weeklyLimit
+            ? `Die Demo-Version ist auf ${weeklyLimit} Gespräche pro Woche begrenzt — Ihr Kontingent ist erreicht.`
+            : 'Ihr Kontingent in der Demo-Version ist für diese Woche erreicht.'}
         </h2>
         <p className="mt-4 font-sans text-[14.5px] leading-relaxed text-paper-dim">
           Das ist bewusst so begrenzt: ein erstes Gespräch, alles Weitere gehört in einen echten
@@ -242,6 +251,9 @@ export function TrustRoomChat({
         <p className="mt-3 max-w-lg font-sans text-[15px] leading-relaxed text-paper-dim">
           Anders als die kurze Analyse: hier entsteht ein echtes, mehrteiliges Gespräch — TEI® hört
           zu, ordnet ein und bleibt mit Ihnen im Austausch.
+        </p>
+        <p className="mt-2 font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
+          Demo-Version · kostenlose Testphase, begrenzt auf wenige Gespräche pro Woche
         </p>
         <form onSubmit={handleSubmit} className="mt-8">
           <textarea
@@ -306,7 +318,9 @@ export function TrustRoomChat({
         <div className="flex items-center gap-2.5">
           <span className="h-1.5 w-1.5 rounded-full bg-brass" />
           <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">
-            {isMockMode ? 'Demo-Modus lokal · kein Live-Modell verbunden' : 'Vertrauliches Gespräch'}
+            {isMockMode
+              ? 'Demo-Modus lokal · kein Live-Modell verbunden'
+              : 'Demo-Version · vertrauliches Gespräch'}
           </span>
         </div>
         <div className="flex items-center gap-4">

@@ -125,6 +125,7 @@ export default function App() {
             errorMessage={roomChat.errorMessage}
             savedConversations={roomChat.savedConversations}
             initialDraft={prefill}
+            weeklyLimit={roomChat.weeklyLimit}
             send={roomChat.send}
             resumeConversation={roomChat.resumeConversation}
             deleteSavedConversation={roomChat.deleteSavedConversation}
