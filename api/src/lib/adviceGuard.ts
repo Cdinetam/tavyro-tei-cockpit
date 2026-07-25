@@ -76,17 +76,20 @@ const BANNED_PHRASE_PATTERNS: RegExp[] = [
   /vielleicht\s+(k[öo]nnte\s+es\s+)?hilft?/i,
 ]
 
-// "Komplexe Situation" als generischer Öffner tritt sowohl in vielen
+// "Komplexe Situation" als generischer Öffner tritt in vielen
 // unterschiedlichen Verb-Varianten auf ("Sie befinden sich in...", "Sie
-// stehen vor...", "Sie sind in...") als auch mit unterschiedlichen Nomen
-// ("Situation", "Herausforderung", "Lage" — live beobachtet: das Modell
-// weicht bei einem verbotenen Nomen einfach auf ein Synonym aus). Statt
-// Verb UND Nomen einzeln zu listen, wird die Kombination aus einem
-// "komplex/vielschichtig/schwierig"-Adjektiv und einem der gängigen Nomen
-// nahe am Anfang der Antwort geprüft — das ist die eigentliche Struktur des
-// ausweichenden Öffners, unabhängig vom genauen Wortlaut drumherum.
+// stehen vor...", "Sie sind in..."), mit unterschiedlichen Nomen
+// ("Situation", "Herausforderung", "Lage") UND als zusammengesetztes Wort
+// mit einem Präfix ("Führungsherausforderung" statt "Herausforderung") —
+// live beobachtet: das Modell weicht bei einem verbotenen Nomen auf ein
+// Synonym ODER ein Kompositum aus. \S* vor dem Nomen-Stamm erlaubt genau
+// diesen Kompositum-Fall (ein beliebiges Präfix direkt vor "situation"/
+// "herausforderung"/... ohne Leerzeichen dazwischen), ohne jedes mögliche
+// Präfix einzeln aufzählen zu müssen. Die Kombination aus Adjektiv und
+// Nomen-Stamm nahe am Anfang ist die eigentliche Struktur des ausweichenden
+// Öffners, unabhängig vom genauen Wortlaut drumherum.
 const GENERIC_OPENER_NEAR_START =
-  /^.{0,70}(komplexe[nr]?|vielschichtige[nr]?|schwierige[nr]?|herausfordernde[nr]?)\s+(situation|herausforderung|lage|konstellation|gemengelage|ausgangslage)/i
+  /^.{0,70}(komplexe[nr]?|vielschichtige[nr]?|schwierige[nr]?|herausfordernde[nr]?)\s+\S*(situation|herausforderung|lage|konstellation|gemengelage)/i
 
 /** Erkennt, ob eine Antwort eine der explizit verbotenen Formulierungen
  * enthält (irgendwo im Text) oder mit dem generischen "komplexe
