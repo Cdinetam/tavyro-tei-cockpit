@@ -62,30 +62,57 @@ const COMMITMENT_PATTERNS: RegExp[] = [
   /diese\s+schlussfolgerung\s+w[üu]rde\s+ich/i,
 ]
 
-/** Erkennt, ob eine Antwort auf eine ausdrückliche Nachfrage eine
- * erkennbare eigene Tendenz enthält. Bewusst NICHT über eine Liste
- * bekannter Ausweich-Formulierungen definiert (z.B. "das hängt davon ab") —
- * das erwies sich als zu brüchig, weil dieselbe Ausweich-Absicht in zu
- * vielen leicht unterschiedlichen Formulierungen auftritt ("könnte
- * hilfreich sein" vs. "könnte es hilfreich sein" vs. "wäre vielleicht
- * hilfreich" usw.). Stattdessen die robustere, umgekehrte Prüfung: fehlt
- * jede erkennbare Festlegung, gilt die Antwort als ausweichend — unabhängig
- * davon, WIE sie ausweicht. */
+// Exakt die Eröffnungsformulierungen, die Punkt 1 des Steuerungsblocks
+// ("Bereits die erste Antwort muss substanziell sein") ausdrücklich
+// verbietet — inklusive "Sie befinden sich in einer komplexen Situation",
+// die live tatsächlich als Antwort-Eröffnung aufgetreten ist. Nur am Anfang
+// der Antwort geprüft (die ersten ca. 80 Zeichen), da es hier konkret um
+// den ERSTEN Satz geht, nicht um das gelegentliche Vorkommen dieser Wörter
+// später im Text.
+const BANNED_OPENER_PATTERNS: RegExp[] = [
+  /^.{0,10}es\s+klingt,?\s+als\s+ob/i,
+  /^.{0,10}es\s+scheint,?\s+als\s+ob/i,
+  /^.{0,10}es\s+ist\s+verst[äa]ndlich/i,
+  /^.{0,10}sie\s+befinden\s+sich\s+in\s+einer\s+komplexen\s+situation/i,
+  /^.{0,10}vielleicht\s+(k[öo]nnte\s+es\s+)?hilft?/i,
+]
+
+/** Erkennt, ob eine Antwort mit einer der explizit verbotenen
+ * Eröffnungsformulierungen beginnt (Steuerungsblock Punkt 1). */
+export function hasBannedOpener(reply: string): boolean {
+  const opening = reply.slice(0, 80)
+  return BANNED_OPENER_PATTERNS.some((re) => re.test(opening))
+}
+
+/** Erkennt, ob eine Antwort ausweichend ist: entweder weil sie mit einer
+ * ausdrücklich verbotenen Formulierung beginnt (siehe hasBannedOpener),
+ * oder weil sie keine erkennbare eigene Tendenz enthält. Letzteres bewusst
+ * NICHT über eine Liste bekannter Ausweich-Formulierungen definiert (z.B.
+ * "das hängt davon ab") — das erwies sich als zu brüchig, weil dieselbe
+ * Ausweich-Absicht in zu vielen leicht unterschiedlichen Formulierungen
+ * auftritt ("könnte hilfreich sein" vs. "könnte es hilfreich sein" vs.
+ * "wäre vielleicht hilfreich" usw.). Stattdessen die robustere, umgekehrte
+ * Prüfung: fehlt jede erkennbare Festlegung, gilt die Antwort als
+ * ausweichend — unabhängig davon, WIE sie ausweicht. */
 export function isEvasiveReply(reply: string): boolean {
+  if (hasBannedOpener(reply)) return true
   return !COMMITMENT_PATTERNS.some((re) => re.test(reply))
 }
 
 /** Wird als zusätzlicher, nur für den Nachforderungs-Versuch geltender
  * Hinweis an den System-Prompt angehängt (siehe requestChatReply). */
 export const ADVICE_REINFORCEMENT = `VERSTÄRKUNGS-HINWEIS FÜR DIESEN NACHFORDERUNGS-VERSUCH (interner Kontext,
-nicht für die Person sichtbar): Deine vorherige Antwort enthielt keine
-erkennbare vorläufige Position (siehe VERBINDLICHE ANTWORTREGELN, Punkt 3) —
+nicht für die Person sichtbar): Deine vorherige Antwort hat entweder mit
+einer ausdrücklich verbotenen Formulierung begonnen (siehe Steuerungsblock
+Punkt 1 — z.B. "Es klingt, als ob", "Sie befinden sich in einer komplexen
+Situation") oder enthielt keine erkennbare vorläufige Position (Punkt 7) —
 nur Beobachtung, Differenzierung und/oder eine Rückfrage, aber keine eigene
-Empfehlung. Ergänze diese neue Antwort zwingend um einen Satz mit der
-vorgeschriebenen Formulierung "Meine vorläufige Empfehlung ist ..."
-(alternativ "Unter diesen Annahmen würde ich ..." oder "Ich würde noch
-keine langfristige Verpflichtung eingehen ..."), gefolgt von einer kurzen,
-konkreten Begründung, die sich auf das bezieht, was die Person tatsächlich
-geschildert hat. Formuliere danach ggf. weiterhin die nächsten Schritte,
-Entscheidungsbedingungen und höchstens eine Reflexionsfrage, wie in Punkt 4
-der VERBINDLICHEN ANTWORTREGELN vorgesehen.`
+Empfehlung. Beginne diese neue Antwort zwingend mit einer klaren Kernthese
+(Punkt 1) und ergänze eine vorläufige Position mit der vorgeschriebenen
+Formulierung "Meine vorläufige Empfehlung ist ..." (alternativ "Unter
+diesen Annahmen würde ich ..." oder "Ich würde noch keine langfristige
+Verpflichtung eingehen ..."), gefolgt von einer kurzen, konkreten
+Begründung, die sich auf das bezieht, was die Person tatsächlich
+geschildert hat. Formuliere danach ggf. weiterhin die Reihenfolge der
+nächsten Schritte, eine Entscheidungsregel und höchstens eine
+Reflexionsfrage, wie in Punkt 11 der festen Antwortstruktur vorgesehen.`

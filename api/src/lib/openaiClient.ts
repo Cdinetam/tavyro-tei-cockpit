@@ -118,6 +118,7 @@ async function callChatReplyCompletion(
   topicTurnHint: number,
   useStructuredOutput: boolean,
   reinforcement?: string,
+  temperature = 0.5,
 ): Promise<string> {
   const url = `${config.endpoint}/openai/deployments/${config.deployment}/chat/completions?api-version=${config.apiVersion}`
 
@@ -139,7 +140,7 @@ async function callChatReplyCompletion(
       { role: 'system', content: systemContent },
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ],
-    temperature: 0.5,
+    temperature,
     // Die direktivere Antwortlogik (Kernbeobachtung, Differenzierung,
     // Herausforderung, Vorläufige Einschätzung, Handlungssequenz,
     // Entscheidungsregel, Reflexionsfrage) ist deutlich länger als die
@@ -187,11 +188,16 @@ async function callChatReplyCompletion(
  * Nachricht wäre, falls sie das bisherige Thema fortsetzt — Grundlage für
  * die Cliffhanger-Regel im Prompt (siehe CHAT_SYSTEM_PROMPT).
  *
- * Sicherheitsnetz (siehe adviceGuard.ts): fragt die Person ausdrücklich nach
- * einer Handlungsempfehlung und wirkt die Antwort trotzdem ausweichend,
- * wird automatisch EIN Nachforderungs-Versuch mit einem verschärften
- * Zusatz-Hinweis unternommen, bevor die Antwort zurückgegeben wird. log
- * (optional) protokolliert, wenn das greift — siehe chat.ts.
+ * Sicherheitsnetz (siehe adviceGuard.ts): wirkt eine Antwort ausweichend
+ * (keine erkennbare vorläufige Position), werden automatisch bis zu ZWEI
+ * weitere Nachforderungs-Versuche mit einem verschärften Zusatz-Hinweis
+ * unternommen, bevor die Antwort zurückgegeben wird — ein einzelner Retry
+ * erwies sich live als nicht zuverlässig genug (derselbe verschärfte Hinweis
+ * kann bei Sampling-Varianz auch beim ersten Retry nochmal ausweichend
+ * ausfallen). Der letzte Versuch läuft zusätzlich mit niedrigerer
+ * Temperatur, um die Wahrscheinlichkeit einer regelkonformen Antwort weiter
+ * zu erhöhen. log (optional) protokolliert, wenn/wie oft das greift — siehe
+ * chat.ts.
  */
 export async function requestChatReply(
   history: ChatMessage[],
@@ -200,14 +206,14 @@ export async function requestChatReply(
 ): Promise<ChatReplyResult> {
   const config = readConfig()
 
-  async function callOnce(reinforcement?: string): Promise<ChatReplyResult> {
+  async function callOnce(reinforcement?: string, temperature?: number): Promise<ChatReplyResult> {
     let raw: string
     try {
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, reinforcement)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, reinforcement, temperature)
     } catch {
       // Fällt zurück auf json_object, falls das Deployment strict structured
       // outputs (json_schema) nicht unterstützt.
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, reinforcement)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, reinforcement, temperature)
     }
 
     let parsed: Partial<ChatReplyResult>
@@ -223,24 +229,28 @@ export async function requestChatReply(
     }
   }
 
-  const result = await callOnce()
-
   // Die aktuelle Antwortlogik (siehe CHAT_SYSTEM_PROMPT) verlangt bei JEDER
-  // Antwort eine "Vorläufige Einschätzung" (Schritt 4), nicht mehr nur bei
-  // ausdrücklicher Nachfrage wie in der Vorgänger-Fassung des Prompts —
-  // die Prüfung läuft deshalb auf jede Antwort, unabhängig davon, ob
-  // isExplicitAdviceRequest zusätzlich zutrifft (bleibt für Logging/
-  // Diagnose erhalten, siehe adviceGuard.ts).
+  // Antwort eine vorläufige Position ("Meine vorläufige Empfehlung ist..."),
+  // nicht mehr nur bei ausdrücklicher Nachfrage wie in einer früheren
+  // Fassung des Prompts — die Prüfung läuft deshalb auf jede Antwort,
+  // unabhängig davon, ob isExplicitAdviceRequest zusätzlich zutrifft (bleibt
+  // nur für Logging/Diagnose erhalten, siehe adviceGuard.ts).
   const lastUserMessage = [...history].reverse().find((m) => m.role === 'user')
   const adviceWasRequested = !!lastUserMessage && isExplicitAdviceRequest(lastUserMessage.content)
 
-  if (isEvasiveReply(result.reply)) {
+  let result = await callOnce()
+  const MAX_REINFORCED_ATTEMPTS = 2
+
+  for (let attempt = 1; attempt <= MAX_REINFORCED_ATTEMPTS && isEvasiveReply(result.reply); attempt++) {
     log?.(
       `TEI chat: keine erkennbare vorläufige Einschätzung in der Antwort${
         adviceWasRequested ? ' (trotz expliziter Nachfrage)' : ''
-      } — fordere automatisch strenger nach.`,
+      } — Nachforderungs-Versuch ${attempt}/${MAX_REINFORCED_ATTEMPTS}.`,
     )
-    return callOnce(ADVICE_REINFORCEMENT)
+    // Der letzte Versuch läuft mit niedrigerer Temperatur, um deterministischer
+    // der Anweisung zu folgen, statt erneut auf Sampling-Varianz zu hoffen.
+    const temperature = attempt === MAX_REINFORCED_ATTEMPTS ? 0.2 : undefined
+    result = await callOnce(ADVICE_REINFORCEMENT, temperature)
   }
 
   return result
