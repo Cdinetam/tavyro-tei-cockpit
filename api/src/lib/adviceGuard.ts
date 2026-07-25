@@ -62,40 +62,73 @@ const COMMITMENT_PATTERNS: RegExp[] = [
   /diese\s+schlussfolgerung\s+w[üu]rde\s+ich/i,
 ]
 
-// Exakt die Eröffnungsformulierungen, die Punkt 1 des Steuerungsblocks
-// ("Bereits die erste Antwort muss substanziell sein") ausdrücklich
-// verbietet — inklusive "Sie befinden sich in einer komplexen Situation",
-// die live tatsächlich als Antwort-Eröffnung aufgetreten ist. Nur am Anfang
-// der Antwort geprüft (die ersten ca. 80 Zeichen), da es hier konkret um
-// den ERSTEN Satz geht, nicht um das gelegentliche Vorkommen dieser Wörter
-// später im Text.
-const BANNED_OPENER_PATTERNS: RegExp[] = [
-  /^.{0,10}es\s+klingt,?\s+als\s+ob/i,
-  /^.{0,10}es\s+scheint,?\s+als\s+ob/i,
-  /^.{0,10}es\s+ist\s+verst[äa]ndlich/i,
-  /^.{0,10}sie\s+befinden\s+sich\s+in\s+einer\s+komplexen\s+situation/i,
-  /^.{0,10}vielleicht\s+(k[öo]nnte\s+es\s+)?hilft?/i,
+// Die von Punkt 1 des Steuerungsblocks ausdrücklich verbotenen
+// Formulierungen ("Was du vermeiden musst" verbietet sie zusätzlich ganz
+// generell, nicht nur als Opener). Live hat sich gezeigt, dass diese
+// Phrasen nicht nur als allererster Satz auftreten, sondern auch als
+// Eröffnung eines späteren Unterabschnitts ("Zunächst zum CFO: Es klingt,
+// als ob...") — deshalb wird der GESAMTE Text geprüft, nicht nur der
+// Anfang.
+const BANNED_PHRASE_PATTERNS: RegExp[] = [
+  /es\s+klingt,?\s+als\s+ob/i,
+  /es\s+scheint,?\s+als\s+ob/i,
+  /es\s+ist\s+verst[äa]ndlich/i,
+  /vielleicht\s+(k[öo]nnte\s+es\s+)?hilft?/i,
 ]
 
-/** Erkennt, ob eine Antwort mit einer der explizit verbotenen
- * Eröffnungsformulierungen beginnt (Steuerungsblock Punkt 1). */
+// "Komplexe Situation" als generischer Öffner tritt in vielen leicht
+// unterschiedlichen Verb-Varianten auf ("Sie befinden sich in...", "Sie
+// stehen vor...", "Sie sind in..." usw.) — statt jede Variante einzeln zu
+// listen, wird das Nomen selbst nahe am Anfang der Antwort geprüft, da es
+// dort praktisch immer denselben ausweichenden Öffner markiert.
+const GENERIC_OPENER_NEAR_START = /^.{0,60}komplexe[nr]?\s+situation/i
+
+/** Erkennt, ob eine Antwort eine der explizit verbotenen Formulierungen
+ * enthält (irgendwo im Text) oder mit dem generischen "komplexe
+ * Situation"-Muster beginnt (Steuerungsblock Punkt 1 / "Was du vermeiden
+ * musst"). */
 export function hasBannedOpener(reply: string): boolean {
-  const opening = reply.slice(0, 80)
-  return BANNED_OPENER_PATTERNS.some((re) => re.test(opening))
+  if (GENERIC_OPENER_NEAR_START.test(reply)) return true
+  return BANNED_PHRASE_PATTERNS.some((re) => re.test(reply))
 }
 
-/** Erkennt, ob eine Antwort ausweichend ist: entweder weil sie mit einer
- * ausdrücklich verbotenen Formulierung beginnt (siehe hasBannedOpener),
- * oder weil sie keine erkennbare eigene Tendenz enthält. Letzteres bewusst
- * NICHT über eine Liste bekannter Ausweich-Formulierungen definiert (z.B.
- * "das hängt davon ab") — das erwies sich als zu brüchig, weil dieselbe
- * Ausweich-Absicht in zu vielen leicht unterschiedlichen Formulierungen
- * auftritt ("könnte hilfreich sein" vs. "könnte es hilfreich sein" vs.
- * "wäre vielleicht hilfreich" usw.). Stattdessen die robustere, umgekehrte
- * Prüfung: fehlt jede erkennbare Festlegung, gilt die Antwort als
- * ausweichend — unabhängig davon, WIE sie ausweicht. */
+// Abstrakte Massnahmen, die Punkt 10 des Steuerungsblocks nur zulässt, wenn
+// sie konkretisiert werden (mit wem, worüber, bis wann, welche Kriterien,
+// welche Konsequenz). Bewusst als grober Signalgeber behandelt: schon die
+// blosse Verwendung dieser Formulierungen ist meistens ein Zeichen, dass
+// die Konkretisierung fehlt — ein gelegentlicher False Positive (eine
+// bereits konkretisierte Stelle löst trotzdem einen Retry aus) kostet nur
+// etwas Latenz, keine inhaltliche Qualität.
+const VAGUE_ACTION_PATTERNS: RegExp[] = [
+  /(ein\s+)?(kl[äa]rendes|ehrliches|offenes)\s+gespr[äa]ch\s+(zu\s+)?f[üu]hren/i,
+  /transparent\s+(zu\s+)?kommunizieren/i,
+  /erwartungen\s+(zu\s+)?kl[äa]ren/i,
+  /langfristige\s+ziele\s+(zu\s+)?ber[üu]cksichtigen/i,
+  /vor-?\s*und\s+nachteile\s+(ab)?w[äa]gen/i,
+]
+
+/** Erkennt, ob eine Antwort eine der nicht-konkretisierten Pauschal-
+ * Empfehlungen enthält, die Punkt 10 des Steuerungsblocks ohne
+ * Konkretisierung verbietet. */
+export function hasVagueUnconcretizedAction(reply: string): boolean {
+  return VAGUE_ACTION_PATTERNS.some((re) => re.test(reply))
+}
+
+/** Erkennt, ob eine Antwort ausweichend ist: entweder weil sie eine
+ * ausdrücklich verbotene Formulierung enthält (siehe hasBannedOpener), weil
+ * sie eine nicht-konkretisierte Pauschal-Empfehlung enthält (siehe
+ * hasVagueUnconcretizedAction), oder weil sie keine erkennbare eigene
+ * Tendenz enthält. Letzteres bewusst NICHT über eine Liste bekannter
+ * Ausweich-Formulierungen definiert (z.B. "das hängt davon ab") — das
+ * erwies sich als zu brüchig, weil dieselbe Ausweich-Absicht in zu vielen
+ * leicht unterschiedlichen Formulierungen auftritt ("könnte hilfreich
+ * sein" vs. "könnte es hilfreich sein" vs. "wäre vielleicht hilfreich"
+ * usw.). Stattdessen die robustere, umgekehrte Prüfung: fehlt jede
+ * erkennbare Festlegung, gilt die Antwort als ausweichend — unabhängig
+ * davon, WIE sie ausweicht. */
 export function isEvasiveReply(reply: string): boolean {
   if (hasBannedOpener(reply)) return true
+  if (hasVagueUnconcretizedAction(reply)) return true
   return !COMMITMENT_PATTERNS.some((re) => re.test(reply))
 }
 
