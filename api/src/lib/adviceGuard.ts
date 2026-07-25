@@ -76,12 +76,17 @@ const BANNED_PHRASE_PATTERNS: RegExp[] = [
   /vielleicht\s+(k[öo]nnte\s+es\s+)?hilft?/i,
 ]
 
-// "Komplexe Situation" als generischer Öffner tritt in vielen leicht
+// "Komplexe Situation" als generischer Öffner tritt sowohl in vielen
 // unterschiedlichen Verb-Varianten auf ("Sie befinden sich in...", "Sie
-// stehen vor...", "Sie sind in..." usw.) — statt jede Variante einzeln zu
-// listen, wird das Nomen selbst nahe am Anfang der Antwort geprüft, da es
-// dort praktisch immer denselben ausweichenden Öffner markiert.
-const GENERIC_OPENER_NEAR_START = /^.{0,60}komplexe[nr]?\s+situation/i
+// stehen vor...", "Sie sind in...") als auch mit unterschiedlichen Nomen
+// ("Situation", "Herausforderung", "Lage" — live beobachtet: das Modell
+// weicht bei einem verbotenen Nomen einfach auf ein Synonym aus). Statt
+// Verb UND Nomen einzeln zu listen, wird die Kombination aus einem
+// "komplex/vielschichtig/schwierig"-Adjektiv und einem der gängigen Nomen
+// nahe am Anfang der Antwort geprüft — das ist die eigentliche Struktur des
+// ausweichenden Öffners, unabhängig vom genauen Wortlaut drumherum.
+const GENERIC_OPENER_NEAR_START =
+  /^.{0,70}(komplexe[nr]?|vielschichtige[nr]?|schwierige[nr]?|herausfordernde[nr]?)\s+(situation|herausforderung|lage|konstellation|gemengelage|ausgangslage)/i
 
 /** Erkennt, ob eine Antwort eine der explizit verbotenen Formulierungen
  * enthält (irgendwo im Text) oder mit dem generischen "komplexe
@@ -99,10 +104,16 @@ export function hasBannedOpener(reply: string): boolean {
 // die Konkretisierung fehlt — ein gelegentlicher False Positive (eine
 // bereits konkretisierte Stelle löst trotzdem einen Retry aus) kostet nur
 // etwas Latenz, keine inhaltliche Qualität.
+// Bewusst wortstellungs-unabhängig gehalten (kein "X gefolgt von Y"-Zwang):
+// live hat sich gezeigt, dass z.B. "Führen Sie ein offenes Gespräch..."
+// (Verb zuerst) genauso vorkommt wie "ein offenes Gespräch führen" (Verb
+// zuletzt) — die blosse Kombination aus Adjektiv und "Gespräch" ist schon
+// der eigentliche Signalgeber, unabhängig von der Satzstellung.
 const VAGUE_ACTION_PATTERNS: RegExp[] = [
-  /(ein\s+)?(kl[äa]rendes|ehrliches|offenes)\s+gespr[äa]ch\s+(zu\s+)?f[üu]hren/i,
+  /(kl[äa]rendes|ehrliches|offenes)\s+gespr[äa]ch/i,
   /transparent\s+(zu\s+)?kommunizieren/i,
   /erwartungen\s+(zu\s+)?kl[äa]ren/i,
+  /kl[äa]ren\s+sie\s+.{0,20}erwartungen/i,
   /langfristige\s+ziele\s+(zu\s+)?ber[üu]cksichtigen/i,
   /vor-?\s*und\s+nachteile\s+(ab)?w[äa]gen/i,
 ]
