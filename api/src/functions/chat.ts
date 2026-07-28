@@ -115,7 +115,20 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   const exempt = isUnlimitedIp(quotaKey)
 
   if (isFirstTurn && !exempt) {
-    const used = await getUsageCount(quotaKey)
+    // Der Kontingent-Check läuft bewusst in einem eigenen try/catch statt
+    // ungeschützt: ein Aussetzer in der Table-Storage-Anbindung (Netzwerk,
+    // Drosselung o.ä.) darf nicht die gesamte Anfrage mit einem nackten,
+    // nicht abgefangenen 500 ohne jede Nachricht zum Absturz bringen — live
+    // beobachtet. Fällt der Check aus, wird bewusst "offen" fehlgeschlagen
+    // (Anfrage durchgelassen): eine echte Person nicht wegen eines
+    // Infrastruktur-Hakelers zu blockieren wiegt schwerer als ein einzelnes,
+    // eventuell nicht gezähltes Gespräch.
+    let used = 0
+    try {
+      used = await getUsageCount(quotaKey)
+    } catch (err) {
+      context.error('TEI chat: Kontingent-Prüfung fehlgeschlagen, lasse Anfrage durch', err)
+    }
     if (used >= limit) {
       return {
         status: 200,
@@ -137,13 +150,26 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
     const cliffhanger = topicTurnHint >= CLIFFHANGER_TOPIC_TURN_THRESHOLD || result.themenwechsel
 
     if (isFirstTurn && !exempt) {
-      await recordUsage(quotaKey)
-      await notify({
-        kind: 'chat',
-        sessionId,
-        question: lastMessage.content,
-        personName: access.ownerName ?? undefined,
-      })
+      // Ebenfalls eigens abgefangen: eine bereits erfolgreich erzeugte,
+      // reale (kostenpflichtige) Antwort darf nicht an den Absender
+      // verlorengehen, nur weil das Verbuchen des Kontingents danach
+      // fehlschlägt — das würde die Person doppelt bestrafen (Antwort weg
+      // UND Kontingent evtl. trotzdem verbraucht).
+      try {
+        await recordUsage(quotaKey)
+      } catch (err) {
+        context.error('TEI chat: Kontingent-Verbuchung fehlgeschlagen (Zählung evtl. ungenau)', err)
+      }
+      try {
+        await notify({
+          kind: 'chat',
+          sessionId,
+          question: lastMessage.content,
+          personName: access.ownerName ?? undefined,
+        })
+      } catch (err) {
+        context.error('TEI chat: Benachrichtigung fehlgeschlagen', err)
+      }
     }
 
     return {

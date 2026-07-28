@@ -66,7 +66,17 @@ export async function analyze(req: HttpRequest, context: InvocationContext): Pro
   const quotaKey = getClientIp(req)
   const limit = getWeeklyLimit()
   const exempt = isUnlimitedIp(quotaKey)
-  const used = exempt ? 0 : await getUsageCount(quotaKey)
+  // Siehe chat.ts für die Begründung: ein Aussetzer in der Storage-
+  // Anbindung darf nicht die ganze Anfrage mit einem nackten 500 zum
+  // Absturz bringen — bei Fehlschlag wird bewusst "offen" fehlgeschlagen.
+  let used = 0
+  if (!exempt) {
+    try {
+      used = await getUsageCount(quotaKey)
+    } catch (err) {
+      context.error('TEI analyze: Kontingent-Prüfung fehlgeschlagen, lasse Anfrage durch', err)
+    }
+  }
 
   if (!exempt && used >= limit) {
     return {
