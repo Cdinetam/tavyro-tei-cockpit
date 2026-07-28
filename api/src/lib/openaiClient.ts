@@ -169,6 +169,17 @@ async function callChatReplyCompletion(
     body.response_format = { type: 'json_object' }
   }
 
+  // Harte Obergrenze für EINEN einzelnen Azure-OpenAI-Aufruf: ohne dieses
+  // Limit könnte ein einzelner hängender/langsamer Call für sich allein
+  // schon das kurze Timeout der Azure-SWA-verwalteten Function reissen,
+  // bevor die Zeitbudget-Prüfung in requestChatReply überhaupt zwischen
+  // zwei Versuchen greifen kann (die prüft nur VOR jedem Retry, nicht
+  // während eines laufenden Calls). Läuft der Call in dieses Timeout,
+  // wirft fetch einen AbortError, den der Aufrufer wie jeden anderen Fehler
+  // behandelt (Fallback auf json_object bzw. abschliessendes catch in
+  // chat.ts → 502 mit Nachricht statt eines nackten, leeren 500ers).
+  const SINGLE_CALL_TIMEOUT_MS = Number(process.env.CHAT_REPLY_CALL_TIMEOUT_MS ?? '15000')
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -176,6 +187,7 @@ async function callChatReplyCompletion(
       'api-key': config.apiKey,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(SINGLE_CALL_TIMEOUT_MS),
   })
 
   if (!response.ok) {
@@ -253,10 +265,37 @@ export async function requestChatReply(
   const lastUserMessage = [...history].reverse().find((m) => m.role === 'user')
   const adviceWasRequested = !!lastUserMessage && isExplicitAdviceRequest(lastUserMessage.content, lang)
 
+  // Zeitbudget für die GESAMTE Funktion (Erstversuch + alle Nachforderungs-
+  // Versuche zusammen): Azure Static Web Apps' verwaltete Functions laufen
+  // hinter einem Reverse Proxy mit einem deutlich kürzeren Hard-Timeout als
+  // eine reguläre Function App (die dort übliche 5-Minuten-Grenze gilt hier
+  // NICHT). Bis zu drei sequenzielle Azure-OpenAI-Aufrufe (Erstversuch + 2
+  // Nachforderungen, siehe unten) können dieses Timeout in Summe reissen —
+  // live als nackter, leerer 500er beobachtet (kein try/catch im Aufrufer
+  // kann das abfangen, da der Prozess von aussen beendet wird, bevor die
+  // Antwort geschrieben ist). Wird das Budget während der Retry-Schleife
+  // überschritten, bricht die Schleife sofort ab und die bislang letzte
+  // Antwort geht (nach der ohnehin folgenden mechanischen Absicherung
+  // weiter unten) zurück, statt einen weiteren, das Timeout riskierenden
+  // Aufruf zu starten. Über Env-Variable konfigurierbar für den Fall, dass
+  // sich das Plattform-Timeout ändert.
+  const startedAt = Date.now()
+  const TIME_BUDGET_MS = Number(process.env.CHAT_REPLY_TIME_BUDGET_MS ?? '20000')
+
   let result = await callOnce()
   const MAX_REINFORCED_ATTEMPTS = 2
 
-  for (let attempt = 1; attempt <= MAX_REINFORCED_ATTEMPTS && needsReinforcedRetry(result.reply, lang); attempt++) {
+  for (
+    let attempt = 1;
+    attempt <= MAX_REINFORCED_ATTEMPTS && needsReinforcedRetry(result.reply, lang);
+    attempt++
+  ) {
+    if (Date.now() - startedAt >= TIME_BUDGET_MS) {
+      log?.(
+        `TEI chat: Zeitbudget (${TIME_BUDGET_MS}ms) vor Nachforderungs-Versuch ${attempt}/${MAX_REINFORCED_ATTEMPTS} erreicht — Antwort wird ohne weiteren Versuch mechanisch abgesichert zurückgegeben (Plattform-Timeout-Schutz).`,
+      )
+      break
+    }
     const reason = isEvasiveReply(result.reply, lang)
       ? 'keine erkennbare vorläufige Einschätzung in der Antwort'
       : 'verbotene Listen-/Aufzählungs-Formatierung in der Antwort'
