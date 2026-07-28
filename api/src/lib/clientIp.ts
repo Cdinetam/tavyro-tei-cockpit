@@ -9,15 +9,37 @@ import type { HttpRequest } from '@azure/functions'
  * wird ein fester Platzhalter genutzt, der dann wie ein einzelner
  * gemeinsamer Zähler wirkt.
  */
+/**
+ * Entfernt einen angehängten Portanteil von einer IP-Adresse, z.B.
+ * "83.78.242.147:50290" -> "83.78.242.147". Live über /api/quota-debug
+ * beobachtet: der x-forwarded-for-Header hinter Azure Static Web Apps
+ * enthält offenbar IP:Port statt nur der IP — ohne diese Bereinigung würde
+ * praktisch jede Anfrage desselben Besuchers als "neue" IP gezählt (der
+ * Port wechselt pro Verbindung), das Wochenlimit hätte dadurch nie
+ * zuverlässig greifen können. IPv6-Adressen (mit mehreren Doppelpunkten,
+ * ggf. in eckigen Klammern samt Port) werden bewusst nicht angefasst, ausser
+ * sie liegen explizit in der Klammer-Notation "[...]:port" vor.
+ */
+function stripPort(ip: string): string {
+  const bracketed = ip.match(/^\[(.+)\]:\d+$/)
+  if (bracketed) return bracketed[1]
+
+  const colonCount = (ip.match(/:/g) ?? []).length
+  if (colonCount === 1 && ip.includes('.')) {
+    return ip.split(':')[0]
+  }
+  return ip
+}
+
 export function getClientIp(req: HttpRequest): string {
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) {
     const first = forwarded.split(',')[0]?.trim()
-    if (first) return first
+    if (first) return stripPort(first)
   }
 
   const alt = req.headers.get('x-client-ip') ?? req.headers.get('x-real-ip')
-  if (alt) return alt.trim()
+  if (alt) return stripPort(alt.trim())
 
   return 'unknown-ip'
 }
