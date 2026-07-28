@@ -12,7 +12,7 @@ interface LeadRequestBody {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function lead(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-  const access = checkAccessCode(req)
+  const access = await checkAccessCode(req)
   if (access.denied) return access.denied
 
   let body: LeadRequestBody

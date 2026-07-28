@@ -53,6 +53,34 @@ export async function verifyAccessCode(code: string): Promise<boolean> {
   }
 }
 
+/**
+ * Fordert automatisch einen Zugangscode für die aktuelle IP-Adresse an
+ * (siehe api/src/functions/autoAccess.ts) — ersetzt den manuellen "E-Mail an
+ * hello@tavyro.ch"-Umweg auf der Zugangscode-Gate-Seite (AccessGate.tsx).
+ * Liefert bei Erfolg direkt einen gültigen Code zurück, der wie ein normal
+ * eingegebener Code gespeichert und verwendet wird.
+ */
+export async function requestAutoAccess(): Promise<{ status: 'ok'; code: string } | { status: 'error'; message: string }> {
+  if (!API_BASE_URL) {
+    // Mock-Modus: sofortiger Fake-Code, kein Backend nötig.
+    return { status: 'ok', code: 'mock-auto-access' }
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auto-access`, { method: 'POST' })
+    if (!response.ok) {
+      return { status: 'error', message: 'Automatische Freischaltung ist gerade nicht möglich.' }
+    }
+    const data = (await response.json()) as { status: string; code?: string }
+    if (!data.code) {
+      return { status: 'error', message: 'Automatische Freischaltung ist gerade nicht möglich.' }
+    }
+    return { status: 'ok', code: data.code }
+  } catch {
+    return { status: 'error', message: 'Automatische Freischaltung ist gerade nicht möglich.' }
+  }
+}
+
 export async function analyzeQuestion(question: string): Promise<AnalyzeResponse> {
   if (!API_BASE_URL) {
     const result = await mockAnalyze(question)

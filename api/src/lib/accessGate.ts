@@ -1,31 +1,40 @@
 import type { HttpRequest, HttpResponseInit } from '@azure/functions'
 import { resolveAccessCode, isAccessControlEnabled } from './accessCodes.js'
+import { resolveIssuedCode } from './issuedCodesStore.js'
 
 export interface AccessCheckResult {
   denied: HttpResponseInit | null
-  /** Name der Person laut PILOT_ACCESS_CODES, falls Zugangskontrolle aktiv ist. */
+  /** Name der Person laut PILOT_ACCESS_CODES ODER automatisch vergebener
+   * Besucher-Name (siehe issuedCodesStore.ts), falls Zugangskontrolle aktiv
+   * ist. */
   ownerName: string | null
   /** Der geprüfte Code selbst, als Schlüssel für das Nutzungslimit. */
   code: string
 }
 
 /**
- * Leichte, aber echte Zugangskontrolle für eine kontrollierte Pilotphase
- * mit individuell eingeladenen Personen. Kein vollwertiges Login, sondern
- * ein persönlicher Code pro Person (siehe accessCodes.ts) — passt zur
- * "persönliche Ansprache statt Funnel"-Philosophie des Produkts.
+ * Leichte, aber echte Zugangskontrolle für eine kontrollierte Pilotphase.
+ * Kein vollwertiges Login, sondern entweder ein persönlicher Code pro
+ * eingeladener Person (siehe accessCodes.ts, PILOT_ACCESS_CODES) ODER ein
+ * automatisch vergebener Code pro IP-Adresse (siehe issuedCodesStore.ts,
+ * AccessGate.tsx → "Direkt freischalten") für Besucher ohne persönlichen
+ * Code — ersetzt den früheren manuellen "E-Mail an hello@tavyro.ch"-Umweg.
+ * Statische Codes haben Vorrang, falls ein Code zufällig in beiden Listen
+ * vorkäme.
  *
- * Ist PILOT_ACCESS_CODES nicht gesetzt, ist die Prüfung deaktiviert — so
- * bleibt lokale Entwicklung ohne Zusatzschritt möglich.
+ * Ist PILOT_ACCESS_CODES nicht gesetzt, ist die gesamte Prüfung deaktiviert
+ * — so bleibt lokale Entwicklung ohne Zusatzschritt möglich.
  */
-export function checkAccessCode(req: HttpRequest): AccessCheckResult {
+export async function checkAccessCode(req: HttpRequest): Promise<AccessCheckResult> {
   const providedCode = req.headers.get('x-tei-access-code') ?? ''
 
   if (!isAccessControlEnabled()) {
     return { denied: null, ownerName: null, code: providedCode }
   }
 
-  const ownerName = resolveAccessCode(providedCode)
+  const staticOwnerName = resolveAccessCode(providedCode)
+  const ownerName = staticOwnerName ?? (providedCode ? await resolveIssuedCode(providedCode) : null)
+
   if (!ownerName) {
     return {
       denied: {

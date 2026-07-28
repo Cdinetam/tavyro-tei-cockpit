@@ -33,7 +33,7 @@ const MAX_MESSAGE_LENGTH = 2000
 const CLIFFHANGER_TOPIC_TURN_THRESHOLD = 5
 
 export async function chat(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-  const access = checkAccessCode(req)
+  const access = await checkAccessCode(req)
   if (access.denied) return access.denied
 
   let body: ChatRequestBody

@@ -50,6 +50,9 @@ interface Copy {
     checking: string
     submit: string
     footer: string
+    autoAccessCta: string
+    autoAccessChecking: string
+    autoAccessError: string
   }
   header: {
     ariaHome: string
@@ -120,12 +123,15 @@ const de: Copy = {
     kicker: 'Vertrauliche Pilotphase',
     heading: 'Diese Vorschau ist auf ausgewählte Kontakte begrenzt.',
     body: 'Den Zugangscode haben Sie von Tam Nguyen persönlich erhalten.',
-    noCode: 'Kein Zugangscode? Kontakt: hello@tavyro.ch',
+    noCode: 'Kein Zugangscode?',
     inputPlaceholder: 'Zugangscode',
     invalidCode: 'Dieser Code ist nicht gültig. Bitte prüfen Sie Gross-/Kleinschreibung.',
     checking: 'Wird geprüft…',
     submit: 'Zugang bestätigen',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    autoAccessCta: 'Direkt freischalten →',
+    autoAccessChecking: 'Wird freigeschaltet…',
+    autoAccessError: 'Automatische Freischaltung ist gerade nicht möglich. Bitte in Kürze erneut versuchen.',
   },
   header: {
     ariaHome: 'Zur Startseite',
@@ -214,12 +220,15 @@ const en: Copy = {
     kicker: 'Confidential pilot phase',
     heading: 'This preview is limited to selected contacts.',
     body: 'You received your access code personally from Tam Nguyen.',
-    noCode: "Don't have an access code? Contact: hello@tavyro.ch",
+    noCode: "Don't have an access code?",
     inputPlaceholder: 'Access code',
     invalidCode: 'This code is not valid. Please check upper/lower case.',
     checking: 'Checking…',
     submit: 'Confirm access',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    autoAccessCta: 'Unlock instantly →',
+    autoAccessChecking: 'Unlocking…',
+    autoAccessError: 'Instant unlock is not available right now. Please try again shortly.',
   },
   header: {
     ariaHome: 'Back to homepage',

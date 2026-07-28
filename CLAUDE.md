@@ -80,6 +80,35 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   synchron gehalten werden, siehe Kommentar dort).
 - `public/tavyro-logo.png` — TaVyro-Logo, Claim-Text ("People |
   Organisation | Impact") in Hellgold für Lesbarkeit auf Nachtblau-Hintergrund.
+- **Englische Demo-Version** (`/en`, `/en/gespraech`): eigener Pfad-Präfix
+  statt reiner In-App-Umschaltung, damit die EN-Version direkt verlinkbar
+  ist. `src/lib/i18n.ts` (`getCopy`, `getLangFromPath`, `hasEnPrefix`,
+  `BOOKING_URL`) ist das zentrale Wörterbuch für alle UI-Texte inkl.
+  `AccessGate.tsx`. Die KI selbst antwortet im EN-Modus auch wirklich auf
+  Englisch: `api/src/lib/prompt.ts` → `CHAT_SYSTEM_PROMPT_EN` (eigenständige
+  Übersetzung/Adaption, kein Laufzeit-Übersetzer) plus `lang`-Parameter, der
+  vom Client mitgeschickt wird (`sendChatMessage`/`useTrustRoomChat`) bis zu
+  `requestChatReply`. `api/src/lib/adviceGuard.ts` hat dafür komplett
+  eigene englische Regex-Sätze (`*_EN`-Varianten) — deutsche und englische
+  Muster driften bewusst unabhängig auseinander, siehe dortige Kommentare
+  zu wiederholt entdeckten Lücken (neue Adjektive/Synonyme bei generischen
+  Öffnern, verbotene "1. 2. 3."-Listenformatierung v.a. auf Englisch
+  beobachtet).
+- **Automatische Zugangscode-Vergabe** (`AccessGate.tsx` → "Direkt
+  freischalten"): ersetzt den früheren manuellen "E-Mail an
+  hello@tavyro.ch"-Umweg für Besucher ohne persönlichen Code. Vergibt pro
+  IP-Adresse automatisch einen fortlaufend nummerierten Code (`auto-014`
+  o.ä., siehe `api/src/lib/issuedCodesStore.ts`, Endpoint
+  `POST /api/auto-access`), dauerhaft gültig für diese IP, persistiert in
+  derselben Table-Storage-Verbindung wie das Nutzungslimit
+  (`QUOTA_STORAGE_CONNECTION_STRING`). Zählt danach normal gegen
+  `PILOT_WEEKLY_LIMIT`, löst bei Erstvergabe eine `notify()`-Benachrichtigung
+  aus (Kind `"access"`). `api/src/lib/accessGate.ts` (`checkAccessCode`) ist
+  seit dieser Änderung `async` — prüft zuerst die statische
+  `PILOT_ACCESS_CODES`-Liste, dann `issuedCodesStore.ts` als Fallback. Die
+  Gate-Seite zeigt weiterhin bewusst "Vertrauliche Pilotphase / auf
+  ausgewählte Kontakte begrenzt" (Produktentscheidung, obwohl technisch
+  jeder Besucher sich selbst freischalten kann).
 
 ## Bekannte offene Punkte
 

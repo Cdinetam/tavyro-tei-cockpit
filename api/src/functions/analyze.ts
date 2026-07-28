@@ -16,7 +16,7 @@ const MIN_QUESTION_LENGTH = 8
 const MAX_QUESTION_LENGTH = 800
 
 export async function analyze(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-  const access = checkAccessCode(req)
+  const access = await checkAccessCode(req)
   if (access.denied) return access.denied
 
   if (isDemoExpired()) {

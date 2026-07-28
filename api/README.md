@@ -105,6 +105,19 @@ Umgebungsvariablen-UI mit einem Fehler ab.
 `{"name": "...", "code": "..."}` ergänzen. Auf Azure: in den Application
 Settings der Static Web App den Wert aktualisieren, kein Redeploy nötig.
 
+**Automatische Zugangscode-Vergabe ohne persönlichen Code:** Besucher ohne
+Code müssen nicht mehr manuell per E-Mail an hello@tavyro.ch nachfragen —
+auf der Gate-Seite (`AccessGate.tsx`) können sie über "Direkt freischalten"
+sofort einen automatisch vergebenen, fortlaufend nummerierten Code erhalten
+(z.B. `auto-014`, siehe `src/lib/issuedCodesStore.ts` und
+`POST /api/auto-access`). Ein Code pro IP-Adresse, dauerhaft gültig,
+persistiert in derselben Table-Storage-Verbindung wie das Nutzungslimit
+(`QUOTA_STORAGE_CONNECTION_STRING`) — zählt danach ganz normal gegen
+`PILOT_WEEKLY_LIMIT`. Bei jedem neu vergebenen Code (nicht bei
+Wiederholungsaufrufen derselben IP) geht eine Benachrichtigung an
+`NOTIFY_WEBHOOK_URL` (Kind `"access"`, siehe `notify.ts`), damit Tam
+trotzdem sieht, wer über diesen Weg reinkommt.
+
 ## Bekannte Grenze: Session-Store
 
 `sessionStore.ts` hält das Limit aktuell in einer In-Memory-Map — reicht für
