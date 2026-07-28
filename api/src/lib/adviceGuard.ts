@@ -229,6 +229,49 @@ export function stripLeadingBannedOpener(reply: string, lang: GuardLang = 'de'):
   return trimmedRest.charAt(0).toUpperCase() + trimmedRest.slice(1)
 }
 
+// Verbotene Listen-Formatierung ("-, *, 1., 2." laut FORMAT-Regel im
+// System-Prompt) — live beobachtet: die deutsche Antwort hält sich
+// zuverlässig an Fliesstext, die englische Antwort rutscht bei
+// "Sequence of action"/"next steps" auffällig oft in eine sichtbare
+// nummerierte Liste ("1. ... 2. ... 3. ...") ab, obwohl exakt dieselbe
+// FORMAT-Regel (nur übersetzt) auch dort steht. Sprachunabhängig geprüft,
+// da es reine Zeichen-/Formatierungserkennung ist, kein Sprachmuster.
+const LIST_MARKER_PATTERN = /(^|\n)[ \t]*(?:[-*]|\d+[.)])[ \t]+/g
+
+/** Erkennt, ob eine Antwort eine verbotene Aufzählungs-/Nummerierungs-
+ * Formatierung enthält (Bindestrich, Stern oder "1."/"1)" am Zeilenanfang) —
+ * das Feld "reply" wird im Frontend als reiner Fliesstext gerendert
+ * (whitespace-pre-line), eine sichtbare Nummerierung sieht dort kaputt statt
+ * gestylt aus. */
+export function hasListFormatting(reply: string): boolean {
+  LIST_MARKER_PATTERN.lastIndex = 0
+  return LIST_MARKER_PATTERN.test(reply)
+}
+
+/** Kombinierte Prüfung, ob eine Antwort einen weiteren Nachforderungs-
+ * Versuch auslösen sollte: entweder weil sie ausweichend ist (siehe
+ * isEvasiveReply) oder weil sie gegen die Fliesstext-Formatierungsregel
+ * verstösst (siehe hasListFormatting). Beide Gründe sind unabhängig
+ * voneinander möglich — eine Antwort kann inhaltlich vollständig
+ * entscheidungsfreudig sein und trotzdem eine verbotene Liste enthalten. */
+export function needsReinforcedRetry(reply: string, lang: GuardLang = 'de'): boolean {
+  return isEvasiveReply(reply, lang) || hasListFormatting(reply)
+}
+
+/**
+ * Letzte, deterministische Absicherung — analog zu
+ * stripLeadingBannedOpener, aber für Listen-Formatierung: entfernt nur die
+ * Aufzählungs-/Nummerierungs-Zeichen am Zeilenanfang, behält Zeilenumbrüche
+ * und den restlichen Text unverändert bei. Kein Versuch, die Sätze zu einem
+ * einzigen Fliesstext-Absatz zusammenzuführen (zu fehleranfällig ohne
+ * weiteren Modell-Aufruf) — das Ergebnis liest sich als mehrere kurze,
+ * durch Zeilenumbruch getrennte Sätze, was die bestehende
+ * whitespace-pre-line-Darstellung im Frontend weiterhin sauber anzeigt.
+ */
+export function stripListMarkers(reply: string): string {
+  return reply.replace(LIST_MARKER_PATTERN, '$1')
+}
+
 /** Wird als zusätzlicher, nur für den Nachforderungs-Versuch geltender
  * Hinweis an den System-Prompt angehängt (siehe requestChatReply). */
 export const ADVICE_REINFORCEMENT_DE = `VERSTÄRKUNGS-HINWEIS FÜR DIESEN NACHFORDERUNGS-VERSUCH (interner Kontext,
@@ -245,7 +288,11 @@ Verpflichtung eingehen ..."), gefolgt von einer kurzen, konkreten
 Begründung, die sich auf das bezieht, was die Person tatsächlich
 geschildert hat. Formuliere danach ggf. weiterhin die Reihenfolge der
 nächsten Schritte, eine Entscheidungsregel und höchstens eine
-Reflexionsfrage, wie in Punkt 11 der festen Antwortstruktur vorgesehen.`
+Reflexionsfrage, wie in Punkt 11 der festen Antwortstruktur vorgesehen.
+Schreibe die Reihenfolge der nächsten Schritte als Fliesstext in Sätzen
+("Zunächst ..., danach ..., abschliessend ...") — NICHT als sichtbare
+nummerierte Liste ("1. ... 2. ... 3. ...") oder Aufzählung mit Bindestrichen
+oder Sternen.`
 
 /** Englisches Pendant zu ADVICE_REINFORCEMENT_DE — Formulierungen müssen zu
  * den englischen COMMITMENT_PATTERNS_EN/BANNED_PHRASE_PATTERNS_EN passen. */
@@ -261,7 +308,10 @@ assumptions, I would ..." or "I would not yet make a long-term commitment
 ..."), followed by a short, concrete justification tied to what the person
 actually described. After that, continue as needed with the sequence of
 next steps, a decision rule, and at most one reflection question, as set
-out in point 11 of the fixed response structure.`
+out in point 11 of the fixed response structure.
+Write the sequence of next steps as flowing prose in sentences ("First, ...
+Next, ... Finally, ...") — NOT as a visible numbered list ("1. ... 2. ...
+3. ...") or a bullet list with dashes or asterisks.`
 
 /** Wählt den passenden Reinforcement-Text anhand der Sprache. */
 export function getAdviceReinforcement(lang: GuardLang = 'de'): string {

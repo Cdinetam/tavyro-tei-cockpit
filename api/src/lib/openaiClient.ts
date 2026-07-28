@@ -8,9 +8,12 @@ import {
 import { SYSTEM_PROMPT, buildUserPrompt, getChatSystemPrompt } from './prompt.js'
 import {
   getAdviceReinforcement,
+  hasListFormatting,
   isEvasiveReply,
   isExplicitAdviceRequest,
+  needsReinforcedRetry,
   stripLeadingBannedOpener,
+  stripListMarkers,
   type GuardLang,
 } from './adviceGuard.js'
 
@@ -253,9 +256,12 @@ export async function requestChatReply(
   let result = await callOnce()
   const MAX_REINFORCED_ATTEMPTS = 2
 
-  for (let attempt = 1; attempt <= MAX_REINFORCED_ATTEMPTS && isEvasiveReply(result.reply, lang); attempt++) {
+  for (let attempt = 1; attempt <= MAX_REINFORCED_ATTEMPTS && needsReinforcedRetry(result.reply, lang); attempt++) {
+    const reason = isEvasiveReply(result.reply, lang)
+      ? 'keine erkennbare vorläufige Einschätzung in der Antwort'
+      : 'verbotene Listen-/Aufzählungs-Formatierung in der Antwort'
     log?.(
-      `TEI chat: keine erkennbare vorläufige Einschätzung in der Antwort${
+      `TEI chat: ${reason}${
         adviceWasRequested ? ' (trotz expliziter Nachfrage)' : ''
       } — Nachforderungs-Versuch ${attempt}/${MAX_REINFORCED_ATTEMPTS}.`,
     )
@@ -265,18 +271,28 @@ export async function requestChatReply(
     result = await callOnce(getAdviceReinforcement(lang), temperature)
   }
 
-  // Letzte, deterministische Absicherung: bleibt die verbotene Eröffnung
-  // ("Sie stehen vor einer komplexen Situation" o.ä.) trotz aller
-  // Nachforderungs-Versuche im ersten Satz bestehen, wird sie mechanisch
-  // entfernt statt die Person damit zu konfrontieren — siehe
-  // stripLeadingBannedOpener in adviceGuard.ts für die Begründung.
-  if (isEvasiveReply(result.reply, lang)) {
-    const stripped = stripLeadingBannedOpener(result.reply, lang)
-    if (stripped !== result.reply) {
+  // Letzte, deterministische Absicherung: bleiben die verbotene Eröffnung
+  // ("Sie stehen vor einer komplexen Situation" o.ä.) oder eine verbotene
+  // Listen-Formatierung ("1. ... 2. ...") trotz aller Nachforderungs-
+  // Versuche bestehen, werden sie mechanisch entfernt statt die Person
+  // damit zu konfrontieren — siehe stripLeadingBannedOpener/
+  // stripListMarkers in adviceGuard.ts für die Begründung. Beide Prüfungen
+  // sind unabhängig voneinander möglich.
+  let finalReply = result.reply
+  if (isEvasiveReply(finalReply, lang)) {
+    const stripped = stripLeadingBannedOpener(finalReply, lang)
+    if (stripped !== finalReply) {
       log?.('TEI chat: verbotene Eröffnung auch nach Nachforderungs-Versuchen vorhanden — erster Satz mechanisch entfernt.')
-      result = { ...result, reply: stripped }
+      finalReply = stripped
+    }
+  }
+  if (hasListFormatting(finalReply)) {
+    const stripped = stripListMarkers(finalReply)
+    if (stripped !== finalReply) {
+      log?.('TEI chat: verbotene Listen-Formatierung auch nach Nachforderungs-Versuchen vorhanden — Aufzählungszeichen mechanisch entfernt.')
+      finalReply = stripped
     }
   }
 
-  return result
+  return { ...result, reply: finalReply }
 }
