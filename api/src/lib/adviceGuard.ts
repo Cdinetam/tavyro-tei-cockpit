@@ -123,16 +123,24 @@ const BANNED_PHRASE_PATTERNS_EN: RegExp[] = [
 // "herausforderung"/... ohne Leerzeichen dazwischen), ohne jedes mögliche
 // Präfix einzeln aufzählen zu müssen. Die Kombination aus Adjektiv und
 // Nomen-Stamm nahe am Anfang ist die eigentliche Struktur des ausweichenden
-// Öffners, unabhängig vom genauen Wortlaut drumherum.
+// Öffners, unabhängig vom genauen Wortlaut drumherum. Adjektiv-Klasse
+// bewusst grosszügig gehalten (auch "kritisch", "ernst", "heikel",
+// "sensibel", "angespannt", "brisant", "delikat" — live beobachtet:
+// "Sie stehen vor einer kritischen Situation" nutzte ein bis dahin nicht
+// erfasstes Adjektiv), da genau diese Adjektiv-für-Adjektiv-Lücke schon
+// mehrfach in dieser Sitzung neu auftrat.
 const GENERIC_OPENER_NEAR_START_DE =
-  /^.{0,70}(komplexe[nr]?|vielschichtige[nr]?|schwierige[nr]?|herausfordernde[nr]?)\s+\S*(situation|herausforderung|lage|konstellation|gemengelage)/i
+  /^.{0,70}(komplexe[nr]?|vielschichtige[nr]?|schwierige[nr]?|herausfordernde[nr]?|kritische[nr]?|ernste[nr]?|heikle[nr]?|sensible[nr]?|angespannte[nr]?|brisante[nr]?|delikate[nr]?)\s+\S*(situation|herausforderung|lage|konstellation|gemengelage)/i
 
 // Englisches Pendant — dieselbe Struktur (Adjektiv + evtl. zusammengesetztes
 // Nomen), auf die englischen Synonyme angepasst ("challenging situation",
 // "complex leadership challenge" usw.), inkl. der beiden gängigen
-// Verb-Einleitungen ("you're facing", "you are in").
+// Verb-Einleitungen ("you're facing", "you are in"). Adjektiv-Klasse
+// ebenfalls um dieselben Synonyme wie DE erweitert (critical/serious/
+// delicate/sensitive/tense), damit dieselbe Lücke nicht zuerst auf Englisch
+// auftaucht.
 const GENERIC_OPENER_NEAR_START_EN =
-  /^.{0,70}(complex|challenging|multifaceted|difficult)\s+\S*(situation|challenge|circumstance|predicament)/i
+  /^.{0,70}(complex|challenging|multifaceted|difficult|critical|serious|delicate|sensitive|tense)\s+\S*(situation|challenge|circumstance|predicament)/i
 
 /** Erkennt, ob eine Antwort eine der explizit verbotenen Formulierungen
  * enthält (irgendwo im Text) oder mit dem generischen "komplexe
