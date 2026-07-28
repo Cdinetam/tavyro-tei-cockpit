@@ -5,12 +5,13 @@ import {
   type ChatMessage,
   type ChatReplyResult,
 } from './schema.js'
-import { SYSTEM_PROMPT, buildUserPrompt, CHAT_SYSTEM_PROMPT } from './prompt.js'
+import { SYSTEM_PROMPT, buildUserPrompt, getChatSystemPrompt } from './prompt.js'
 import {
-  ADVICE_REINFORCEMENT,
+  getAdviceReinforcement,
   isEvasiveReply,
   isExplicitAdviceRequest,
   stripLeadingBannedOpener,
+  type GuardLang,
 } from './adviceGuard.js'
 
 interface AzureOpenAiConfig {
@@ -122,6 +123,7 @@ async function callChatReplyCompletion(
   history: ChatMessage[],
   topicTurnHint: number,
   useStructuredOutput: boolean,
+  lang: GuardLang,
   reinforcement?: string,
   temperature = 0.5,
 ): Promise<string> {
@@ -131,7 +133,11 @@ async function callChatReplyCompletion(
   // angehängt statt als eigene Chat-Nachricht eingefügt — so bleibt die
   // Nachrichtenliste sauber (System zuerst, dann abwechselnd User/Assistant)
   // und der Hinweis ist eindeutig dem aktuellen Turn zugeordnet.
-  let systemContent = `${CHAT_SYSTEM_PROMPT}\n\nAKTUELLER TURN-HINWEIS (interner Kontext, nicht für die Person sichtbar): Falls die neueste Nutzer-Nachricht das bisherige Thema fortsetzt, wäre sie die ${topicTurnHint}. Nachricht zu diesem Thema — siehe CLIFFHANGER-HINWEIS FÜR DIESE ANTWORT oben.`
+  const turnHintText =
+    lang === 'en'
+      ? `\n\nCURRENT TURN HINT (internal context, not visible to the person): If the latest user message continues the existing topic, it would be message number ${topicTurnHint} on this topic — see CLIFFHANGER NOTE FOR THIS REPLY above.`
+      : `\n\nAKTUELLER TURN-HINWEIS (interner Kontext, nicht für die Person sichtbar): Falls die neueste Nutzer-Nachricht das bisherige Thema fortsetzt, wäre sie die ${topicTurnHint}. Nachricht zu diesem Thema — siehe CLIFFHANGER-HINWEIS FÜR DIESE ANTWORT oben.`
+  let systemContent = `${getChatSystemPrompt(lang)}${turnHintText}`
   // Nur beim automatischen Nachforderungs-Versuch gesetzt (siehe
   // requestChatReply/adviceGuard.ts) — verschärft die RATSCHLÄGE-Regel
   // gezielt für diesen einen Retry, statt den Haupt-Prompt dauerhaft zu
@@ -207,6 +213,7 @@ async function callChatReplyCompletion(
 export async function requestChatReply(
   history: ChatMessage[],
   topicTurnHint: number,
+  lang: GuardLang = 'de',
   log?: (message: string) => void,
 ): Promise<ChatReplyResult> {
   const config = readConfig()
@@ -214,11 +221,11 @@ export async function requestChatReply(
   async function callOnce(reinforcement?: string, temperature?: number): Promise<ChatReplyResult> {
     let raw: string
     try {
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, reinforcement, temperature)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, lang, reinforcement, temperature)
     } catch {
       // Fällt zurück auf json_object, falls das Deployment strict structured
       // outputs (json_schema) nicht unterstützt.
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, reinforcement, temperature)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, lang, reinforcement, temperature)
     }
 
     let parsed: Partial<ChatReplyResult>
@@ -241,12 +248,12 @@ export async function requestChatReply(
   // unabhängig davon, ob isExplicitAdviceRequest zusätzlich zutrifft (bleibt
   // nur für Logging/Diagnose erhalten, siehe adviceGuard.ts).
   const lastUserMessage = [...history].reverse().find((m) => m.role === 'user')
-  const adviceWasRequested = !!lastUserMessage && isExplicitAdviceRequest(lastUserMessage.content)
+  const adviceWasRequested = !!lastUserMessage && isExplicitAdviceRequest(lastUserMessage.content, lang)
 
   let result = await callOnce()
   const MAX_REINFORCED_ATTEMPTS = 2
 
-  for (let attempt = 1; attempt <= MAX_REINFORCED_ATTEMPTS && isEvasiveReply(result.reply); attempt++) {
+  for (let attempt = 1; attempt <= MAX_REINFORCED_ATTEMPTS && isEvasiveReply(result.reply, lang); attempt++) {
     log?.(
       `TEI chat: keine erkennbare vorläufige Einschätzung in der Antwort${
         adviceWasRequested ? ' (trotz expliziter Nachfrage)' : ''
@@ -255,7 +262,7 @@ export async function requestChatReply(
     // Der letzte Versuch läuft mit niedrigerer Temperatur, um deterministischer
     // der Anweisung zu folgen, statt erneut auf Sampling-Varianz zu hoffen.
     const temperature = attempt === MAX_REINFORCED_ATTEMPTS ? 0.2 : undefined
-    result = await callOnce(ADVICE_REINFORCEMENT, temperature)
+    result = await callOnce(getAdviceReinforcement(lang), temperature)
   }
 
   // Letzte, deterministische Absicherung: bleibt die verbotene Eröffnung
@@ -263,8 +270,8 @@ export async function requestChatReply(
   // Nachforderungs-Versuche im ersten Satz bestehen, wird sie mechanisch
   // entfernt statt die Person damit zu konfrontieren — siehe
   // stripLeadingBannedOpener in adviceGuard.ts für die Begründung.
-  if (isEvasiveReply(result.reply)) {
-    const stripped = stripLeadingBannedOpener(result.reply)
+  if (isEvasiveReply(result.reply, lang)) {
+    const stripped = stripLeadingBannedOpener(result.reply, lang)
     if (stripped !== result.reply) {
       log?.('TEI chat: verbotene Eröffnung auch nach Nachforderungs-Versuchen vorhanden — erster Satz mechanisch entfernt.')
       result = { ...result, reply: stripped }

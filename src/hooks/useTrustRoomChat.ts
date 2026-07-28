@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChatMessage } from '../types'
 import { sendChatMessage } from '../lib/aiClient'
+import type { Lang } from '../lib/i18n'
 
 export type ChatFlowStatus = 'idle' | 'sending' | 'limit_reached' | 'demo_expired' | 'error'
 
@@ -44,7 +45,16 @@ function writeSaved(conversations: SavedConversation[]): void {
  * localStorage auf diesem Gerät gesichert werden — nie automatisch, siehe
  * Produktentscheidung zur Vertraulichkeit dieses Inhalts.
  */
-export function useTrustRoomChat() {
+export function useTrustRoomChat(lang: Lang = 'de') {
+  // Ref statt nur des Parameters direkt, damit `send` (unten, als Closure
+  // über mehrere Aufrufe hinweg stabil) beim Absenden immer die zum
+  // Zeitpunkt des Klicks aktuelle Sprache liest, auch falls die Person kurz
+  // zuvor per D | EN-Toggle die Sprache gewechselt hat.
+  const langRef = useRef(lang)
+  useEffect(() => {
+    langRef.current = lang
+  }, [lang])
+
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [status, setStatus] = useState<ChatFlowStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -73,7 +83,7 @@ export function useTrustRoomChat() {
     setErrorMessage('')
 
     const topicTurnHint = topicStreak + 1
-    const response = await sendChatMessage(nextMessages, topicTurnHint)
+    const response = await sendChatMessage(nextMessages, topicTurnHint, langRef.current)
 
     if (response.status === 'ok' && response.reply) {
       const cliffhanger = !!response.cliffhanger

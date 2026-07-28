@@ -1,5 +1,6 @@
 import type { AnalyzeResponse, ChatMessage, ChatResponse, LeadRequest, LeadResponse } from '../types'
 import { mockAnalyze, mockChatReply } from './aiMock'
+import type { Lang } from './i18n'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
@@ -85,6 +86,7 @@ export async function analyzeQuestion(question: string): Promise<AnalyzeResponse
 export async function sendChatMessage(
   messages: ChatMessage[],
   topicTurnHint: number,
+  lang: Lang = 'de',
 ): Promise<ChatResponse> {
   if (!API_BASE_URL) {
     const reply = await mockChatReply(messages)
@@ -94,7 +96,7 @@ export async function sendChatMessage(
   const response = await fetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...accessHeaders() },
-    body: JSON.stringify({ sessionId: getSessionId(), messages, topicTurnHint }),
+    body: JSON.stringify({ sessionId: getSessionId(), messages, topicTurnHint, lang }),
   })
 
   if (response.status === 401) {

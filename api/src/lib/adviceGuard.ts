@@ -22,7 +22,9 @@
  * zuverlässiger als ausschliesslich auf Prompt-Befolgung zu vertrauen.
  */
 
-const ADVICE_REQUEST_PATTERNS: RegExp[] = [
+export type GuardLang = 'de' | 'en'
+
+const ADVICE_REQUEST_PATTERNS_DE: RegExp[] = [
   /was\s+soll\s+ich/i,
   /was\s+w[üu]rdest\s+du/i,
   /wie\s+w[üu]rdest\s+du/i,
@@ -38,16 +40,28 @@ const ADVICE_REQUEST_PATTERNS: RegExp[] = [
   /deine\s+meinung/i,
 ]
 
+const ADVICE_REQUEST_PATTERNS_EN: RegExp[] = [
+  /what\s+should\s+i/i,
+  /what\s+would\s+you\s+do/i,
+  /how\s+would\s+you\s+decide/i,
+  /what('?s|\s+is)\s+your\s+(suggestion|advice|tip|opinion|assessment|idea|take)/i,
+  /just\s+tell\s+me/i,
+  /what\s+do\s+you\s+think/i,
+  /your\s+opinion/i,
+  /should\s+i\s+(fire|hire|engage|keep|trust|replace)/i,
+]
+
 /** Erkennt, ob die letzte Nutzer-Nachricht ausdrücklich nach einer
  * Handlungsempfehlung fragt (auslösende Bedingung für die RATSCHLÄGE-Regel
  * im Prompt). Bewusst als Muster-Liste gehalten, nicht abschliessend —
  * natürliche Sprache hat mehr Varianten, als sich vollständig erfassen
  * lassen (siehe Modul-Kommentar oben zu den Grenzen dieser Heuristik). */
-export function isExplicitAdviceRequest(text: string): boolean {
-  return ADVICE_REQUEST_PATTERNS.some((re) => re.test(text))
+export function isExplicitAdviceRequest(text: string, lang: GuardLang = 'de'): boolean {
+  const patterns = lang === 'en' ? ADVICE_REQUEST_PATTERNS_EN : ADVICE_REQUEST_PATTERNS_DE
+  return patterns.some((re) => re.test(text))
 }
 
-const COMMITMENT_PATTERNS: RegExp[] = [
+const COMMITMENT_PATTERNS_DE: RegExp[] = [
   /ich\s+w[üu]rde\s+(eher|zu|an\s+ihrer\s+stelle|dazu\s+tendieren|empfehlen|dazu\s+raten|davon\s+abraten|noch\s+keine)/i,
   /mein\s+erster\s+gedanke/i,
   /meine\s+(vorl[äa]ufige\s+)?einsch[äa]tzung/i,
@@ -62,6 +76,20 @@ const COMMITMENT_PATTERNS: RegExp[] = [
   /diese\s+schlussfolgerung\s+w[üu]rde\s+ich/i,
 ]
 
+const COMMITMENT_PATTERNS_EN: RegExp[] = [
+  /i\s+would\s+(lean|recommend|advise|not\s+yet)/i,
+  /my\s+first\s+instinct/i,
+  /my\s+(preliminary\s+)?assessment/i,
+  /my\s+preliminary\s+recommendation/i,
+  /i\s+recommend/i,
+  /i\s+advise\s+(you\s+)?(to|against)/i,
+  /i\s+(would\s+)?consider\s+.{0,40}(sensible|premature|risky)/i,
+  /under\s+these\s+assumptions,?\s+i\s+would/i,
+  /i\s+would\s+(currently\s+)?advise\s+against/i,
+  /that('s|\s+is)\s+not\s+a\s+conclusion\s+i'?d\s+draw/i,
+  /given\s+the\s+circumstances.{0,40}i\s+would/i,
+]
+
 // Die von Punkt 1 des Steuerungsblocks ausdrücklich verbotenen
 // Formulierungen ("Was du vermeiden musst" verbietet sie zusätzlich ganz
 // generell, nicht nur als Opener). Live hat sich gezeigt, dass diese
@@ -69,11 +97,19 @@ const COMMITMENT_PATTERNS: RegExp[] = [
 // Eröffnung eines späteren Unterabschnitts ("Zunächst zum CFO: Es klingt,
 // als ob...") — deshalb wird der GESAMTE Text geprüft, nicht nur der
 // Anfang.
-const BANNED_PHRASE_PATTERNS: RegExp[] = [
+const BANNED_PHRASE_PATTERNS_DE: RegExp[] = [
   /es\s+klingt,?\s+als\s+ob/i,
   /es\s+scheint,?\s+als\s+ob/i,
   /es\s+ist\s+verst[äa]ndlich/i,
   /vielleicht\s+(k[öo]nnte\s+es\s+)?hilft?/i,
+]
+
+const BANNED_PHRASE_PATTERNS_EN: RegExp[] = [
+  /it\s+sounds\s+like/i,
+  /it\s+seems\s+like/i,
+  /it'?s\s+understandable/i,
+  /perhaps\s+it\s+(could\s+|would\s+)?help/i,
+  /maybe\s+it\s+(could\s+|would\s+)?help/i,
 ]
 
 // "Komplexe Situation" als generischer Öffner tritt in vielen
@@ -88,16 +124,25 @@ const BANNED_PHRASE_PATTERNS: RegExp[] = [
 // Präfix einzeln aufzählen zu müssen. Die Kombination aus Adjektiv und
 // Nomen-Stamm nahe am Anfang ist die eigentliche Struktur des ausweichenden
 // Öffners, unabhängig vom genauen Wortlaut drumherum.
-const GENERIC_OPENER_NEAR_START =
+const GENERIC_OPENER_NEAR_START_DE =
   /^.{0,70}(komplexe[nr]?|vielschichtige[nr]?|schwierige[nr]?|herausfordernde[nr]?)\s+\S*(situation|herausforderung|lage|konstellation|gemengelage)/i
+
+// Englisches Pendant — dieselbe Struktur (Adjektiv + evtl. zusammengesetztes
+// Nomen), auf die englischen Synonyme angepasst ("challenging situation",
+// "complex leadership challenge" usw.), inkl. der beiden gängigen
+// Verb-Einleitungen ("you're facing", "you are in").
+const GENERIC_OPENER_NEAR_START_EN =
+  /^.{0,70}(complex|challenging|multifaceted|difficult)\s+\S*(situation|challenge|circumstance|predicament)/i
 
 /** Erkennt, ob eine Antwort eine der explizit verbotenen Formulierungen
  * enthält (irgendwo im Text) oder mit dem generischen "komplexe
  * Situation"-Muster beginnt (Steuerungsblock Punkt 1 / "Was du vermeiden
  * musst"). */
-export function hasBannedOpener(reply: string): boolean {
-  if (GENERIC_OPENER_NEAR_START.test(reply)) return true
-  return BANNED_PHRASE_PATTERNS.some((re) => re.test(reply))
+export function hasBannedOpener(reply: string, lang: GuardLang = 'de'): boolean {
+  const genericOpener = lang === 'en' ? GENERIC_OPENER_NEAR_START_EN : GENERIC_OPENER_NEAR_START_DE
+  const bannedPhrases = lang === 'en' ? BANNED_PHRASE_PATTERNS_EN : BANNED_PHRASE_PATTERNS_DE
+  if (genericOpener.test(reply)) return true
+  return bannedPhrases.some((re) => re.test(reply))
 }
 
 // Abstrakte Massnahmen, die Punkt 10 des Steuerungsblocks nur zulässt, wenn
@@ -112,7 +157,7 @@ export function hasBannedOpener(reply: string): boolean {
 // (Verb zuerst) genauso vorkommt wie "ein offenes Gespräch führen" (Verb
 // zuletzt) — die blosse Kombination aus Adjektiv und "Gespräch" ist schon
 // der eigentliche Signalgeber, unabhängig von der Satzstellung.
-const VAGUE_ACTION_PATTERNS: RegExp[] = [
+const VAGUE_ACTION_PATTERNS_DE: RegExp[] = [
   /(kl[äa]rendes|ehrliches|offenes)\s+gespr[äa]ch/i,
   /transparent\s+(zu\s+)?kommunizieren/i,
   /erwartungen\s+(zu\s+)?kl[äa]ren/i,
@@ -121,11 +166,20 @@ const VAGUE_ACTION_PATTERNS: RegExp[] = [
   /vor-?\s*und\s+nachteile\s+(ab)?w[äa]gen/i,
 ]
 
+const VAGUE_ACTION_PATTERNS_EN: RegExp[] = [
+  /(honest|open|clarifying)\s+conversation/i,
+  /communicate\s+transparently/i,
+  /clarify\s+expectations/i,
+  /take\s+long-?term\s+goals\s+into\s+account/i,
+  /weigh(ing)?\s+(the\s+)?pros\s+and\s+cons/i,
+]
+
 /** Erkennt, ob eine Antwort eine der nicht-konkretisierten Pauschal-
  * Empfehlungen enthält, die Punkt 10 des Steuerungsblocks ohne
  * Konkretisierung verbietet. */
-export function hasVagueUnconcretizedAction(reply: string): boolean {
-  return VAGUE_ACTION_PATTERNS.some((re) => re.test(reply))
+export function hasVagueUnconcretizedAction(reply: string, lang: GuardLang = 'de'): boolean {
+  const patterns = lang === 'en' ? VAGUE_ACTION_PATTERNS_EN : VAGUE_ACTION_PATTERNS_DE
+  return patterns.some((re) => re.test(reply))
 }
 
 /** Erkennt, ob eine Antwort ausweichend ist: entweder weil sie eine
@@ -140,10 +194,11 @@ export function hasVagueUnconcretizedAction(reply: string): boolean {
  * usw.). Stattdessen die robustere, umgekehrte Prüfung: fehlt jede
  * erkennbare Festlegung, gilt die Antwort als ausweichend — unabhängig
  * davon, WIE sie ausweicht. */
-export function isEvasiveReply(reply: string): boolean {
-  if (hasBannedOpener(reply)) return true
-  if (hasVagueUnconcretizedAction(reply)) return true
-  return !COMMITMENT_PATTERNS.some((re) => re.test(reply))
+export function isEvasiveReply(reply: string, lang: GuardLang = 'de'): boolean {
+  if (hasBannedOpener(reply, lang)) return true
+  if (hasVagueUnconcretizedAction(reply, lang)) return true
+  const commitmentPatterns = lang === 'en' ? COMMITMENT_PATTERNS_EN : COMMITMENT_PATTERNS_DE
+  return !commitmentPatterns.some((re) => re.test(reply))
 }
 
 /**
@@ -159,13 +214,15 @@ export function isEvasiveReply(reply: string): boolean {
  * Greift nur, wenn ein zweiter Satz übrig bleibt (sonst bliebe nichts
  * Sinnvolles stehen, dann wird die Antwort unverändert gelassen).
  */
-export function stripLeadingBannedOpener(reply: string): string {
+export function stripLeadingBannedOpener(reply: string, lang: GuardLang = 'de'): string {
   const match = reply.match(/^(.+?[.!?])\s+([\s\S]+)$/)
   if (!match) return reply
 
+  const genericOpener = lang === 'en' ? GENERIC_OPENER_NEAR_START_EN : GENERIC_OPENER_NEAR_START_DE
+  const bannedPhrases = lang === 'en' ? BANNED_PHRASE_PATTERNS_EN : BANNED_PHRASE_PATTERNS_DE
+
   const [, firstSentence, rest] = match
-  const firstIsBanned =
-    GENERIC_OPENER_NEAR_START.test(firstSentence) || BANNED_PHRASE_PATTERNS.some((re) => re.test(firstSentence))
+  const firstIsBanned = genericOpener.test(firstSentence) || bannedPhrases.some((re) => re.test(firstSentence))
   if (!firstIsBanned || !rest.trim()) return reply
 
   const trimmedRest = rest.trim()
@@ -174,7 +231,7 @@ export function stripLeadingBannedOpener(reply: string): string {
 
 /** Wird als zusätzlicher, nur für den Nachforderungs-Versuch geltender
  * Hinweis an den System-Prompt angehängt (siehe requestChatReply). */
-export const ADVICE_REINFORCEMENT = `VERSTÄRKUNGS-HINWEIS FÜR DIESEN NACHFORDERUNGS-VERSUCH (interner Kontext,
+export const ADVICE_REINFORCEMENT_DE = `VERSTÄRKUNGS-HINWEIS FÜR DIESEN NACHFORDERUNGS-VERSUCH (interner Kontext,
 nicht für die Person sichtbar): Deine vorherige Antwort hat entweder mit
 einer ausdrücklich verbotenen Formulierung begonnen (siehe Steuerungsblock
 Punkt 1 — z.B. "Es klingt, als ob", "Sie befinden sich in einer komplexen
@@ -189,3 +246,24 @@ Begründung, die sich auf das bezieht, was die Person tatsächlich
 geschildert hat. Formuliere danach ggf. weiterhin die Reihenfolge der
 nächsten Schritte, eine Entscheidungsregel und höchstens eine
 Reflexionsfrage, wie in Punkt 11 der festen Antwortstruktur vorgesehen.`
+
+/** Englisches Pendant zu ADVICE_REINFORCEMENT_DE — Formulierungen müssen zu
+ * den englischen COMMITMENT_PATTERNS_EN/BANNED_PHRASE_PATTERNS_EN passen. */
+export const ADVICE_REINFORCEMENT_EN = `REINFORCEMENT NOTE FOR THIS RETRY (internal context, not visible to the
+person): Your previous reply either began with an explicitly forbidden
+phrase (see steering block point 1 — e.g. "It sounds like", "You're facing
+a complex situation") or contained no recognisable preliminary position
+(point 7) — only observation, differentiation and/or a follow-up question,
+but no recommendation of your own. This new reply must begin with a clear
+core thesis (point 1) and add a preliminary position using the required
+phrasing "My preliminary recommendation is ..." (alternatively "Under these
+assumptions, I would ..." or "I would not yet make a long-term commitment
+..."), followed by a short, concrete justification tied to what the person
+actually described. After that, continue as needed with the sequence of
+next steps, a decision rule, and at most one reflection question, as set
+out in point 11 of the fixed response structure.`
+
+/** Wählt den passenden Reinforcement-Text anhand der Sprache. */
+export function getAdviceReinforcement(lang: GuardLang = 'de'): string {
+  return lang === 'en' ? ADVICE_REINFORCEMENT_EN : ADVICE_REINFORCEMENT_DE
+}

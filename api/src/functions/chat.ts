@@ -17,6 +17,14 @@ interface ChatRequestBody {
    * fehlt der Wert (z.B. erste Nachricht überhaupt), wird 1 angenommen.
    */
   topicTurnHint?: number
+  /**
+   * Sprache der Konversation ('de' | 'en'), vom Client anhand der Route
+   * (/gespraech vs. /en/gespraech) mitgeschickt — steuert sowohl den
+   * System-Prompt (siehe prompt.ts → getChatSystemPrompt) als auch das
+   * adviceGuard-Regelwerk (siehe adviceGuard.ts). Fehlt der Wert oder ist er
+   * ungültig, wird 'de' angenommen.
+   */
+  lang?: string
 }
 
 const MAX_MESSAGE_LENGTH = 2000
@@ -28,22 +36,27 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   const access = checkAccessCode(req)
   if (access.denied) return access.denied
 
+  let body: ChatRequestBody
+  try {
+    body = (await req.json()) as ChatRequestBody
+  } catch {
+    return { status: 400, jsonBody: { status: 'error', message: 'Ungültiger Request-Body.' } }
+  }
+
+  const lang: 'de' | 'en' = body.lang === 'en' ? 'en' : 'de'
+
   if (isDemoExpired()) {
     return {
       status: 200,
       jsonBody: {
         status: 'demo_expired',
         demoExpiresAt: getDemoExpiresAt(),
-        message: 'Diese Live-Demo-Phase ist abgeschlossen.',
+        message:
+          lang === 'en'
+            ? 'This live demo phase has ended.'
+            : 'Diese Live-Demo-Phase ist abgeschlossen.',
       },
     }
-  }
-
-  let body: ChatRequestBody
-  try {
-    body = (await req.json()) as ChatRequestBody
-  } catch {
-    return { status: 400, jsonBody: { status: 'error', message: 'Ungültiger Request-Body.' } }
   }
 
   const sessionId = (body.sessionId ?? '').trim()
@@ -53,7 +66,10 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
     return { status: 400, jsonBody: { status: 'error', message: 'sessionId fehlt.' } }
   }
   if (messages.length === 0) {
-    return { status: 400, jsonBody: { status: 'error', message: 'Nachricht fehlt.' } }
+    return {
+      status: 400,
+      jsonBody: { status: 'error', message: lang === 'en' ? 'Message is missing.' : 'Nachricht fehlt.' },
+    }
   }
 
   // Keine künstliche Obergrenze für die Gesprächslänge mehr (bewusste
@@ -64,10 +80,19 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   // unten ohnehin freundlich abfängt.
   const lastMessage = messages[messages.length - 1]
   if (!lastMessage || lastMessage.role !== 'user' || !lastMessage.content?.trim()) {
-    return { status: 400, jsonBody: { status: 'error', message: 'Letzte Nachricht ist ungültig.' } }
+    return {
+      status: 400,
+      jsonBody: {
+        status: 'error',
+        message: lang === 'en' ? 'The last message is invalid.' : 'Letzte Nachricht ist ungültig.',
+      },
+    }
   }
   if (lastMessage.content.length > MAX_MESSAGE_LENGTH) {
-    return { status: 400, jsonBody: { status: 'error', message: 'Nachricht ist zu lang.' } }
+    return {
+      status: 400,
+      jsonBody: { status: 'error', message: lang === 'en' ? 'Message is too long.' : 'Nachricht ist zu lang.' },
+    }
   }
 
   const topicTurnHint =
@@ -98,14 +123,17 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
           status: 'limit_reached',
           sessionAnalysesUsed: used,
           sessionAnalysesLimit: limit,
-          message: `Das Limit von ${limit} Gesprächen für diese IP-Adresse ist erreicht.`,
+          message:
+            lang === 'en'
+              ? `The limit of ${limit} conversations for this IP address has been reached.`
+              : `Das Limit von ${limit} Gesprächen für diese IP-Adresse ist erreicht.`,
         },
       }
     }
   }
 
   try {
-    const result = await requestChatReply(messages, topicTurnHint, (msg) => context.log(msg))
+    const result = await requestChatReply(messages, topicTurnHint, lang, (msg) => context.log(msg))
     const cliffhanger = topicTurnHint >= CLIFFHANGER_TOPIC_TURN_THRESHOLD || result.themenwechsel
 
     if (isFirstTurn && !exempt) {
@@ -128,7 +156,10 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
       status: 502,
       jsonBody: {
         status: 'error',
-        message: 'Die Antwort konnte gerade nicht erstellt werden. Bitte in Kürze erneut versuchen.',
+        message:
+          lang === 'en'
+            ? 'The reply could not be generated right now. Please try again shortly.'
+            : 'Die Antwort konnte gerade nicht erstellt werden. Bitte in Kürze erneut versuchen.',
       },
     }
   }
