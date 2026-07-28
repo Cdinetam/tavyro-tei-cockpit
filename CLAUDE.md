@@ -84,15 +84,20 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde
-  angelegt, `AzureWebJobsStorage` (Achtung Gross-/Kleinschreibung, genau
-  so) muss in den Umgebungsvariablen der Static Web App auf den Connection
-  String von `tavyroteiquota` gesetzt sein, sonst fällt das IP-Limit
+  angelegt. WICHTIG (live im Portal entdeckt): der Connection String darf
+  NICHT über `AzureWebJobsStorage` gesetzt werden — Azure Static Web Apps
+  reserviert diesen Namen für seine verwalteten Functions und lehnt das
+  Setzen über die Umgebungsvariablen-UI mit `InvalidAppSettings` hart ab.
+  Der Code nutzt daher stattdessen `QUOTA_STORAGE_CONNECTION_STRING` (siehe
+  `api/src/lib/quotaStore.ts`) — diese Variable muss in den
+  Umgebungsvariablen der Static Web App auf den Connection String von
+  `tavyroteiquota` gesetzt sein, sonst fällt das Limit
   (`api/src/lib/clientIp.ts` + `chat.ts`, Standard 5/Woche pro IP über
   `PILOT_WEEKLY_LIMIT`) auf einen In-Memory-Fallback zurück, der
-  Kaltstarts/Skalierung nicht übersteht — Stand zuletzt: im Portal
-  eingerichtet, aber nicht mit letzter Sicherheit bestätigt, dass der
-  Connection String tatsächlich im Feld mit korrekter Gross-/
-  Kleinschreibung gespeichert wurde.
+  Kaltstarts/Skalierung nicht übersteht. Ebenfalls wichtig: `PILOT_WEEKLY_LIMIT`
+  ist ein reiner Code-Fallback (Standard `5`), wenn die Variable in Azure
+  fehlt — sie muss aktiv als Umgebungsvariable gesetzt werden, um z.B. auf
+  `7` zu stehen.
 - Eigene, unabhängige Domain für TEI Trust Room (losgelöst von tavyro.ch)
   sowie vollständige TaVyro-Branding-Entfernung wurden diskutiert, dann
   bewusst zurückgestellt — aktuell bleibt das TaVyro-Logo im Header/Access

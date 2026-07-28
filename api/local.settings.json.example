@@ -14,7 +14,9 @@
     "PILOT_ACCESS_CODES": "[{\"name\":\"Beispiel CEO\",\"code\":\"tavyro-beispiel-482\"}]",
     "PILOT_WEEKLY_LIMIT": "5",
 
-    "NOTIFY_WEBHOOK_URL": ""
+    "NOTIFY_WEBHOOK_URL": "",
+
+    "QUOTA_STORAGE_CONNECTION_STRING": ""
   },
   "Host": {
     "CORS": "http://localhost:5173",

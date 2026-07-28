@@ -89,13 +89,17 @@ curl -X POST http://localhost:7071/api/analyze \
 | `DEMO_EXPIRES_AT` | Harter Stichtag für die gesamte Pilotphase | `2026-09-30T23:59:59Z` |
 | `PILOT_ACCESS_CODES` | JSON-Liste individueller Zugangscodes pro Person (leer = Zugangskontrolle deaktiviert) | `[{"name":"Peter Müller","code":"tavyro-mueller-482"}]` |
 | `PILOT_WEEKLY_LIMIT` | Vertiefte Analysen pro Person innerhalb von 7 Tagen (gleitendes Fenster) | `5` |
+| `QUOTA_STORAGE_CONNECTION_STRING` | Connection String eines eigenen Storage-Accounts (z.B. `tavyroteiquota`) für die persistente Zählung des Nutzungslimits | — |
 | `NOTIFY_WEBHOOK_URL` | Webhook für persönliche Benachrichtigung (Slack/Teams/Zapier) | — |
 
-**Zum Nutzungslimit:** Es gilt pro **Person** (pro Zugangscode), nicht pro
+**Zum Nutzungslimit:** Es gilt aktuell pro **IP-Adresse**, nicht pro
 Browser-Sitzung — ein neuer Tab oder privates Fenster setzt es nicht zurück.
-Gezählt wird in Azure Table Storage (sobald auf Azure deployed; lokal ohne
-Azurite-Emulator automatisch In-Memory als Fallback, siehe
-`src/lib/quotaStore.ts`).
+Gezählt wird in Azure Table Storage, sobald `QUOTA_STORAGE_CONNECTION_STRING`
+gesetzt ist (lokal ohne Azurite-Emulator automatisch In-Memory als Fallback,
+siehe `src/lib/quotaStore.ts`). **Wichtig:** dafür NICHT `AzureWebJobsStorage`
+verwenden — Azure Static Web Apps reserviert diesen Namen für seine
+verwalteten Functions und lehnt ihn beim Setzen über die
+Umgebungsvariablen-UI mit einem Fehler ab.
 
 **Neue Person einladen:** In `PILOT_ACCESS_CODES` einen weiteren Eintrag
 `{"name": "...", "code": "..."}` ergänzen. Auf Azure: in den Application

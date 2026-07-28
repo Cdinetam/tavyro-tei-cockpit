@@ -5,15 +5,21 @@ import { TableClient } from '@azure/data-tables'
  * 7-Tage-Fenster hinweg — nicht pro Browser-Sitzung, denn ein neuer
  * Inkognito-Tab darf das Limit nicht zurücksetzen können.
  *
- * Produktion: Azure Table Storage. Die Function App braucht ohnehin ein
- * Storage-Konto (AzureWebJobsStorage), sobald sie auf Azure läuft — das
- * hier nutzt genau diese Verbindung mit, kein zusätzlicher Dienst nötig.
+ * Produktion: Azure Table Storage, über die Umgebungsvariable
+ * QUOTA_STORAGE_CONNECTION_STRING (eigener Storage-Account, z.B.
+ * "tavyroteiquota"). NICHT über AzureWebJobsStorage: Azure Static Web Apps
+ * reserviert diesen Namen für seine verwalteten Functions und blockiert das
+ * Setzen über die Umgebungsvariablen-UI mit einem harten Fehler
+ * ("InvalidAppSettings ... AzureWebJobsStorage ... are not allowed") — live
+ * im Portal beobachtet, siehe getConnectionString() unten.
  *
- * Lokale Entwicklung: Wenn AzureWebJobsStorage auf "UseDevelopmentStorage=true"
- * steht (Standard in local.settings.json) und kein Azurite-Emulator läuft,
- * fällt dies automatisch auf eine In-Memory-Zählung zurück. Das reicht für
- * lokales Testen, überlebt aber keinen Neustart — für den echten
- * Pilotbetrieb auf Azure wird automatisch die persistente Variante genutzt.
+ * Lokale Entwicklung: Ist weder QUOTA_STORAGE_CONNECTION_STRING noch ein
+ * echtes AzureWebJobsStorage gesetzt (Standard in local.settings.json ist
+ * "UseDevelopmentStorage=true") und kein Azurite-Emulator läuft, fällt dies
+ * automatisch auf eine In-Memory-Zählung zurück. Das reicht für lokales
+ * Testen, überlebt aber keinen Neustart — für den echten Pilotbetrieb auf
+ * Azure wird automatisch die persistente Variante genutzt, sobald
+ * QUOTA_STORAGE_CONNECTION_STRING gesetzt ist.
  */
 
 const WINDOW_MS = 7 * 24 * 60 * 60 * 1000 // 7 Tage, gleitendes Fenster
@@ -23,7 +29,15 @@ let tableClientPromise: Promise<TableClient | null> | null = null
 const memoryStore = new Map<string, number[]>()
 
 function getConnectionString(): string | null {
-  const conn = process.env.AzureWebJobsStorage
+  // Bevorzugt einen eigenen Variablennamen (QUOTA_STORAGE_CONNECTION_STRING)
+  // statt AzureWebJobsStorage: Azure Static Web Apps reserviert
+  // "AzureWebJobsStorage" für seine verwalteten Functions und blockiert das
+  // Setzen über die Umgebungsvariablen-UI mit einem klaren Fehler
+  // ("InvalidAppSettings ... AzureWebJobsStorage ... are not allowed") —
+  // live im Portal beobachtet. Lokale Entwicklung nutzt weiterhin
+  // AzureWebJobsStorage als Fallback (dort keine SWA-Restriktion, siehe
+  // local.settings.json.example, z.B. mit laufendem Azurite-Emulator).
+  const conn = process.env.QUOTA_STORAGE_CONNECTION_STRING || process.env.AzureWebJobsStorage
   if (!conn || conn === 'UseDevelopmentStorage=true') return null
   return conn
 }
