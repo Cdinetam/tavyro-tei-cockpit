@@ -270,7 +270,7 @@ export function TrustRoomChat({
             disabled={!draft.trim() || overLimit}
             className="mt-4 inline-flex items-center gap-2 border border-brass-dim bg-gradient-to-b from-brass/[0.14] to-brass/[0.06] px-6 py-3 font-sans text-[14px] font-medium text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:from-brass/[0.2] hover:to-brass/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Gespräch beginnen →
+            Dialog starten →
           </button>
         </form>
 
@@ -336,7 +336,7 @@ export function TrustRoomChat({
             onClick={onRequestNewChat}
             className="border border-line-strong px-3.5 py-1.5 font-sans text-[12.5px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper"
           >
-            Neues Gespräch
+            Neuer Dialog
           </button>
         </div>
       </div>

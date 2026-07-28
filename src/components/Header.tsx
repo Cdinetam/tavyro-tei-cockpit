@@ -37,7 +37,7 @@ export function Header({ stage, onReset }: HeaderProps) {
           <div className="hidden items-center gap-2 sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-brass" />
             <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">
-              Vertraulich · Lokale Sitzung
+              Vertraulich
             </span>
           </div>
         </div>

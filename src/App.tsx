@@ -23,7 +23,7 @@ function pathToView(pathname: string): View {
 
 // Wohin nach einer Bestätigung (Speichern-Dialog) navigiert werden soll —
 // "toLanding" für Header-Logo/Zurück-zum-Start, "newChat" für den
-// "Neues Gespräch"-Button innerhalb des Trust Rooms selbst.
+// "Neuer Dialog"-Button innerhalb des Trust Rooms selbst.
 type PendingExit = 'toLanding' | 'newChat' | null
 
 export default function App() {
@@ -80,7 +80,7 @@ export default function App() {
     doFullReset()
   }
 
-  // "Neues Gespräch"-Button innerhalb des Trust Rooms — bleibt in der
+  // "Neuer Dialog"-Button innerhalb des Trust Rooms — bleibt in der
   // Ansicht, fragt aber ebenfalls erst nach, falls etwas verloren ginge.
   function requestNewRoomChat() {
     if (roomChat.messages.length > 0) {
