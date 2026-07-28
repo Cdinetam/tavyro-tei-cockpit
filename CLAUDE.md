@@ -94,21 +94,27 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   zu wiederholt entdeckten Lücken (neue Adjektive/Synonyme bei generischen
   Öffnern, verbotene "1. 2. 3."-Listenformatierung v.a. auf Englisch
   beobachtet).
-- **Automatische Zugangscode-Vergabe** (`AccessGate.tsx` → "Direkt
-  freischalten"): ersetzt den früheren manuellen "E-Mail an
-  hello@tavyro.ch"-Umweg für Besucher ohne persönlichen Code. Vergibt pro
-  IP-Adresse automatisch einen fortlaufend nummerierten Code (`auto-014`
-  o.ä., siehe `api/src/lib/issuedCodesStore.ts`, Endpoint
-  `POST /api/auto-access`), dauerhaft gültig für diese IP, persistiert in
-  derselben Table-Storage-Verbindung wie das Nutzungslimit
+- **Automatische Zugangscode-Vergabe per E-Mail** (`AccessGate.tsx` →
+  "Code per E-Mail anfordern"): ersetzt den früheren manuellen "E-Mail an
+  hello@tavyro.ch"-Umweg für Besucher ohne persönlichen Code. Anfangs (v1)
+  war das eine IP-basierte Sofort-Freischaltung ohne jeden Kontakt zur
+  Person — bewusst durch ein echtes Gate ersetzt (v2, siehe Git-Historie für
+  v1): Person gibt E-Mail-Adresse ein → bekommt einen fortlaufend
+  nummerierten Code (`auto-014` o.ä., siehe
+  `api/src/lib/issuedCodesStore.ts`, Endpoint `POST /api/auto-access`) per
+  E-Mail zugeschickt (`api/src/lib/emailSender.ts`, Versand über Azure
+  Communication Services Email, siehe `api/README.md` für die
+  Portal-Einrichtung) → muss ihn danach manuell im normalen
+  Zugangscode-Feld eingeben. Der Code kommt bewusst NIE direkt in der
+  HTTP-Antwort zurück. Ein Code pro E-Mail-Adresse, dauerhaft gültig,
+  persistiert in derselben Table-Storage-Verbindung wie das Nutzungslimit
   (`QUOTA_STORAGE_CONNECTION_STRING`). Zählt danach normal gegen
   `PILOT_WEEKLY_LIMIT`, löst bei Erstvergabe eine `notify()`-Benachrichtigung
   aus (Kind `"access"`). `api/src/lib/accessGate.ts` (`checkAccessCode`) ist
   seit dieser Änderung `async` — prüft zuerst die statische
   `PILOT_ACCESS_CODES`-Liste, dann `issuedCodesStore.ts` als Fallback. Die
   Gate-Seite zeigt weiterhin bewusst "Vertrauliche Pilotphase / auf
-  ausgewählte Kontakte begrenzt" (Produktentscheidung, obwohl technisch
-  jeder Besucher sich selbst freischalten kann).
+  ausgewählte Kontakte begrenzt" (Produktentscheidung).
 
 ## Bekannte offene Punkte
 
@@ -119,14 +125,38 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   Setzen über die Umgebungsvariablen-UI mit `InvalidAppSettings` hart ab.
   Der Code nutzt daher stattdessen `QUOTA_STORAGE_CONNECTION_STRING` (siehe
   `api/src/lib/quotaStore.ts`) — diese Variable muss in den
-  Umgebungsvariablen der Static Web App auf den Connection String von
-  `tavyroteiquota` gesetzt sein, sonst fällt das Limit
+  Umgebungsvariablen der Static Web App auf den vollständigen Connection
+  String (Storage Account → Zugriffsschlüssel → "Verbindungszeichenfolge
+  anzeigen" bei key1, NICHT ein SAS-Token/eine SAS-URL) von `tavyroteiquota`
+  gesetzt sein, sonst fällt das Limit
   (`api/src/lib/clientIp.ts` + `chat.ts`, Standard 5/Woche pro IP über
   `PILOT_WEEKLY_LIMIT`) auf einen In-Memory-Fallback zurück, der
   Kaltstarts/Skalierung nicht übersteht. Ebenfalls wichtig: `PILOT_WEEKLY_LIMIT`
   ist ein reiner Code-Fallback (Standard `5`), wenn die Variable in Azure
   fehlt — sie muss aktiv als Umgebungsvariable gesetzt werden, um z.B. auf
-  `7` zu stehen.
+  `7` zu stehen. Live verifiziert (siehe `/api/quota-debug`, Diagnose-Endpoint
+  in `api/src/functions/quotaDebug.ts`, durch Zugangscode geschützt): das
+  Limit greift jetzt nachweislich (8. Anfrage liefert `limit_reached` bei
+  `PILOT_WEEKLY_LIMIT=7`).
+- **Azure Functions v4 Node-Programmiermodell — Registrierungsfalle**:
+  `api/src/index.ts` ist der EINZIGE Einstiegspunkt (`"main":
+  "dist/src/index.js"` in `api/package.json`, kein automatisches Glob-
+  Muster). Jede neue Datei unter `api/src/functions/*.ts` muss dort
+  zusätzlich per `import './functions/<name>.js'` eingetragen werden —
+  sonst wird `app.http(...)` nie ausgeführt, die Route wird nie registriert
+  und liefert dauerhaft 404, OBWOHL Typecheck, Build und der GitHub-
+  Actions-Deploy alle sauber grün laufen (kein Fehler irgendwo sichtbar).
+  Live so entdeckt: `autoAccess.ts` und `quotaDebug.ts` liefen deswegen
+  beide ins Leere, bis sie in `index.ts` nachgetragen wurden. Bei jeder
+  neuen Function-Datei zwingend `index.ts` mit anpassen.
+- **`getClientIp` (`api/src/lib/clientIp.ts`)**: der `x-forwarded-for`-
+  Header hinter Azure Static Web Apps enthält live beobachtet einen
+  angehängten Portanteil (z.B. `83.78.242.147:50290` statt nur der IP) —
+  ohne Portbereinigung (`stripPort`) hätte das IP-basierte Wochenlimit nie
+  zuverlässig zählen können, da der Port pro Verbindung wechselt. Seit der
+  Behebung wird der Port vor der Verwendung als Quota-Schlüssel entfernt
+  (IPv6 in Klammer-Notation bleibt unangetastet, ausser explizit mit
+  angehängtem `:port`).
 - Eigene, unabhängige Domain für TEI Trust Room (losgelöst von tavyro.ch)
   sowie vollständige TaVyro-Branding-Entfernung wurden diskutiert, dann
   bewusst zurückgestellt — aktuell bleibt das TaVyro-Logo im Header/Access

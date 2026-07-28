@@ -53,6 +53,8 @@ interface Copy {
     autoAccessCta: string
     autoAccessChecking: string
     autoAccessError: string
+    autoAccessEmailPlaceholder: string
+    autoAccessSent: (email: string) => string
   }
   header: {
     ariaHome: string
@@ -129,9 +131,12 @@ const de: Copy = {
     checking: 'Wird geprüft…',
     submit: 'Zugang bestätigen',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
-    autoAccessCta: 'Direkt freischalten →',
-    autoAccessChecking: 'Wird freigeschaltet…',
-    autoAccessError: 'Automatische Freischaltung ist gerade nicht möglich. Bitte in Kürze erneut versuchen.',
+    autoAccessCta: 'Code per E-Mail anfordern →',
+    autoAccessChecking: 'Wird verschickt…',
+    autoAccessError: 'Der Code konnte gerade nicht verschickt werden. Bitte in Kürze erneut versuchen.',
+    autoAccessEmailPlaceholder: 'Ihre E-Mail-Adresse',
+    autoAccessSent: (email) =>
+      `Ein Zugangscode wurde an ${email} verschickt. Bitte prüfen Sie Ihr Postfach und geben Sie den Code oben ein.`,
   },
   header: {
     ariaHome: 'Zur Startseite',
@@ -226,9 +231,12 @@ const en: Copy = {
     checking: 'Checking…',
     submit: 'Confirm access',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
-    autoAccessCta: 'Unlock instantly →',
-    autoAccessChecking: 'Unlocking…',
-    autoAccessError: 'Instant unlock is not available right now. Please try again shortly.',
+    autoAccessCta: 'Request code by email →',
+    autoAccessChecking: 'Sending…',
+    autoAccessError: 'The code could not be sent right now. Please try again shortly.',
+    autoAccessEmailPlaceholder: 'Your email address',
+    autoAccessSent: (email) =>
+      `An access code was sent to ${email}. Please check your inbox and enter the code above.`,
   },
   header: {
     ariaHome: 'Back to homepage',

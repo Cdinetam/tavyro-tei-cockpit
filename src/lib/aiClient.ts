@@ -54,30 +54,40 @@ export async function verifyAccessCode(code: string): Promise<boolean> {
 }
 
 /**
- * Fordert automatisch einen Zugangscode für die aktuelle IP-Adresse an
- * (siehe api/src/functions/autoAccess.ts) — ersetzt den manuellen "E-Mail an
+ * Fordert einen Zugangscode per E-Mail an (siehe
+ * api/src/functions/autoAccess.ts) — ersetzt den manuellen "E-Mail an
  * hello@tavyro.ch"-Umweg auf der Zugangscode-Gate-Seite (AccessGate.tsx).
- * Liefert bei Erfolg direkt einen gültigen Code zurück, der wie ein normal
- * eingegebener Code gespeichert und verwendet wird.
+ * Anders als die frühere IP-basierte Sofort-Freischaltung ein echtes Gate:
+ * der Code selbst kommt NIE in dieser Antwort zurück, sondern nur per
+ * E-Mail — die Person muss ihn danach manuell im Zugangscode-Feld eingeben.
  */
-export async function requestAutoAccess(): Promise<{ status: 'ok'; code: string } | { status: 'error'; message: string }> {
+export async function requestAutoAccess(
+  email: string,
+  lang: Lang = 'de',
+): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
   if (!API_BASE_URL) {
-    // Mock-Modus: sofortiger Fake-Code, kein Backend nötig.
-    return { status: 'ok', code: 'mock-auto-access' }
+    // Mock-Modus: kein Backend nötig, einfach Erfolg simulieren.
+    return { status: 'ok' }
   }
 
+  const fallbackMessage =
+    lang === 'en'
+      ? 'The code could not be sent right now. Please try again shortly.'
+      : 'Der Code konnte gerade nicht verschickt werden. Bitte in Kürze erneut versuchen.'
+
   try {
-    const response = await fetch(`${API_BASE_URL}/auto-access`, { method: 'POST' })
+    const response = await fetch(`${API_BASE_URL}/auto-access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, lang }),
+    })
     if (!response.ok) {
-      return { status: 'error', message: 'Automatische Freischaltung ist gerade nicht möglich.' }
+      const data = (await response.json().catch(() => null)) as { message?: string } | null
+      return { status: 'error', message: data?.message ?? fallbackMessage }
     }
-    const data = (await response.json()) as { status: string; code?: string }
-    if (!data.code) {
-      return { status: 'error', message: 'Automatische Freischaltung ist gerade nicht möglich.' }
-    }
-    return { status: 'ok', code: data.code }
+    return { status: 'ok' }
   } catch {
-    return { status: 'error', message: 'Automatische Freischaltung ist gerade nicht möglich.' }
+    return { status: 'error', message: fallbackMessage }
   }
 }
 

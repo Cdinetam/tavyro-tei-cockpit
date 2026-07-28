@@ -91,6 +91,8 @@ curl -X POST http://localhost:7071/api/analyze \
 | `PILOT_WEEKLY_LIMIT` | Vertiefte Analysen pro Person innerhalb von 7 Tagen (gleitendes Fenster) | `5` |
 | `QUOTA_STORAGE_CONNECTION_STRING` | Connection String eines eigenen Storage-Accounts (z.B. `tavyroteiquota`) für die persistente Zählung des Nutzungslimits | — |
 | `NOTIFY_WEBHOOK_URL` | Webhook für persönliche Benachrichtigung (Slack/Teams/Zapier) | — |
+| `ACS_EMAIL_CONNECTION_STRING` | Verbindungszeichenfolge der Azure-Communication-Services-Ressource für den Versand der Zugangscode-E-Mail | — |
+| `ACS_SENDER_ADDRESS` | Absenderadresse aus der verknüpften Email-Communication-Services-Domain (z.B. `DoNotReply@xxxxxxxx.azurecomm.net`) | — |
 
 **Zum Nutzungslimit:** Es gilt aktuell pro **IP-Adresse**, nicht pro
 Browser-Sitzung — ein neuer Tab oder privates Fenster setzt es nicht zurück.
@@ -105,18 +107,42 @@ Umgebungsvariablen-UI mit einem Fehler ab.
 `{"name": "...", "code": "..."}` ergänzen. Auf Azure: in den Application
 Settings der Static Web App den Wert aktualisieren, kein Redeploy nötig.
 
-**Automatische Zugangscode-Vergabe ohne persönlichen Code:** Besucher ohne
+**Automatische Zugangscode-Vergabe per E-Mail (echtes Gate):** Besucher ohne
 Code müssen nicht mehr manuell per E-Mail an hello@tavyro.ch nachfragen —
-auf der Gate-Seite (`AccessGate.tsx`) können sie über "Direkt freischalten"
-sofort einen automatisch vergebenen, fortlaufend nummerierten Code erhalten
-(z.B. `auto-014`, siehe `src/lib/issuedCodesStore.ts` und
-`POST /api/auto-access`). Ein Code pro IP-Adresse, dauerhaft gültig,
-persistiert in derselben Table-Storage-Verbindung wie das Nutzungslimit
+auf der Gate-Seite (`AccessGate.tsx`) können sie über "Code per E-Mail
+anfordern" ihre Adresse eingeben und bekommen einen fortlaufend
+nummerierten Code (z.B. `auto-014`, siehe `src/lib/issuedCodesStore.ts` und
+`POST /api/auto-access`) per E-Mail zugeschickt (`api/src/lib/
+emailSender.ts`, Versand über Azure Communication Services Email). Der Code
+kommt bewusst NIE direkt in der HTTP-Antwort zurück — die Person muss ihn
+danach manuell im normalen Zugangscode-Feld eingeben. Ein Code pro
+E-Mail-Adresse, dauerhaft gültig, persistiert in derselben
+Table-Storage-Verbindung wie das Nutzungslimit
 (`QUOTA_STORAGE_CONNECTION_STRING`) — zählt danach ganz normal gegen
 `PILOT_WEEKLY_LIMIT`. Bei jedem neu vergebenen Code (nicht bei
-Wiederholungsaufrufen derselben IP) geht eine Benachrichtigung an
-`NOTIFY_WEBHOOK_URL` (Kind `"access"`, siehe `notify.ts`), damit Tam
-trotzdem sieht, wer über diesen Weg reinkommt.
+Wiederholungsaufrufen derselben Adresse) geht zusätzlich eine
+Benachrichtigung an `NOTIFY_WEBHOOK_URL` (Kind `"access"`, siehe
+`notify.ts`), damit Tam trotzdem sieht, wer über diesen Weg reinkommt.
+
+**Einrichtung von Azure Communication Services Email** (einmalig, im
+Azure-Portal):
+
+1. Ressource **"E-Mail Communication Services"** anlegen (eigene
+   Ressourcenart, nicht "Communication Services").
+2. Dort unter "Domänen bereitstellen" eine **kostenlose, von Azure
+   verwaltete Domain** hinzufügen — liefert sofort eine Absenderadresse wie
+   `DoNotReply@xxxxxxxx.azurecomm.net`, keine eigene DNS-Konfiguration und
+   keine Wartezeit nötig (für den Pilotbetrieb ausreichend; für bessere
+   Zustellbarkeit später optional eine eigene Subdomain wie `mail.tavyro.ch`
+   verifizieren).
+3. Ressource **"Communication Services"** anlegen (die "normale", nicht die
+   Email-spezifische Variante).
+4. In dieser Communication-Services-Ressource unter "E-Mail" die
+   Email-Domain aus Schritt 2 verknüpfen.
+5. Unter "Schlüssel" die **Verbindungszeichenfolge** kopieren → als
+   `ACS_EMAIL_CONNECTION_STRING` in den Umgebungsvariablen der Static Web
+   App hinterlegen.
+6. Die Absenderadresse aus Schritt 2 als `ACS_SENDER_ADDRESS` hinterlegen.
 
 ## Bekannte Grenze: Session-Store
 

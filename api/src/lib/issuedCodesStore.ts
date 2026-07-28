@@ -4,14 +4,19 @@ import { TableClient } from '@azure/data-tables'
  * Automatische Zugangscode-Vergabe für Besucher ohne persönlichen Code von
  * Tam Nguyen (siehe PILOT_ACCESS_CODES/accessCodes.ts).
  *
- * Produktentscheidung: statt eines manuellen "E-Mail an hello@tavyro.ch"-
- * Umwegs bekommt jede neue IP-Adresse automatisch einen eigenen, fortlaufend
- * nummerierten Code (z.B. "auto-014"), sobald sie über die Gate-Seite
- * (AccessGate.tsx → "Direkt freischalten") einen Code anfordert. Der Code
- * bleibt danach dauerhaft für diese IP gültig — ein erneuter Aufruf liefert
- * denselben Code zurück statt einen neuen zu erzeugen — und zählt danach wie
- * jeder andere Code ganz normal gegen PILOT_WEEKLY_LIMIT (siehe chat.ts/
- * analyze.ts, quotaStore.ts).
+ * Produktentscheidung (Version 2, siehe Git-Historie für die ursprüngliche
+ * IP-basierte Variante): statt eines rein IP-basierten Sofort-Freischaltens
+ * ist dies jetzt ein echtes Gate — eine Person gibt ihre E-Mail-Adresse ein
+ * (siehe AccessGate.tsx), bekommt einen fortlaufend nummerierten Code
+ * (z.B. "auto-014") per E-Mail zugeschickt (siehe emailSender.ts) und muss
+ * ihn danach manuell im bestehenden Zugangscode-Feld eingeben. Grund für die
+ * Umstellung: die reine IP-Variante schaltete sofort frei, ohne dass
+ * irgendein Kontakt zur Person bestand — das war für eine "vertrauliche
+ * Pilotphase auf ausgewählte Kontakte begrenzt" zu offen. Der Code bleibt
+ * pro E-Mail-Adresse dauerhaft gültig — ein erneuter Aufruf mit derselben
+ * Adresse verschickt denselben Code erneut, statt einen neuen zu erzeugen —
+ * und zählt danach wie jeder andere Code ganz normal gegen
+ * PILOT_WEEKLY_LIMIT (siehe chat.ts/analyze.ts, quotaStore.ts).
  *
  * Persistenz: dieselbe Azure-Table-Storage-Verbindung wie quotaStore.ts
  * (QUOTA_STORAGE_CONNECTION_STRING — bewusst NICHT AzureWebJobsStorage,
@@ -29,13 +34,13 @@ import { TableClient } from '@azure/data-tables'
  */
 
 const TABLE_NAME = 'TeiIssuedCodes'
-const IP_PARTITION = 'by-ip'
+const EMAIL_PARTITION = 'by-email'
 const CODE_PARTITION = 'by-code'
 const COUNTER_PARTITION = 'counter'
 const COUNTER_ROW = 'sequence'
 
 let tableClientPromise: Promise<TableClient | null> | null = null
-const memoryByIp = new Map<string, { code: string; name: string }>()
+const memoryByEmail = new Map<string, { code: string; name: string }>()
 const memoryByCode = new Map<string, string>() // code -> name
 let memoryCounter = 0
 
@@ -77,33 +82,42 @@ function formatName(n: number): string {
   return `Besucher ${String(n).padStart(3, '0')}`
 }
 
+/** Normalisiert eine E-Mail-Adresse als Tabellenschlüssel (Gross-/
+ * Kleinschreibung soll nicht zu zwei verschiedenen Codes führen). Table
+ * Storage RowKeys dürfen zudem u.a. kein "/" enthalten — bei E-Mail-Adressen
+ * praktisch nie relevant, aber sicherheitshalber ersetzt. */
+function normalizeEmailKey(email: string): string {
+  return email.trim().toLowerCase().replace(/\//g, '_')
+}
+
 /**
- * Liefert den bestehenden Auto-Code für diese IP zurück, oder erzeugt einen
- * neuen mit der nächsten fortlaufenden Nummer. isNew ist nur beim
- * allerersten Aufruf für diese IP true (relevant für die Benachrichtigung
- * an Tam, siehe autoAccess.ts).
+ * Liefert den bestehenden Auto-Code für diese E-Mail-Adresse zurück, oder
+ * erzeugt einen neuen mit der nächsten fortlaufenden Nummer. isNew ist nur
+ * beim allerersten Aufruf für diese Adresse true (relevant für die
+ * Benachrichtigung an Tam, siehe autoAccess.ts).
  */
-export async function getOrIssueCodeForIp(
-  ip: string,
+export async function getOrIssueCodeForEmail(
+  email: string,
 ): Promise<{ code: string; name: string; isNew: boolean }> {
+  const key = normalizeEmailKey(email)
   const client = await getTableClient()
 
   if (!client) {
-    const existing = memoryByIp.get(ip)
+    const existing = memoryByEmail.get(key)
     if (existing) return { ...existing, isNew: false }
     memoryCounter += 1
     const code = formatCode(memoryCounter)
     const name = formatName(memoryCounter)
-    memoryByIp.set(ip, { code, name })
+    memoryByEmail.set(key, { code, name })
     memoryByCode.set(code, name)
     return { code, name, isNew: true }
   }
 
   try {
-    const existing = await client.getEntity<Record<string, unknown>>(IP_PARTITION, ip)
+    const existing = await client.getEntity<Record<string, unknown>>(EMAIL_PARTITION, key)
     return { code: String(existing.code), name: String(existing.name), isNew: false }
   } catch {
-    // noch kein Eintrag für diese IP — neuen Code vergeben, siehe unten
+    // noch kein Eintrag für diese Adresse — neuen Code vergeben, siehe unten
   }
 
   let nextN = 1
@@ -121,8 +135,8 @@ export async function getOrIssueCodeForIp(
   const code = formatCode(nextN)
   const name = formatName(nextN)
 
-  await client.upsertEntity({ partitionKey: IP_PARTITION, rowKey: ip, code, name }, 'Replace')
-  await client.upsertEntity({ partitionKey: CODE_PARTITION, rowKey: code, name, ip }, 'Replace')
+  await client.upsertEntity({ partitionKey: EMAIL_PARTITION, rowKey: key, code, name }, 'Replace')
+  await client.upsertEntity({ partitionKey: CODE_PARTITION, rowKey: code, name, email: key }, 'Replace')
 
   return { code, name, isNew: true }
 }

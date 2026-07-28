@@ -10,10 +10,15 @@ export function AccessGate({ children }: Props) {
   const [unlocked, setUnlocked] = useState(() => getStoredAccessCode().length > 0)
   const [code, setCode] = useState('')
   const [status, setStatus] = useState<'idle' | 'checking' | 'invalid'>('idle')
-  // Eigener Status für den "Direkt freischalten"-Weg (siehe autoAccess.ts) —
-  // getrennt von `status` oben, da beide Wege unabhängig voneinander
-  // fehlschlagen/laufen können.
-  const [autoStatus, setAutoStatus] = useState<'idle' | 'checking' | 'error'>('idle')
+  // Eigener Status für den E-Mail-Gate-Weg (siehe autoAccess.ts) — getrennt
+  // von `status` oben, da beide Wege unabhängig voneinander fehlschlagen/
+  // laufen können. 'sent' bedeutet: Code wurde per E-Mail verschickt, die
+  // Person muss ihn jetzt oben im normalen Zugangscode-Feld eingeben — es
+  // gibt bewusst KEINE Sofort-Freischaltung mehr, siehe issuedCodesStore.ts.
+  const [autoStatus, setAutoStatus] = useState<'idle' | 'checking' | 'sent' | 'error'>('idle')
+  const [autoErrorMessage, setAutoErrorMessage] = useState('')
+  const [email, setEmail] = useState('')
+  const [sentToEmail, setSentToEmail] = useState('')
   // AccessGate rendert in main.tsx VOR App.tsx (siehe dort) — hat also
   // keinen Zugriff auf Apps view/lang-State. Ermittelt die Sprache deshalb
   // selbst, einmalig beim ersten Rendern, direkt aus der URL (gleiche
@@ -40,18 +45,24 @@ export function AccessGate({ children }: Props) {
     }
   }
 
-  // "Direkt freischalten" — ersetzt den früheren manuellen "E-Mail an
-  // hello@tavyro.ch"-Umweg für Besucher ohne persönlichen Code. Fordert
-  // automatisch einen fortlaufend nummerierten Code für die aktuelle
-  // IP-Adresse an (siehe api/src/functions/autoAccess.ts) und schaltet bei
-  // Erfolg sofort frei, ohne dass die Person selbst etwas eintippen muss.
-  async function handleAutoAccess() {
+  // E-Mail-Gate — ersetzt den früheren manuellen "E-Mail an
+  // hello@tavyro.ch"-Umweg für Besucher ohne persönlichen Code UND die noch
+  // frühere IP-basierte Sofort-Freischaltung (zu offen für eine "auf
+  // ausgewählte Kontakte begrenzte" Pilotphase). Fordert einen fortlaufend
+  // nummerierten Code für die eingegebene Adresse an (siehe
+  // api/src/functions/autoAccess.ts) — der Code kommt NUR per E-Mail, nicht
+  // in dieser Antwort, die Person muss ihn danach oben manuell eingeben.
+  async function handleAutoAccess(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = email.trim()
+    if (trimmed.length === 0) return
     setAutoStatus('checking')
-    const result = await requestAutoAccess()
+    const result = await requestAutoAccess(trimmed, lang)
     if (result.status === 'ok') {
-      storeAccessCode(result.code)
-      setUnlocked(true)
+      setSentToEmail(trimmed)
+      setAutoStatus('sent')
     } else {
+      setAutoErrorMessage(result.message)
       setAutoStatus('error')
     }
   }
@@ -96,22 +107,42 @@ export function AccessGate({ children }: Props) {
           </button>
         </form>
 
-        <div className="mt-6 flex items-center justify-between gap-3 border-t border-line-soft pt-6">
-          <p className="font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
-            {copy.gate.noCode}
-          </p>
-          <button
-            type="button"
-            onClick={handleAutoAccess}
-            disabled={autoStatus === 'checking'}
-            className="shrink-0 font-mono text-[11px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper disabled:cursor-not-allowed disabled:text-paper-faint"
-          >
-            {autoStatus === 'checking' ? copy.gate.autoAccessChecking : copy.gate.autoAccessCta}
-          </button>
+        <div className="mt-6 border-t border-line-soft pt-6">
+          {autoStatus === 'sent' ? (
+            <p className="font-sans text-[13px] leading-relaxed text-paper-faint">
+              {copy.gate.autoAccessSent(sentToEmail)}
+            </p>
+          ) : (
+            <>
+              <p className="font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
+                {copy.gate.noCode}
+              </p>
+              <form onSubmit={handleAutoAccess} className="mt-3 flex items-center gap-3">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (autoStatus === 'error') setAutoStatus('idle')
+                  }}
+                  placeholder={copy.gate.autoAccessEmailPlaceholder}
+                  className="min-w-0 flex-1 border border-line bg-ink-800/60 px-3 py-2 font-sans text-[13px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+                />
+                <button
+                  type="submit"
+                  disabled={autoStatus === 'checking' || email.trim().length === 0}
+                  className="shrink-0 font-mono text-[11px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper disabled:cursor-not-allowed disabled:text-paper-faint"
+                >
+                  {autoStatus === 'checking' ? copy.gate.autoAccessChecking : copy.gate.autoAccessCta}
+                </button>
+              </form>
+              {autoStatus === 'error' && (
+                <p className="mt-2 font-sans text-[13px] text-paper-dim">{autoErrorMessage}</p>
+              )}
+            </>
+          )}
         </div>
-        {autoStatus === 'error' && (
-          <p className="mt-2 font-sans text-[13px] text-paper-dim">{copy.gate.autoAccessError}</p>
-        )}
 
         <p className="mt-8 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
           {copy.gate.footer}
