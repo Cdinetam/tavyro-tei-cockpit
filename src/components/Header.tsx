@@ -1,3 +1,5 @@
+const BOOKING_URL = 'https://tavyro.ch/de/erstgespraech-buchen'
+
 interface HeaderProps {
   stage: 'landing' | 'room'
   onReset: () => void
@@ -32,6 +34,14 @@ export function Header({ onReset }: HeaderProps) {
               Vertraulich
             </span>
           </div>
+          <a
+            href={BOOKING_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex shrink-0 items-center gap-2 border border-brass-dim bg-brass/[0.12] px-4 py-2 font-sans text-[13px] font-medium text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.2]"
+          >
+            Erstgespräch buchen →
+          </a>
         </div>
       </div>
     </header>

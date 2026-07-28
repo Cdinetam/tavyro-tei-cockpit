@@ -56,9 +56,6 @@ export function Landing({ onStart }: LandingProps) {
             </span>
           </button>
         </div>
-        <p className="mt-4 font-mono text-[11px] uppercase tracking-widest2 text-paper-faint">
-          Demo-Prototyp · keine echten Kundendaten
-        </p>
       </div>
 
       <div className="mt-16 max-w-2xl border-t border-line-soft pt-8 fade-in fade-in-delay-2">
