@@ -1,6 +1,5 @@
 interface LandingProps {
   onStart: (prefill?: string) => void
-  onViewExamples: () => void
 }
 
 const glQuestions = [
@@ -10,7 +9,7 @@ const glQuestions = [
   'Wachstum bringt Reibung ins Führungsteam, die vorher nicht da war.',
 ]
 
-export function Landing({ onStart, onViewExamples }: LandingProps) {
+export function Landing({ onStart }: LandingProps) {
   return (
     <section className="relative mx-auto flex min-h-[calc(100vh-56px)] max-w-[1400px] flex-col justify-center px-6 lg:px-10">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -55,12 +54,6 @@ export function Landing({ onStart, onViewExamples }: LandingProps) {
             <span className="transition-transform duration-300 ease-editorial group-hover:translate-x-1">
               →
             </span>
-          </button>
-          <button
-            onClick={onViewExamples}
-            className="font-mono text-[11.5px] uppercase tracking-widest2 text-paper-dim transition-colors hover:text-paper"
-          >
-            Referenzfälle ansehen
           </button>
         </div>
         <p className="mt-4 font-mono text-[11px] uppercase tracking-widest2 text-paper-faint">

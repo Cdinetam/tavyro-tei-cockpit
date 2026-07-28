@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Header } from './components/Header'
 import { Landing } from './components/Landing'
-import { ScenarioInput } from './components/ScenarioInput'
-import { AnalysisView } from './components/AnalysisView'
 import { TrustRoomChat, ExitConfirmDialog } from './components/TrustRoomChat'
-import { useAnalysis } from './hooks/useAnalysis'
 import { useTrustRoomChat } from './hooks/useTrustRoomChat'
 
-type View = 'landing' | 'static' | 'room'
+type View = 'landing' | 'room'
 
 // Der echte, mehrteilige Trust-Room-Gespräch-Flow bekommt eine eigene URL
 // (/gespraech), damit er direkt verlinkt/geteilt werden kann. Er ist der
-// einzige Live-KI-Flow — die frühere Einmal-Analyse-Demo wurde bewusst
-// entfernt (Produktentscheidung: der Dialog ist strikt überlegen, eine
-// schwächere Parallelversion würde nur den Cliffhanger-Effekt verwässern,
-// siehe Diskussion). Azure SWA leitet via staticwebapp.config.json
+// einzige Live-KI-Flow — sowohl die frühere Einmal-Analyse-Demo als auch
+// die statische Referenzfälle-Ansicht wurden bewusst entfernt
+// (Produktentscheidung: der Dialog ist strikt überlegen, eine parallele,
+// stilistisch inkonsistente Ansicht — Konfidenzwerte, Hypothesen-Raster —
+// verwässert nur die Stimme des Trust Room, siehe Diskussion). Die
+// zugehörigen Dateien (ScenarioInput.tsx, AnalysisView.tsx, scenarios.ts,
+// useAnalysis.ts etc.) sind NICHT gelöscht (Sandbox-rm-Probleme), aber hier
+// nicht mehr eingebunden — toter Code, kann bei Gelegenheit bereinigt
+// werden. Azure SWA leitet via staticwebapp.config.json
 // (navigationFallback) jeden Pfad auf index.html um, ein Deep-Link auf
 // /gespraech funktioniert also direkt.
 function pathToView(pathname: string): View {
@@ -31,7 +33,6 @@ export default function App() {
   const [prefill, setPrefill] = useState('')
   const [pendingExit, setPendingExit] = useState<PendingExit>(null)
 
-  const staticFlow = useAnalysis()
   const roomChat = useTrustRoomChat()
 
   useEffect(() => {
@@ -66,7 +67,6 @@ export default function App() {
     window.history.pushState({}, '', '/')
     setView('landing')
     setPrefill('')
-    staticFlow.reset()
   }
 
   // Zurück zum Start — fragt erst nach, falls im Trust Room ein
@@ -102,21 +102,13 @@ export default function App() {
     setPendingExit(null)
   }
 
-  const headerStage = view === 'room' ? 'room' : view === 'static' ? staticFlow.stage : 'landing'
+  const headerStage = view === 'room' ? 'room' : 'landing'
 
   return (
     <div className="grain min-h-screen bg-ink-900">
       <Header stage={headerStage} onReset={resetAll} />
       <div className="pt-14">
-        {view === 'landing' && (
-          <Landing
-            onStart={(text) => goToRoom(text)}
-            onViewExamples={() => {
-              setView('static')
-              staticFlow.goToInput()
-            }}
-          />
-        )}
+        {view === 'landing' && <Landing onStart={(text) => goToRoom(text)} />}
 
         {view === 'room' && (
           <TrustRoomChat
@@ -140,22 +132,6 @@ export default function App() {
             onLeaveWithoutSaving={() => confirmPendingExit(false)}
             onCancel={() => setPendingExit(null)}
           />
-        )}
-
-        {view === 'static' && (
-          <>
-            {staticFlow.stage === 'input' && (
-              <ScenarioInput onSubmit={staticFlow.submitQuestion} noMatch={staticFlow.noMatch} />
-            )}
-            {staticFlow.stage === 'analysis' && staticFlow.scenario && (
-              <AnalysisView
-                scenario={staticFlow.scenario}
-                question={staticFlow.question}
-                isMatchedReference={staticFlow.isMatchedReference}
-                onSelectScenario={staticFlow.selectScenario}
-              />
-            )}
-          </>
         )}
       </div>
     </div>

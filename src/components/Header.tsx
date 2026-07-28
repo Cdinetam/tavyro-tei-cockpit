@@ -1,9 +1,9 @@
 interface HeaderProps {
-  stage: 'landing' | 'input' | 'analysis' | 'room'
+  stage: 'landing' | 'room'
   onReset: () => void
 }
 
-export function Header({ stage, onReset }: HeaderProps) {
+export function Header({ onReset }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 border-b border-line-soft bg-ink-900/90 backdrop-blur-sm">
       <div className="relative mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-4 px-6 lg:px-10">
@@ -26,14 +26,6 @@ export function Header({ stage, onReset }: HeaderProps) {
         </button>
 
         <div className="flex items-center gap-6">
-          {stage === 'analysis' && (
-            <button
-              onClick={onReset}
-              className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
-            >
-              Neue Analyse
-            </button>
-          )}
           <div className="hidden items-center gap-2 sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-brass" />
             <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">

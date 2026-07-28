@@ -61,24 +61,23 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   "CLIFFHANGER-HINWEIS FÜR DIESE ANTWORT"), Frontend zeigt zusätzlich einen
   Inline-Hinweis (`CliffhangerCta` in `TrustRoomChat.tsx`) unter der
   jeweiligen Nachricht.
-- **Alte Einmal-Analyse-Demo entfernt** (Produktentscheidung: der Dialog
-  ist strikt überlegen, eine parallele schwächere Version verwässert den
+- **Alte Einmal-Analyse-Demo UND statische Referenzfälle-Ansicht entfernt**
+  (Produktentscheidung: der Dialog ist strikt überlegen, eine parallele,
+  stilistisch inkonsistente Ansicht — Konfidenzwerte, Hypothesen-Raster,
+  sechs feste Dimensionen — verwässert die Stimme des Trust Room und den
   Cliffhanger-Effekt). Zugehörige Dateien (`api/src/functions/analyze.ts`,
   `src/components/AiScenarioInput.tsx`, `AiAnalysisView.tsx`,
-  `EmpathicReflection.tsx`, `LockedDecisionCard.tsx`, `AdvisoryNote.tsx`*,
-  `src/hooks/useAiSession.ts`) sind NICHT gelöscht (Sandbox-`rm`-Probleme
-  bei Löschversuchen), aber aus Landing.tsx/App.tsx ausgehängt — toter Code,
-  kann bei Gelegenheit bereinigt werden. *`AdvisoryNote.tsx` wird
-  weiterhin vom separaten statischen Referenzfälle-Bereich genutzt, nicht
-  löschen.
+  `EmpathicReflection.tsx`, `LockedDecisionCard.tsx`, `AdvisoryNote.tsx`,
+  `src/hooks/useAiSession.ts`, `src/data/scenarios.ts`, `AnalysisView.tsx`,
+  `ExecutiveSituation.tsx`, `Hypotheses.tsx`, `RootCauseTree.tsx`,
+  `ScenarioInput.tsx`, `src/hooks/useAnalysis.ts` etc.) sind NICHT gelöscht
+  (Sandbox-`rm`-Probleme bei Löschversuchen), aber aus Landing.tsx/App.tsx
+  ausgehängt — toter Code, kann bei Gelegenheit bereinigt werden. Landing
+  hat dadurch nur noch einen einzigen CTA ("Dialog starten"), `View` in
+  App.tsx nur noch `'landing' | 'room'`, Header.tsx nur noch
+  `'landing' | 'room'` als `stage`.
 - `src/types.ts` — Frontend-Pendant zu `api/src/lib/schema.ts` (muss
   synchron gehalten werden, siehe Kommentar dort).
-- `src/data/scenarios.ts` + zugehörige Komponenten (`AnalysisView.tsx`,
-  `ExecutiveSituation.tsx`, `Hypotheses.tsx`, `RootCauseTree.tsx` etc.) —
-  **separate, statische Referenzfälle-Ansicht** ("Referenzfälle ansehen"),
-  zeigt bewusst noch die volle strukturierte Methodik (6 Dimensionen,
-  Hypothesen) als Showcase — unabhängig vom Live-KI-Flow, nicht anfassen
-  bei Änderungen am KI-Flow.
 - `public/tavyro-logo.png` — TaVyro-Logo, Claim-Text ("People |
   Organisation | Impact") in Hellgold für Lesbarkeit auf Nachtblau-Hintergrund.
 
