@@ -94,14 +94,19 @@ curl -X POST http://localhost:7071/api/analyze \
 | `ACS_EMAIL_CONNECTION_STRING` | Verbindungszeichenfolge der Azure-Communication-Services-Ressource für den Versand der Zugangscode-E-Mail | — |
 | `ACS_SENDER_ADDRESS` | Absenderadresse aus der verknüpften Email-Communication-Services-Domain (z.B. `DoNotReply@xxxxxxxx.azurecomm.net`) | — |
 
-**Zum Nutzungslimit:** Es gilt aktuell pro **IP-Adresse**, nicht pro
-Browser-Sitzung — ein neuer Tab oder privates Fenster setzt es nicht zurück.
-Gezählt wird in Azure Table Storage, sobald `QUOTA_STORAGE_CONNECTION_STRING`
-gesetzt ist (lokal ohne Azurite-Emulator automatisch In-Memory als Fallback,
-siehe `src/lib/quotaStore.ts`). **Wichtig:** dafür NICHT `AzureWebJobsStorage`
+**Zum Nutzungslimit:** Es gilt pro **Zugangscode** (nicht mehr pro
+IP-Adresse — IP-Bindung liess sich trivial per Netzwerkwechsel, z.B.
+Handy-Hotspot, umgehen, während derselbe dauerhaft gültige Code weiter
+funktionierte). Ist Zugangskontrolle deaktiviert (kein `PILOT_ACCESS_CODES`
+gesetzt), dient die IP-Adresse als Ersatzschlüssel. Gezählt wird in Azure
+Table Storage, sobald `QUOTA_STORAGE_CONNECTION_STRING` gesetzt ist (lokal
+ohne Azurite-Emulator automatisch In-Memory als Fallback, siehe
+`src/lib/quotaStore.ts`). **Wichtig:** dafür NICHT `AzureWebJobsStorage`
 verwenden — Azure Static Web Apps reserviert diesen Namen für seine
 verwalteten Functions und lehnt ihn beim Setzen über die
-Umgebungsvariablen-UI mit einem Fehler ab.
+Umgebungsvariablen-UI mit einem Fehler ab. `PILOT_UNLIMITED_IPS` bleibt
+bewusst ein reiner IP-Check (unabhängig vom benutzten Code) — für internes
+Testen von einer festen Netzwerkverbindung aus.
 
 **Neue Person einladen:** In `PILOT_ACCESS_CODES` einen weiteren Eintrag
 `{"name": "...", "code": "..."}` ergänzen. Auf Azure: in den Application

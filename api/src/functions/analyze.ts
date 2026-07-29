@@ -56,16 +56,13 @@ export async function analyze(req: HttpRequest, context: InvocationContext): Pro
     }
   }
 
-  // Limit gilt pro Besucher-IP-Adresse, nicht pro Browser-Sitzung — ein
-  // neuer Tab oder privates Fenster darf das Limit nicht umgehen können.
-  // Wichtig seit die Demo öffentlich von der TaVyro-Homepage aus verlinkt
-  // ist (nicht mehr nur über persönliche Zugangscodes erreichbar): ohne
-  // IP-Bindung könnte ein einzelner Besucher beliebig viele Azure-OpenAI-
-  // Anfragen auslösen. Ein zusätzlich aktiver Zugangscode (falls
-  // PILOT_ACCESS_CODES gesetzt ist) bleibt davon unberührt und gilt vorher.
-  const quotaKey = getClientIp(req)
+  // Schlüssel für die Zählung ist der Zugangscode selbst (siehe chat.ts für
+  // die ausführliche Begründung — IP-Bindung ist trivial umgehbar), mit
+  // IP-Adresse als Ersatzschlüssel, falls Zugangskontrolle deaktiviert ist.
+  const clientIp = getClientIp(req)
+  const quotaKey = access.code || clientIp
   const limit = getWeeklyLimit()
-  const exempt = isUnlimitedIp(quotaKey)
+  const exempt = isUnlimitedIp(clientIp)
   // Siehe chat.ts für die Begründung: ein Aussetzer in der Storage-
   // Anbindung darf nicht die ganze Anfrage mit einem nackten 500 zum
   // Absturz bringen — bei Fehlschlag wird bewusst "offen" fehlgeschlagen.

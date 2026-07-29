@@ -106,13 +106,24 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   // dürfen. Geprüft und gezählt wird das Limit daher nur beim ersten Turn;
   // ein bereits laufendes Gespräch darf zu Ende geführt werden, selbst wenn
   // das Kontingent zwischenzeitlich durch andere Anfragen erreicht wird.
-  // Nutzt denselben IP-Schlüssel/dieselbe Tabelle wie die Einmal-Analyse
-  // (analyze.ts) — das Limit gilt für die Nutzung insgesamt, nicht separat
-  // pro Feature.
+  //
+  // Schlüssel für die Zählung ist der Zugangscode selbst (access.code), NICHT
+  // mehr die IP-Adresse — live festgestellt, dass eine reine IP-Bindung
+  // trivial umgehbar ist (z.B. per Handy-Hotspot mit neuer IP, aber
+  // demselben, dauerhaft gültigen Code). Ist Zugangskontrolle deaktiviert
+  // (kein PILOT_ACCESS_CODES gesetzt, access.code dann leer), bleibt die
+  // IP-Adresse als einzig sinnvoller Ersatzschlüssel. Nutzt denselben
+  // Schlüssel/dieselbe Tabelle wie die Einmal-Analyse (analyze.ts) — das
+  // Limit gilt für die Nutzung insgesamt, nicht separat pro Feature.
   const isFirstTurn = messages.filter((m) => m.role === 'user').length <= 1
-  const quotaKey = getClientIp(req)
+  const clientIp = getClientIp(req)
+  const quotaKey = access.code || clientIp
   const limit = getWeeklyLimit()
-  const exempt = isUnlimitedIp(quotaKey)
+  // Die Ausnahme für interne Test-IPs (PILOT_UNLIMITED_IPS) bleibt bewusst an
+  // die tatsächliche Netzwerkverbindung gebunden, nicht an den Code — so
+  // bleibt z.B. Tams eigenes Testen unlimitiert, unabhängig davon, welchen
+  // Code er gerade benutzt.
+  const exempt = isUnlimitedIp(clientIp)
 
   if (isFirstTurn && !exempt) {
     // Der Kontingent-Check läuft bewusst in einem eigenen try/catch statt
@@ -138,8 +149,8 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
           sessionAnalysesLimit: limit,
           message:
             lang === 'en'
-              ? `The limit of ${limit} conversations for this IP address has been reached.`
-              : `Das Limit von ${limit} Gesprächen für diese IP-Adresse ist erreicht.`,
+              ? `The limit of ${limit} conversations for this ${access.code ? 'access code' : 'IP address'} has been reached.`
+              : `Das Limit von ${limit} Gesprächen für ${access.code ? 'diesen Zugangscode' : 'diese IP-Adresse'} ist erreicht.`,
         },
       }
     }

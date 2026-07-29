@@ -152,11 +152,23 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
 - **`getClientIp` (`api/src/lib/clientIp.ts`)**: der `x-forwarded-for`-
   Header hinter Azure Static Web Apps enthält live beobachtet einen
   angehängten Portanteil (z.B. `83.78.242.147:50290` statt nur der IP) —
-  ohne Portbereinigung (`stripPort`) hätte das IP-basierte Wochenlimit nie
-  zuverlässig zählen können, da der Port pro Verbindung wechselt. Seit der
-  Behebung wird der Port vor der Verwendung als Quota-Schlüssel entfernt
-  (IPv6 in Klammer-Notation bleibt unangetastet, ausser explizit mit
-  angehängtem `:port`).
+  ohne Portbereinigung (`stripPort`) hätte ein IP-basiertes Limit nie
+  zuverlässig zählen können, da der Port pro Verbindung wechselt.
+- **Wochenlimit-Schlüssel: Code statt IP**: `chat.ts`/`analyze.ts` zählen
+  `PILOT_WEEKLY_LIMIT` seit dieser Änderung pro **Zugangscode**
+  (`access.code`), nicht mehr pro IP-Adresse — eine reine IP-Bindung liess
+  sich trivial umgehen (Netzwerkwechsel, z.B. Handy-Hotspot, während
+  derselbe dauerhaft gültige Code weiterfunktionierte). IP-Adresse bleibt
+  nur Ersatzschlüssel, falls Zugangskontrolle komplett deaktiviert ist
+  (kein `PILOT_ACCESS_CODES`). `PILOT_UNLIMITED_IPS` bleibt bewusst ein
+  reiner IP-Check, unabhängig vom benutzten Code (für internes Testen von
+  einer festen Netzwerkverbindung aus).
+- **Missbrauchsschutz für `/api/auto-access`**: eigenständiges IP-Rate-Limit
+  (5 Anfragen/Stunde, `api/src/lib/autoAccessRateLimit.ts`, eigene Tabelle
+  `TeiAutoAccessRate`) plus Versand-Cooldown pro E-Mail-Adresse (frühestens
+  alle 10 Minuten ein tatsächlicher erneuter Versand, siehe `canSend` in
+  `issuedCodesStore.ts`) — verhindert, dass der Endpoint zum
+  E-Mail-Spam-Vektor wird, unabhängig vom eigentlichen Wochenlimit.
 - Eigene, unabhängige Domain für TEI Trust Room (losgelöst von tavyro.ch)
   sowie vollständige TaVyro-Branding-Entfernung wurden diskutiert, dann
   bewusst zurückgestellt — aktuell bleibt das TaVyro-Logo im Header/Access
