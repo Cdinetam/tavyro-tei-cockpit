@@ -4,6 +4,7 @@ import { getClientIp } from '../lib/clientIp.js'
 import { notify } from '../lib/notify.js'
 import { isAccessControlEnabled } from '../lib/accessCodes.js'
 import { sendAccessCodeEmail } from '../lib/emailSender.js'
+import { allowAutoAccessRequest } from '../lib/autoAccessRateLimit.js'
 
 interface AutoAccessRequestBody {
   email?: string
@@ -56,33 +57,58 @@ export async function autoAccess(req: HttpRequest, context: InvocationContext): 
     }
   }
 
-  const { code, name, isNew } = await getOrIssueCodeForEmail(email)
+  const clientIp = getClientIp(req)
 
-  try {
-    await sendAccessCodeEmail({ to: email, code, lang })
-  } catch (err) {
-    // Fehlerdetails bewusst nur ins Server-Log, nicht in die Antwort — dieser
-    // Endpoint ist ohne Zugangscode erreichbar (er IST der Weg zum ersten
-    // Code), Interna zur E-Mail-Konfiguration sollen daher nicht für jeden
-    // Anfragenden sichtbar sein.
-    context.error('TEI autoAccess: E-Mail-Versand fehlgeschlagen', err)
+  // IP-Rate-Limit VOR jeder Storage-/E-Mail-Aktion prüfen — verhindert, dass
+  // eine einzelne IP diesen Endpoint mit vielen verschiedenen Adressen
+  // flutet (siehe autoAccessRateLimit.ts).
+  const allowed = await allowAutoAccessRequest(clientIp)
+  if (!allowed) {
     return {
-      status: 502,
+      status: 429,
       jsonBody: {
         status: 'error',
         message:
           lang === 'en'
-            ? 'The code could not be sent right now. Please try again shortly.'
-            : 'Der Code konnte gerade nicht verschickt werden. Bitte in Kürze erneut versuchen.',
+            ? 'Too many requests. Please try again later.'
+            : 'Zu viele Anfragen. Bitte später erneut versuchen.',
       },
     }
   }
+
+  const { code, name, isNew, canSend } = await getOrIssueCodeForEmail(email)
+
+  if (canSend) {
+    try {
+      await sendAccessCodeEmail({ to: email, code, lang })
+    } catch (err) {
+      // Fehlerdetails bewusst nur ins Server-Log, nicht in die Antwort —
+      // dieser Endpoint ist ohne Zugangscode erreichbar (er IST der Weg zum
+      // ersten Code), Interna zur E-Mail-Konfiguration sollen daher nicht
+      // für jeden Anfragenden sichtbar sein.
+      context.error('TEI autoAccess: E-Mail-Versand fehlgeschlagen', err)
+      return {
+        status: 502,
+        jsonBody: {
+          status: 'error',
+          message:
+            lang === 'en'
+              ? 'The code could not be sent right now. Please try again shortly.'
+              : 'Der Code konnte gerade nicht verschickt werden. Bitte in Kürze erneut versuchen.',
+        },
+      }
+    }
+  }
+  // canSend === false: kürzlich bereits verschickt (Cooldown, siehe
+  // issuedCodesStore.ts) — kein erneuter Versand, aber die Person bekommt
+  // trotzdem eine normale Erfolgsmeldung ("prüfen Sie Ihr Postfach"), da der
+  // Code ja bereits unterwegs bzw. angekommen ist.
 
   if (isNew) {
     await notify({
       kind: 'access',
       sessionId: 'auto-access',
-      question: `Code per E-Mail an ${email} verschickt (IP: ${getClientIp(req)})`,
+      question: `Code per E-Mail an ${email} verschickt (IP: ${clientIp})`,
       personName: name,
       email,
     })

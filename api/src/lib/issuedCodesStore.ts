@@ -39,8 +39,15 @@ const CODE_PARTITION = 'by-code'
 const COUNTER_PARTITION = 'counter'
 const COUNTER_ROW = 'sequence'
 
+// Mindestabstand zwischen zwei tatsächlichen E-Mail-Versänden an dieselbe
+// Adresse — verhindert, dass jemand eine fremde (oder die eigene) Adresse
+// durch wiederholtes Klicken mit E-Mails flutet. Wiederholte Anfragen
+// innerhalb des Fensters liefern weiterhin denselben Code zurück (isNew
+// bleibt false), lösen aber keinen erneuten Versand aus (siehe canSend).
+const RESEND_COOLDOWN_MS = 10 * 60 * 1000
+
 let tableClientPromise: Promise<TableClient | null> | null = null
-const memoryByEmail = new Map<string, { code: string; name: string }>()
+const memoryByEmail = new Map<string, { code: string; name: string; lastSentAt: number }>()
 const memoryByCode = new Map<string, string>() // code -> name
 let memoryCounter = 0
 
@@ -94,28 +101,44 @@ function normalizeEmailKey(email: string): string {
  * Liefert den bestehenden Auto-Code für diese E-Mail-Adresse zurück, oder
  * erzeugt einen neuen mit der nächsten fortlaufenden Nummer. isNew ist nur
  * beim allerersten Aufruf für diese Adresse true (relevant für die
- * Benachrichtigung an Tam, siehe autoAccess.ts).
+ * Benachrichtigung an Tam, siehe autoAccess.ts). canSend ist false, wenn erst
+ * kürzlich (< RESEND_COOLDOWN_MS) bereits eine E-Mail an diese Adresse
+ * verschickt wurde — der Aufrufer (autoAccess.ts) soll dann KEINEN erneuten
+ * Versand auslösen, obwohl der Code selbst natürlich weiterhin gültig ist.
  */
 export async function getOrIssueCodeForEmail(
   email: string,
-): Promise<{ code: string; name: string; isNew: boolean }> {
+): Promise<{ code: string; name: string; isNew: boolean; canSend: boolean }> {
   const key = normalizeEmailKey(email)
   const client = await getTableClient()
+  const now = Date.now()
 
   if (!client) {
     const existing = memoryByEmail.get(key)
-    if (existing) return { ...existing, isNew: false }
+    if (existing) {
+      const canSend = now - existing.lastSentAt >= RESEND_COOLDOWN_MS
+      if (canSend) existing.lastSentAt = now
+      return { code: existing.code, name: existing.name, isNew: false, canSend }
+    }
     memoryCounter += 1
     const code = formatCode(memoryCounter)
     const name = formatName(memoryCounter)
-    memoryByEmail.set(key, { code, name })
+    memoryByEmail.set(key, { code, name, lastSentAt: now })
     memoryByCode.set(code, name)
-    return { code, name, isNew: true }
+    return { code, name, isNew: true, canSend: true }
   }
 
   try {
     const existing = await client.getEntity<Record<string, unknown>>(EMAIL_PARTITION, key)
-    return { code: String(existing.code), name: String(existing.name), isNew: false }
+    const lastSentAt = Number(existing.lastSentAt ?? 0)
+    const canSend = now - lastSentAt >= RESEND_COOLDOWN_MS
+    if (canSend) {
+      await client.updateEntity(
+        { partitionKey: EMAIL_PARTITION, rowKey: key, lastSentAt: now },
+        'Merge',
+      )
+    }
+    return { code: String(existing.code), name: String(existing.name), isNew: false, canSend }
   } catch {
     // noch kein Eintrag für diese Adresse — neuen Code vergeben, siehe unten
   }
@@ -135,10 +158,13 @@ export async function getOrIssueCodeForEmail(
   const code = formatCode(nextN)
   const name = formatName(nextN)
 
-  await client.upsertEntity({ partitionKey: EMAIL_PARTITION, rowKey: key, code, name }, 'Replace')
+  await client.upsertEntity(
+    { partitionKey: EMAIL_PARTITION, rowKey: key, code, name, lastSentAt: now },
+    'Replace',
+  )
   await client.upsertEntity({ partitionKey: CODE_PARTITION, rowKey: code, name, email: key }, 'Replace')
 
-  return { code, name, isNew: true }
+  return { code, name, isNew: true, canSend: true }
 }
 
 /** Löst einen bereits automatisch vergebenen Code auf einen Namen auf — für
