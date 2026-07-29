@@ -83,10 +83,55 @@ export function AccessGate({ children }: Props) {
         <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.gate.heading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.gate.body}</p>
 
-        <form onSubmit={handleSubmit} className="mt-8">
+        <div className="mt-8">
+          {autoStatus === 'sent' ? (
+            <p className="font-sans text-[13px] leading-relaxed text-paper-faint">
+              {copy.gate.autoAccessSent(sentToEmail)}
+            </p>
+          ) : (
+            <>
+              <p className="font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
+                {copy.gate.noCode}
+              </p>
+              <form onSubmit={handleAutoAccess} className="mt-3 space-y-3">
+                <input
+                  type="email"
+                  autoFocus
+                  required
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (autoStatus === 'error') setAutoStatus('idle')
+                  }}
+                  placeholder={copy.gate.autoAccessEmailPlaceholder}
+                  className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+                />
+                <button
+                  type="submit"
+                  disabled={autoStatus === 'checking' || email.trim().length === 0}
+                  className="w-full border border-brass-dim bg-brass/[0.08] px-5 py-3 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-paper-faint"
+                >
+                  {autoStatus === 'checking' ? copy.gate.autoAccessChecking : copy.gate.autoAccessCta}
+                </button>
+              </form>
+              {autoStatus === 'error' && (
+                <p className="mt-2 font-sans text-[13px] text-paper-dim">{autoErrorMessage}</p>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="mt-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-line-soft" />
+          <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
+            {copy.gate.orDivider}
+          </span>
+          <div className="h-px flex-1 bg-line-soft" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6">
           <input
             type="password"
-            autoFocus
             value={code}
             onChange={(e) => {
               setCode(e.target.value)
@@ -106,43 +151,6 @@ export function AccessGate({ children }: Props) {
             {status === 'checking' ? copy.gate.checking : copy.gate.submit}
           </button>
         </form>
-
-        <div className="mt-6 border-t border-line-soft pt-6">
-          {autoStatus === 'sent' ? (
-            <p className="font-sans text-[13px] leading-relaxed text-paper-faint">
-              {copy.gate.autoAccessSent(sentToEmail)}
-            </p>
-          ) : (
-            <>
-              <p className="font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
-                {copy.gate.noCode}
-              </p>
-              <form onSubmit={handleAutoAccess} className="mt-3 flex items-center gap-3">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    if (autoStatus === 'error') setAutoStatus('idle')
-                  }}
-                  placeholder={copy.gate.autoAccessEmailPlaceholder}
-                  className="min-w-0 flex-1 border border-line bg-ink-800/60 px-3 py-2 font-sans text-[13px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
-                />
-                <button
-                  type="submit"
-                  disabled={autoStatus === 'checking' || email.trim().length === 0}
-                  className="shrink-0 font-mono text-[11px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper disabled:cursor-not-allowed disabled:text-paper-faint"
-                >
-                  {autoStatus === 'checking' ? copy.gate.autoAccessChecking : copy.gate.autoAccessCta}
-                </button>
-              </form>
-              {autoStatus === 'error' && (
-                <p className="mt-2 font-sans text-[13px] text-paper-dim">{autoErrorMessage}</p>
-              )}
-            </>
-          )}
-        </div>
 
         <p className="mt-8 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
           {copy.gate.footer}

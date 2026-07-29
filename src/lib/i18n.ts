@@ -55,6 +55,7 @@ interface Copy {
     autoAccessError: string
     autoAccessEmailPlaceholder: string
     autoAccessSent: (email: string) => string
+    orDivider: string
   }
   header: {
     ariaHome: string
@@ -136,7 +137,8 @@ const de: Copy = {
     autoAccessError: 'Der Code konnte gerade nicht verschickt werden. Bitte in Kürze erneut versuchen.',
     autoAccessEmailPlaceholder: 'Ihre E-Mail-Adresse',
     autoAccessSent: (email) =>
-      `Ein Zugangscode wurde an ${email} verschickt. Bitte prüfen Sie Ihr Postfach und geben Sie den Code oben ein.`,
+      `Ein Zugangscode wurde an ${email} verschickt. Bitte prüfen Sie Ihr Postfach und geben Sie den Code unten ein.`,
+    orDivider: 'oder',
   },
   header: {
     ariaHome: 'Zur Startseite',
@@ -236,7 +238,8 @@ const en: Copy = {
     autoAccessError: 'The code could not be sent right now. Please try again shortly.',
     autoAccessEmailPlaceholder: 'Your email address',
     autoAccessSent: (email) =>
-      `An access code was sent to ${email}. Please check your inbox and enter the code above.`,
+      `An access code was sent to ${email}. Please check your inbox and enter the code below.`,
+    orDivider: 'or',
   },
   header: {
     ariaHome: 'Back to homepage',
