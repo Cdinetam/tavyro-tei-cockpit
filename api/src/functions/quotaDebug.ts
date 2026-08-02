@@ -19,9 +19,14 @@ export async function quotaDebug(req: HttpRequest): Promise<HttpResponseInit> {
   const access = await checkAccessCode(req)
   if (access.denied) return access.denied
 
-  const quotaKey = getClientIp(req)
+  // Muss exakt dieselbe Schlüssel-Logik wie chat.ts/analyze.ts verwenden,
+  // sonst zeigt dieser Endpoint einen anderen Stand als die echte Zählung —
+  // genau das war zwischenzeitlich der Fall, nachdem der Schlüssel dort von
+  // IP auf Zugangscode umgestellt wurde, ohne diesen Endpoint anzupassen.
+  const clientIp = getClientIp(req)
+  const quotaKey = access.code || clientIp
   const limit = getWeeklyLimit()
-  const exempt = isUnlimitedIp(quotaKey)
+  const exempt = isUnlimitedIp(clientIp)
   const rawUnlimitedIps = process.env.PILOT_UNLIMITED_IPS ?? null
   const hasConnectionStringEnv = Boolean(
     process.env.QUOTA_STORAGE_CONNECTION_STRING || process.env.AzureWebJobsStorage,
@@ -54,6 +59,9 @@ export async function quotaDebug(req: HttpRequest): Promise<HttpResponseInit> {
     status: 200,
     jsonBody: {
       quotaKey,
+      clientIp,
+      accessCode: access.code || null,
+      ownerName: access.ownerName,
       limit,
       exempt,
       rawUnlimitedIps,
