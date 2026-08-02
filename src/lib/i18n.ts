@@ -94,6 +94,13 @@ interface Copy {
       booking: string
       backToStart: string
     }
+    conversationLimitReached: {
+      kicker: string
+      heading: string
+      body: string
+      newDialog: string
+      booking: string
+    }
     demoExpired: {
       kicker: string
       heading: string
@@ -192,6 +199,15 @@ const de: Copy = {
         'Austausch — nicht in eine endlose Demo-Schleife.',
       booking: 'Erstgespräch buchen →',
       backToStart: 'Zurück zum Start',
+    },
+    conversationLimitReached: {
+      kicker: 'Maximale Gesprächslänge erreicht',
+      heading: 'Dieses Gespräch hat seine maximale Länge erreicht.',
+      body:
+        'Das ist eine rein technische Obergrenze pro einzelnem Gespräch, unabhängig von Ihrem ' +
+        'Wochenkontingent — Sie können sofort ein neues Gespräch starten.',
+      newDialog: 'Neues Gespräch starten',
+      booking: 'Erstgespräch buchen →',
     },
     demoExpired: {
       kicker: 'Pilotphase abgeschlossen',
@@ -292,6 +308,15 @@ const en: Copy = {
         'exchange, not an endless demo loop.',
       booking: 'Book an intro call →',
       backToStart: 'Back to start',
+    },
+    conversationLimitReached: {
+      kicker: 'Maximum conversation length reached',
+      heading: 'This conversation has reached its maximum length.',
+      body:
+        "That's a purely technical cap per individual conversation, independent of your weekly " +
+        'quota — you can start a new conversation right away.',
+      newDialog: 'Start new conversation',
+      booking: 'Book an intro call →',
     },
     demoExpired: {
       kicker: 'Pilot phase concluded',

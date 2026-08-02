@@ -31,6 +31,16 @@ const MAX_MESSAGE_LENGTH = 2000
 // Ab dieser Nachrichtenzahl zum selben Thema schliesst TEI® spätestens mit
 // einem klaren Cliffhanger ab, siehe CHAT_SYSTEM_PROMPT.
 const CLIFFHANGER_TOPIC_TURN_THRESHOLD = 5
+// Harte, rein technische Obergrenze für Nutzer-Nachrichten INNERHALB EINES
+// einzelnen Gesprächs — unabhängig vom PILOT_WEEKLY_LIMIT weiter unten, das
+// nur zählt, wie viele Gespräche begonnen wurden, nicht wie viele Nachrichten
+// ein einzelnes Gespräch enthält (bewusste frühere Design-Entscheidung, siehe
+// CLAUDE.md: "kein Nachrichtenlimit, Kostenschutz über Azure-Budget-Alert").
+// Live-Beobachtung: dadurch konnte eine einzelne, dauerhaft offene Konversation
+// beliebig viele kostenpflichtige Azure-OpenAI-Aufrufe auslösen, ohne je
+// gegen das Wochenlimit zu zählen. Dieser Wert ist bewusst als zusätzliche,
+// unabhängige Bremse gedacht, nicht als Ersatz für PILOT_WEEKLY_LIMIT.
+const MAX_MESSAGES_PER_CONVERSATION = Number(process.env.MAX_MESSAGES_PER_CONVERSATION ?? '7')
 
 export async function chat(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const access = await checkAccessCode(req)
@@ -115,7 +125,8 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   // IP-Adresse als einzig sinnvoller Ersatzschlüssel. Nutzt denselben
   // Schlüssel/dieselbe Tabelle wie die Einmal-Analyse (analyze.ts) — das
   // Limit gilt für die Nutzung insgesamt, nicht separat pro Feature.
-  const isFirstTurn = messages.filter((m) => m.role === 'user').length <= 1
+  const totalUserMessages = messages.filter((m) => m.role === 'user').length
+  const isFirstTurn = totalUserMessages <= 1
   const clientIp = getClientIp(req)
   const quotaKey = access.code || clientIp
   const limit = getWeeklyLimit()
@@ -124,6 +135,23 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   // bleibt z.B. Tams eigenes Testen unlimitiert, unabhängig davon, welchen
   // Code er gerade benutzt.
   const exempt = isUnlimitedIp(clientIp)
+
+  // Nachrichten-Cap pro Gespräch — siehe MAX_MESSAGES_PER_CONVERSATION oben.
+  // Bewusst VOR dem Wochenlimit geprüft und unabhängig von isFirstTurn (greift
+  // ja gerade bei späteren Nachrichten desselben Gesprächs), aber genau wie
+  // das Wochenlimit für als unlimitiert markierte Test-IPs ausgenommen.
+  if (totalUserMessages > MAX_MESSAGES_PER_CONVERSATION && !exempt) {
+    return {
+      status: 200,
+      jsonBody: {
+        status: 'conversation_limit_reached',
+        message:
+          lang === 'en'
+            ? `This conversation has reached its maximum length (${MAX_MESSAGES_PER_CONVERSATION} messages). Please start a new conversation, or continue in a real conversation with Tam Nguyen.`
+            : `Dieses Gespräch hat seine maximale Länge erreicht (${MAX_MESSAGES_PER_CONVERSATION} Nachrichten). Bitte starten Sie ein neues Gespräch, oder führen Sie es in einem echten Gespräch mit Tam Nguyen weiter.`,
+      },
+    }
+  }
 
   if (isFirstTurn && !exempt) {
     // Der Kontingent-Check läuft bewusst in einem eigenen try/catch statt

@@ -3,7 +3,13 @@ import type { ChatMessage } from '../types'
 import { sendChatMessage } from '../lib/aiClient'
 import type { Lang } from '../lib/i18n'
 
-export type ChatFlowStatus = 'idle' | 'sending' | 'limit_reached' | 'demo_expired' | 'error'
+export type ChatFlowStatus =
+  | 'idle'
+  | 'sending'
+  | 'limit_reached'
+  | 'conversation_limit_reached'
+  | 'demo_expired'
+  | 'error'
 
 export interface SavedConversation {
   id: string
@@ -95,6 +101,11 @@ export function useTrustRoomChat(lang: Lang = 'de') {
         setWeeklyLimit(response.sessionAnalysesLimit)
       }
       setStatus('limit_reached')
+    } else if (response.status === 'conversation_limit_reached') {
+      // Anders als 'limit_reached' (Wochenkontingent komplett erschöpft)
+      // betrifft dies nur DIESES eine Gespräch — die Person kann sofort ein
+      // neues starten, siehe TrustRoomChat.tsx.
+      setStatus('conversation_limit_reached')
     } else if (response.status === 'demo_expired') {
       setStatus('demo_expired')
     } else {

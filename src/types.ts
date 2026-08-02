@@ -128,7 +128,7 @@ export interface ChatMessage {
   cliffhanger?: boolean
 }
 
-export type ChatResponseStatus = 'ok' | 'limit_reached' | 'demo_expired' | 'error'
+export type ChatResponseStatus = 'ok' | 'limit_reached' | 'conversation_limit_reached' | 'demo_expired' | 'error'
 
 export interface ChatResponse {
   status: ChatResponseStatus
