@@ -123,6 +123,21 @@ function AttachmentBar({ attachment, lang }: { attachment: ReturnType<typeof use
   )
 }
 
+function LangToggle({ lang, onToggleLang }: { lang: Lang; onToggleLang: () => void }) {
+  const copy = getCopy(lang)
+  return (
+    <button
+      onClick={onToggleLang}
+      aria-label={copy.header.langToggleAria}
+      className="flex shrink-0 items-center gap-1 font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+    >
+      <span className={lang === 'de' ? 'text-paper' : undefined}>DE</span>
+      <span aria-hidden="true">|</span>
+      <span className={lang === 'en' ? 'text-paper' : undefined}>EN</span>
+    </button>
+  )
+}
+
 function formatSavedAt(ms: number, lang: Lang): string {
   try {
     const locale = lang === 'en' ? 'en-GB' : 'de-CH'
@@ -140,6 +155,7 @@ function formatSavedAt(ms: number, lang: Lang): string {
 
 interface Props {
   lang: Lang
+  onToggleLang: () => void
   messages: ChatMessage[]
   status: LiveChatStatus
   errorMessage: string
@@ -161,6 +177,7 @@ interface Props {
  */
 export function LiveChat({
   lang,
+  onToggleLang,
   messages,
   status,
   errorMessage,
@@ -205,12 +222,15 @@ export function LiveChat({
               {liveCopy.statusLabel}
             </span>
           </div>
-          <button
-            onClick={onLogout}
-            className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
-          >
-            {liveCopy.logout}
-          </button>
+          <div className="flex items-center gap-4">
+            <LangToggle lang={lang} onToggleLang={onToggleLang} />
+            <button
+              onClick={onLogout}
+              className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+            >
+              {liveCopy.logout}
+            </button>
+          </div>
         </div>
         <h1 className="mt-6 font-display text-[1.75rem] font-medium leading-snug text-paper">
           {liveCopy.empty.heading}
@@ -291,6 +311,7 @@ export function LiveChat({
           >
             {liveCopy.newDialog}
           </button>
+          <LangToggle lang={lang} onToggleLang={onToggleLang} />
           <button
             onClick={onLogout}
             className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
