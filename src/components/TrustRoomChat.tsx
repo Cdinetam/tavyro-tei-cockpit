@@ -233,20 +233,20 @@ export function TrustRoomChat({
           {copy.chat.conversationLimitReached.body}
         </p>
         <div className="mt-7 flex flex-wrap gap-4">
-          <button
-            onClick={onRequestNewChat}
-            className="inline-flex items-center gap-2 border border-brass-dim bg-brass/[0.08] px-5 py-2.5 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14]"
-          >
-            {copy.chat.conversationLimitReached.newDialog}
-          </button>
           <a
             href={BOOKING_URL[lang]}
             target="_blank"
             rel="noreferrer"
-            className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+            className="inline-flex items-center gap-2 border border-brass-dim bg-brass/[0.08] px-5 py-2.5 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14]"
           >
             {copy.chat.conversationLimitReached.booking}
           </a>
+          <button
+            onClick={onRequestNewChat}
+            className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+          >
+            {copy.chat.conversationLimitReached.newDialog}
+          </button>
         </div>
       </section>
     )

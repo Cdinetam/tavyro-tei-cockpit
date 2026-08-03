@@ -89,6 +89,7 @@ curl -X POST http://localhost:7071/api/analyze \
 | `DEMO_EXPIRES_AT` | Harter Stichtag für die gesamte Pilotphase | `2026-09-30T23:59:59Z` |
 | `PILOT_ACCESS_CODES` | JSON-Liste individueller Zugangscodes pro Person (leer = Zugangskontrolle deaktiviert) | `[{"name":"Peter Müller","code":"tavyro-mueller-482"}]` |
 | `PILOT_WEEKLY_LIMIT` | Vertiefte Analysen pro Person innerhalb von 7 Tagen (gleitendes Fenster) | `5` |
+| `MAX_MESSAGES_PER_CONVERSATION` | Harte Obergrenze für Nutzer-Nachrichten INNERHALB eines einzelnen Gesprächs — unabhängig von `PILOT_WEEKLY_LIMIT` (das nur begonnene Gespräche zählt, nicht einzelne Nachrichten). Reiner Kostenschutz gegen eine einzelne, unbegrenzt lange Konversation. | `7` |
 | `QUOTA_STORAGE_CONNECTION_STRING` | Connection String eines eigenen Storage-Accounts (z.B. `tavyroteiquota`) für die persistente Zählung des Nutzungslimits | — |
 | `NOTIFY_WEBHOOK_URL` | Webhook für persönliche Benachrichtigung (Slack/Teams/Zapier) | — |
 | `ACS_EMAIL_CONNECTION_STRING` | Verbindungszeichenfolge der Azure-Communication-Services-Ressource für den Versand der Zugangscode-E-Mail | — |

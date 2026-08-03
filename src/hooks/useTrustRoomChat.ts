@@ -109,7 +109,8 @@ export function useTrustRoomChat(lang: Lang = 'de') {
     } else if (response.status === 'demo_expired') {
       setStatus('demo_expired')
     } else {
-      setErrorMessage(response.message ?? 'Etwas ist schiefgelaufen.')
+      const fallback = langRef.current === 'en' ? 'Something went wrong.' : 'Etwas ist schiefgelaufen.'
+      setErrorMessage(response.message ?? fallback)
       setStatus('error')
     }
   }

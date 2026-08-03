@@ -91,7 +91,7 @@ export async function requestAutoAccess(
   }
 }
 
-export async function analyzeQuestion(question: string): Promise<AnalyzeResponse> {
+export async function analyzeQuestion(question: string, lang: Lang = 'de'): Promise<AnalyzeResponse> {
   if (!API_BASE_URL) {
     const result = await mockAnalyze(question)
     return { status: 'ok', result, sessionAnalysesUsed: 1, sessionAnalysesLimit: 1 }
@@ -104,10 +104,22 @@ export async function analyzeQuestion(question: string): Promise<AnalyzeResponse
   })
 
   if (response.status === 401) {
-    return { status: 'error', message: 'Zugangscode ungültig oder abgelaufen. Bitte Seite neu laden.' }
+    return {
+      status: 'error',
+      message:
+        lang === 'en'
+          ? 'Access code invalid or expired. Please reload the page.'
+          : 'Zugangscode ungültig oder abgelaufen. Bitte Seite neu laden.',
+    }
   }
   if (!response.ok && response.status !== 400) {
-    return { status: 'error', message: 'Die Analyse ist gerade nicht erreichbar. Bitte später erneut versuchen.' }
+    return {
+      status: 'error',
+      message:
+        lang === 'en'
+          ? 'The analysis is currently unavailable. Please try again later.'
+          : 'Die Analyse ist gerade nicht erreichbar. Bitte später erneut versuchen.',
+    }
   }
 
   return (await response.json()) as AnalyzeResponse
@@ -138,16 +150,31 @@ export async function sendChatMessage(
   })
 
   if (response.status === 401) {
-    return { status: 'error', message: 'Zugangscode ungültig oder abgelaufen. Bitte Seite neu laden.' }
+    return {
+      status: 'error',
+      message:
+        lang === 'en'
+          ? 'Access code invalid or expired. Please reload the page.'
+          : 'Zugangscode ungültig oder abgelaufen. Bitte Seite neu laden.',
+    }
   }
   if (!response.ok && response.status !== 400) {
-    return { status: 'error', message: 'Der Trust Room ist gerade nicht erreichbar. Bitte später erneut versuchen.' }
+    return {
+      status: 'error',
+      message:
+        lang === 'en'
+          ? 'The Trust Room is currently unavailable. Please try again later.'
+          : 'Der Trust Room ist gerade nicht erreichbar. Bitte später erneut versuchen.',
+    }
   }
 
   return (await response.json()) as ChatResponse
 }
 
-export async function submitLead(payload: Omit<LeadRequest, 'sessionId'>): Promise<LeadResponse> {
+export async function submitLead(
+  payload: Omit<LeadRequest, 'sessionId'>,
+  lang: Lang = 'de',
+): Promise<LeadResponse> {
   if (!API_BASE_URL) {
     // Im lokalen Demo-Modus ohne Backend gibt es niemanden, der benachrichtigt
     // werden könnte — Erfolg wird simuliert, damit sich der Flow testen lässt.
@@ -162,7 +189,10 @@ export async function submitLead(payload: Omit<LeadRequest, 'sessionId'>): Promi
   })
 
   if (!response.ok) {
-    return { status: 'error', message: 'Anfrage konnte nicht übermittelt werden.' }
+    return {
+      status: 'error',
+      message: lang === 'en' ? 'The request could not be submitted.' : 'Anfrage konnte nicht übermittelt werden.',
+    }
   }
   return (await response.json()) as LeadResponse
 }

@@ -136,6 +136,14 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   // Code er gerade benutzt.
   const exempt = isUnlimitedIp(clientIp)
 
+  // Genau die letzte noch erlaubte Nachricht dieses Gesprächs (z.B. die 7.
+  // von 7) — ab hier gibt es keine weitere Antwort mehr, siehe Block direkt
+  // darunter. Diese eine Antwort soll deshalb bewusst nicht einfach mitten im
+  // Thema abbrechen, sondern wie ein regulärer Cliffhanger (siehe
+  // CLIFFHANGER_TOPIC_TURN_THRESHOLD) sauber Richtung echtes Gespräch
+  // abschliessen.
+  const isFinalAllowedMessage = totalUserMessages === MAX_MESSAGES_PER_CONVERSATION && !exempt
+
   // Nachrichten-Cap pro Gespräch — siehe MAX_MESSAGES_PER_CONVERSATION oben.
   // Bewusst VOR dem Wochenlimit geprüft und unabhängig von isFirstTurn (greift
   // ja gerade bei späteren Nachrichten desselben Gesprächs), aber genau wie
@@ -184,9 +192,20 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
     }
   }
 
+  // Bei der letzten erlaubten Nachricht wird der Turn-Hinweis an das Modell
+  // künstlich auf die Cliffhanger-Schwelle angehoben (unabhängig vom
+  // tatsächlichen Themen-Streak) — dieselbe Prompt-Regel, die sonst bei
+  // Themenerschöpfung greift (siehe CHAT_SYSTEM_PROMPT), sorgt so dafür, dass
+  // diese Antwort bewusst und sauber abschliesst statt mitten im Gedanken
+  // abzubrechen, weil danach ohnehin keine weitere Antwort mehr folgt.
+  const effectiveTopicTurnHint = isFinalAllowedMessage
+    ? Math.max(topicTurnHint, CLIFFHANGER_TOPIC_TURN_THRESHOLD)
+    : topicTurnHint
+
   try {
-    const result = await requestChatReply(messages, topicTurnHint, lang, (msg) => context.log(msg))
-    const cliffhanger = topicTurnHint >= CLIFFHANGER_TOPIC_TURN_THRESHOLD || result.themenwechsel
+    const result = await requestChatReply(messages, effectiveTopicTurnHint, lang, (msg) => context.log(msg))
+    const cliffhanger =
+      isFinalAllowedMessage || effectiveTopicTurnHint >= CLIFFHANGER_TOPIC_TURN_THRESHOLD || result.themenwechsel
 
     if (isFirstTurn && !exempt) {
       // Ebenfalls eigens abgefangen: eine bereits erfolgreich erzeugte,
