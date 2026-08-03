@@ -15,7 +15,7 @@
  */
 
 interface NotifyPayload {
-  kind: 'analyse' | 'lead' | 'chat' | 'access'
+  kind: 'analyse' | 'lead' | 'chat' | 'access' | 'live_register'
   sessionId: string
   question: string
   /** Name laut PILOT_ACCESS_CODES ODER automatisch vergebener Besucher-Name
@@ -43,7 +43,9 @@ export async function notify(payload: NotifyPayload): Promise<void> {
               ? `TEI®-Gespräch begonnen · ${who} · Erste Nachricht: "${payload.question}"`
               : payload.kind === 'access'
                 ? `TEI®-Zugang automatisch vergeben · ${who} · ${payload.question}`
-                : `TEI®-Kontaktanfrage · ${who} · ${payload.email} · Frage: "${payload.question}"${
+                : payload.kind === 'live_register'
+                  ? `TEI® Live-Version: neue Registrierung · ${payload.email}`
+                  : `TEI®-Kontaktanfrage · ${who} · ${payload.email} · Frage: "${payload.question}"${
                     payload.note ? ` · Notiz: ${payload.note}` : ''
                   }`,
         ...payload,

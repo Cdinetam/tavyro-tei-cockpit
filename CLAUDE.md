@@ -160,6 +160,41 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   nutzt die Erkennung, siehe Kommentar bei `getLangFromPath` vs.
   `detectInitialLang`.
 
+- **Live-Version** (`/live`, `/live/register`, `/live/verify`,
+  `/live/forgot-password`, `/live/reset-password`, `/live/gespraech`, jeweils
+  auch mit `/en`-Präfix): komplett eigenständige, parallele Ebene neben der
+  Demo-Pilotphase — für Personen mit eigenem Konto statt geteiltem
+  Zugangscode. Kein Wochenlimit, kein Nachrichten-Cap, kein Cliffhanger
+  Richtung Erstgespräch, dafür automatische serverseitige Speicherung jedes
+  Gesprächs (geräteübergreifend abrufbar nach Login). Offene
+  Selbstregistrierung (E-Mail + Passwort), Konto erst nach Klick auf den
+  Bestätigungslink in der Verifikations-E-Mail einsatzfähig (Kostenschutz
+  gegen automatisierte Massenregistrierung, da unlimitiert). Sitzung läuft
+  nicht automatisch ab (bis aktivem Logout gültig), wird aber bei einem
+  Passwort-Reset komplett invalidiert (siehe `invalidateAllSessionsForEmail`
+  in `liveSessionStore.ts`). `AccessGate.tsx` überspringt für `/live`-Pfade
+  komplett das Demo-Zugangscode-Gate (siehe `isLivePath`) — Live hat sein
+  eigenes, unabhängiges Login. Frontend: `LiveAuth.tsx` (Login/Register/
+  Verify/Passwort-vergessen/-Reset-Bildschirme, alle im selben visuellen
+  Grundgerüst wie `AccessGate.tsx`), `LiveChat.tsx` (Chat-Ansicht ohne
+  Cliffhanger-CTA, mit serverseitig geladener statt lokal gespeicherter
+  Gesprächsliste), `useLiveChat.ts`, `liveClient.ts` (Sitzungs-Token in
+  `localStorage`, bewusst NICHT `sessionStorage` wie beim Demo-Zugangscode —
+  "unbegrenzt bis Logout" würde sonst beim Schliessen des Browsers
+  faktisch zu einem automatischen Logout). Backend: `api/src/functions/
+  live*.ts` + `api/src/lib/live{UserStore,SessionStore,ConversationStore,
+  RateLimit,Auth}.ts` — bewusst komplett getrennt von `chat.ts`/
+  `accessGate.ts`, damit die produktiv laufende Demo-Ebene unangetastet
+  bleibt. Neue Tabellen: `TeiLiveUsers`, `TeiLiveSessions`,
+  `TeiLiveConversations`, `TeiLiveRateLimit` (gleiche Storage-Verbindung wie
+  die übrigen TEI-Tabellen). Neue Env-Var `APP_BASE_URL` (Basis-URL für
+  Links in Live-E-Mails, Standard `https://tei.tavyro.ch`). Auf der
+  bestehenden Demo-Landing-Page gibt es einen unauffälligen Link
+  "Bereits Live-Zugang? Hier einloggen →" als Einstieg, bis eine eigene
+  Skalierungs-Homepage (separates, noch nicht existierendes Projekt unter
+  einer neu zu registrierenden Domain `tavyro.com`, siehe Diskussion) einen
+  eigenen Login-Button bekommt.
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde
@@ -217,6 +252,22 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   sowie vollständige TaVyro-Branding-Entfernung wurden diskutiert, dann
   bewusst zurückgestellt — aktuell bleibt das TaVyro-Logo im Header/Access
   Gate.
+- **Skalierungs-Homepage `tavyro.com/trustroom`** (separates, noch nicht
+  existierendes Projekt, eigene Cowork-Sitzung nötig sobald relevant):
+  geplant als eigenständige Marketing-Homepage mit Login-Button zur
+  Live-Version, parallel zur bestehenden `tavyro.ch`-Homepage — z.B. für
+  unterschiedliche Kundensegmente (Schweiz über `.ch`, international über
+  `.com`), technisch unproblematisch, da Azure Static Web Apps mehrere
+  Custom Domains pro App erlaubt (Free-Tarif: 2, Standard: 5 — `tei.tavyro.ch`
+  belegt aktuell einen Platz). Domain `tavyro.com` muss zuerst registriert
+  werden (Aufgabe von Tam, nicht durch Claude ausführbar). Gewählte Struktur
+  ist ein **Pfad** (`/trustroom`) statt einer Subdomain — das bedeutet: sobald
+  die neue Homepage irgendwo gehostet ist, braucht es dort eine
+  Weiterleitungs-/Rewrite-Regel, die genau diesen Pfad zur eigentlichen
+  Live-Version durchreicht; das ist Setup-Arbeit im NEUEN Homepage-Projekt,
+  nicht in diesem Repo. Bis dahin bleibt der Einstieg über den
+  "Bereits Live-Zugang? Hier einloggen →"-Link auf der bestehenden
+  Demo-Landing-Page (siehe Live-Version-Eintrag oben).
 - Cowork-Sitzungen mit verbundenem Ordner syncen nicht geräteübergreifend
   (Anthropic-Produktverhalten) — bei Arbeit auf einem anderen Gerät neue
   Sitzung starten und diesen Ordner per `git clone` frisch holen, nicht

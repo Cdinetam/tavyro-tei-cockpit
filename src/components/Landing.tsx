@@ -3,9 +3,10 @@ import { getCopy, type Lang } from '../lib/i18n'
 interface LandingProps {
   lang: Lang
   onStart: (prefill?: string) => void
+  onNavigateLive: () => void
 }
 
-export function Landing({ lang, onStart }: LandingProps) {
+export function Landing({ lang, onStart, onNavigateLive }: LandingProps) {
   const copy = getCopy(lang)
 
   return (
@@ -45,6 +46,12 @@ export function Landing({ lang, onStart }: LandingProps) {
             <span className="transition-transform duration-300 ease-editorial group-hover:translate-x-1">
               →
             </span>
+          </button>
+          <button
+            onClick={onNavigateLive}
+            className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+          >
+            {copy.landing.liveLoginLink}
           </button>
         </div>
       </div>

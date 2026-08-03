@@ -50,6 +50,14 @@ function senderAddress(): string {
   return sender
 }
 
+/** Basis-URL des Frontends für Links in E-Mails (Verifikation, Passwort-
+ * Reset) — env-konfigurierbar, damit lokale Entwicklung/ein Staging-Deploy
+ * nicht versehentlich Links auf die Produktions-URL verschickt. Fällt ohne
+ * Konfiguration auf die bekannte Produktions-Domain zurück. */
+function appBaseUrl(): string {
+  return (process.env.APP_BASE_URL ?? 'https://tei.tavyro.ch').replace(/\/$/, '')
+}
+
 interface SendAccessCodeEmailArgs {
   to: string
   code: string
@@ -84,6 +92,76 @@ export async function sendAccessCodeEmail({ to, code, lang }: SendAccessCodeEmai
     recipients: { to: [{ address: to }] },
   })
 
+  const result = await poller.pollUntilDone()
+  if (result.status !== 'Succeeded') {
+    throw new Error(`ACS Email Versand fehlgeschlagen (Status: ${result.status}).`)
+  }
+}
+
+interface SendLiveEmailArgs {
+  to: string
+  token: string
+  lang: 'de' | 'en'
+}
+
+/**
+ * Verifikations-E-Mail für die Live-Version-Selbstregistrierung (siehe
+ * liveUserStore.ts/liveRegister.ts) — enthält bewusst einen Link auf die
+ * SPA (nicht direkt auf einen API-Endpoint), damit die Person nach dem Klick
+ * eine ordentliche Bestätigungsseite mit direktem Login-Einstieg sieht statt
+ * einer nackten JSON-Antwort.
+ */
+export async function sendLiveVerificationEmail({ to, token, lang }: SendLiveEmailArgs): Promise<void> {
+  const client = getClient()
+  const link = `${appBaseUrl()}/live/verify?token=${encodeURIComponent(token)}`
+
+  const subject = lang === 'en' ? 'Confirm your TEI® Trust Room account' : 'Bestätigen Sie Ihr TEI® Trust Room Konto'
+
+  const plainText =
+    lang === 'en'
+      ? `Please confirm your email address to activate your TEI® Trust Room account:\n\n${link}\n\nThis link remains valid for 24 hours. If you didn't request this, you can ignore this email.`
+      : `Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr TEI® Trust Room Konto zu aktivieren:\n\n${link}\n\nDieser Link ist 24 Stunden gültig. Falls Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren.`
+
+  const html =
+    lang === 'en'
+      ? `<p>Please confirm your email address to activate your TEI® Trust Room account:</p><p><a href="${link}">${link}</a></p><p>This link remains valid for 24 hours. If you didn't request this, you can ignore this email.</p>`
+      : `<p>Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr TEI® Trust Room Konto zu aktivieren:</p><p><a href="${link}">${link}</a></p><p>Dieser Link ist 24 Stunden gültig. Falls Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren.</p>`
+
+  const poller = await client.beginSend({
+    senderAddress: senderAddress(),
+    content: { subject, plainText, html },
+    recipients: { to: [{ address: to }] },
+  })
+  const result = await poller.pollUntilDone()
+  if (result.status !== 'Succeeded') {
+    throw new Error(`ACS Email Versand fehlgeschlagen (Status: ${result.status}).`)
+  }
+}
+
+/** Passwort-Reset-E-Mail für die Live-Version (siehe liveUserStore.ts/
+ * liveRequestPasswordReset.ts) — Link führt auf die SPA-Seite zum Setzen
+ * eines neuen Passworts, nicht direkt auf die API. */
+export async function sendLivePasswordResetEmail({ to, token, lang }: SendLiveEmailArgs): Promise<void> {
+  const client = getClient()
+  const link = `${appBaseUrl()}/live/reset-password?token=${encodeURIComponent(token)}`
+
+  const subject = lang === 'en' ? 'Reset your TEI® Trust Room password' : 'Passwort für Ihr TEI® Trust Room Konto zurücksetzen'
+
+  const plainText =
+    lang === 'en'
+      ? `Click the link below to set a new password for your TEI® Trust Room account:\n\n${link}\n\nThis link remains valid for 1 hour. If you didn't request this, you can ignore this email — your password stays unchanged.`
+      : `Klicken Sie auf den folgenden Link, um ein neues Passwort für Ihr TEI® Trust Room Konto zu setzen:\n\n${link}\n\nDieser Link ist 1 Stunde gültig. Falls Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren — Ihr Passwort bleibt unverändert.`
+
+  const html =
+    lang === 'en'
+      ? `<p>Click the link below to set a new password for your TEI® Trust Room account:</p><p><a href="${link}">${link}</a></p><p>This link remains valid for 1 hour. If you didn't request this, you can ignore this email — your password stays unchanged.</p>`
+      : `<p>Klicken Sie auf den folgenden Link, um ein neues Passwort für Ihr TEI® Trust Room Konto zu setzen:</p><p><a href="${link}">${link}</a></p><p>Dieser Link ist 1 Stunde gültig. Falls Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren — Ihr Passwort bleibt unverändert.</p>`
+
+  const poller = await client.beginSend({
+    senderAddress: senderAddress(),
+    content: { subject, plainText, html },
+    recipients: { to: [{ address: to }] },
+  })
   const result = await poller.pollUntilDone()
   if (result.status !== 'Succeeded') {
     throw new Error(`ACS Email Versand fehlgeschlagen (Status: ${result.status}).`)

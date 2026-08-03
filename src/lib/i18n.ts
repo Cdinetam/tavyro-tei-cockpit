@@ -100,6 +100,7 @@ interface Copy {
     demoNote: string
     questionsKicker: string
     questions: string[]
+    liveLoginLink: string
   }
   chat: {
     charCounterSuffix: string
@@ -151,6 +152,90 @@ interface Copy {
       newDialog: string
       placeholder: string
       send: string
+    }
+  }
+  live: {
+    welcome: {
+      kicker: string
+      heading: string
+      body: string
+      trustPoints: string[]
+    }
+    login: {
+      emailPlaceholder: string
+      passwordPlaceholder: string
+      submit: string
+      checking: string
+      invalidCredentials: string
+      notVerified: string
+      forgotPasswordLink: string
+      registerPrompt: string
+      registerLink: string
+    }
+    register: {
+      kicker: string
+      heading: string
+      body: string
+      emailPlaceholder: string
+      passwordPlaceholder: string
+      passwordHint: string
+      submit: string
+      checking: string
+      successHeading: string
+      successBody: (email: string) => string
+      loginPrompt: string
+      loginLink: string
+    }
+    verify: {
+      checking: string
+      successHeading: string
+      successBody: string
+      errorHeading: string
+      errorBody: string
+      loginButton: string
+    }
+    forgotPassword: {
+      kicker: string
+      heading: string
+      body: string
+      emailPlaceholder: string
+      submit: string
+      checking: string
+      sentHeading: string
+      sentBody: string
+      backToLogin: string
+    }
+    resetPassword: {
+      kicker: string
+      heading: string
+      body: string
+      passwordPlaceholder: string
+      submit: string
+      checking: string
+      successHeading: string
+      successBody: string
+      errorHeading: string
+      errorBody: string
+      loginButton: string
+      loginPrompt: string
+    }
+    room: {
+      statusLabel: string
+      logout: string
+      newDialog: string
+      savedKicker: string
+      savedEmptyLabel: string
+      deleteAria: string
+      empty: {
+        heading: string
+        body: string
+        placeholder: string
+        startButton: string
+      }
+      active: {
+        placeholder: string
+        send: string
+      }
     }
   }
 }
@@ -206,6 +291,7 @@ const de: Copy = {
       'Ein Nachfolge- oder Besetzungsentscheid steht an, und ich bin mir nicht sicher.',
       'Wachstum bringt Reibung ins Führungsteam, die vorher nicht da war.',
     ],
+    liveLoginLink: 'Bereits Live-Zugang? Hier einloggen →',
   },
   chat: {
     charCounterSuffix: 'Zeichen',
@@ -268,6 +354,100 @@ const de: Copy = {
       send: 'Senden',
     },
   },
+  live: {
+    welcome: {
+      kicker: 'TaVyro Executive Intelligence® Trust Room',
+      heading: 'Willkommen.',
+      body:
+        'Der Trust Room unterstützt Sie dabei, sensible Führungs- und Organisationsfragen ' +
+        'strukturiert zu reflektieren. Er ersetzt keine Entscheidungen, sondern hilft Ihnen, ' +
+        'Perspektiven zu erweitern, Risiken sichtbar zu machen und fundierte Entscheidungen ' +
+        'vorzubereiten.',
+      trustPoints: [
+        'Vertrauliche Datenverarbeitung',
+        'Verarbeitung über dedizierte Azure OpenAI Umgebung',
+        'Keine Nutzung Ihrer Daten zum Training von KI-Modellen',
+        'Für CEO, Geschäftsleitung und Verwaltungsrat',
+      ],
+    },
+    login: {
+      emailPlaceholder: 'E-Mail-Adresse',
+      passwordPlaceholder: 'Passwort',
+      submit: 'Einloggen',
+      checking: 'Wird geprüft…',
+      invalidCredentials: 'E-Mail oder Passwort falsch.',
+      notVerified: 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse (Link in der Registrierungs-E-Mail).',
+      forgotPasswordLink: 'Passwort vergessen?',
+      registerPrompt: 'Noch kein Konto?',
+      registerLink: 'Konto erstellen',
+    },
+    register: {
+      kicker: 'Konto erstellen',
+      heading: 'Live-Zugang anlegen.',
+      body: 'Für Konto und dauerhaften Zugang — ohne Limits, mit automatisch gespeicherten Gesprächen.',
+      emailPlaceholder: 'E-Mail-Adresse',
+      passwordPlaceholder: 'Passwort',
+      passwordHint: 'Mindestens 8 Zeichen.',
+      submit: 'Konto erstellen',
+      checking: 'Wird angelegt…',
+      successHeading: 'Fast geschafft.',
+      successBody: (email) =>
+        `Wir haben einen Bestätigungslink an ${email} geschickt. Bitte prüfen Sie Ihr Postfach und klicken Sie auf den Link, um Ihr Konto zu aktivieren.`,
+      loginPrompt: 'Bereits ein Konto?',
+      loginLink: 'Einloggen',
+    },
+    verify: {
+      checking: 'Wird bestätigt…',
+      successHeading: 'E-Mail-Adresse bestätigt.',
+      successBody: 'Ihr Konto ist jetzt aktiv. Sie können sich einloggen.',
+      errorHeading: 'Link ungültig oder abgelaufen.',
+      errorBody: 'Bitte fordern Sie einen neuen Bestätigungslink an, indem Sie sich erneut registrieren.',
+      loginButton: 'Jetzt einloggen',
+    },
+    forgotPassword: {
+      kicker: 'Passwort vergessen',
+      heading: 'Neues Passwort anfordern.',
+      body: 'Wir schicken Ihnen einen Link, mit dem Sie ein neues Passwort setzen können.',
+      emailPlaceholder: 'E-Mail-Adresse',
+      submit: 'Link anfordern',
+      checking: 'Wird verschickt…',
+      sentHeading: 'E-Mail verschickt.',
+      sentBody: 'Falls zu dieser Adresse ein Konto existiert, finden Sie in Kürze einen Reset-Link in Ihrem Postfach.',
+      backToLogin: 'Zurück zum Login',
+    },
+    resetPassword: {
+      kicker: 'Neues Passwort',
+      heading: 'Neues Passwort setzen.',
+      body: 'Bitte wählen Sie ein neues Passwort für Ihr Konto.',
+      passwordPlaceholder: 'Neues Passwort',
+      submit: 'Passwort speichern',
+      checking: 'Wird gespeichert…',
+      successHeading: 'Passwort geändert.',
+      successBody: 'Sie können sich jetzt mit Ihrem neuen Passwort einloggen.',
+      errorHeading: 'Link ungültig oder abgelaufen.',
+      errorBody: 'Bitte fordern Sie einen neuen Link über "Passwort vergessen" an.',
+      loginButton: 'Zum Login',
+      loginPrompt: 'Passwort geändert —',
+    },
+    room: {
+      statusLabel: 'Live · vertrauliches Gespräch',
+      logout: 'Logout',
+      newDialog: 'Neues Gespräch',
+      savedKicker: 'Gespeicherte Gespräche',
+      savedEmptyLabel: '(ohne Text)',
+      deleteAria: 'Gespeichertes Gespräch löschen',
+      empty: {
+        heading: 'Worüber möchten Sie nachdenken?',
+        body: 'Ihr Gespräch wird automatisch gespeichert und ist bei jedem Login wieder abrufbar.',
+        placeholder: 'Beschreiben Sie in ein paar Sätzen, was Sie beschäftigt…',
+        startButton: 'Dialog starten →',
+      },
+      active: {
+        placeholder: 'Antworten…',
+        send: 'Senden',
+      },
+    },
+  },
 }
 
 const en: Copy = {
@@ -321,6 +501,7 @@ const en: Copy = {
       "A succession or hiring decision is coming up, and I'm not sure about it.",
       'Growth is creating friction in the leadership team that wasn\'t there before.',
     ],
+    liveLoginLink: 'Already have live access? Log in here →',
   },
   chat: {
     charCounterSuffix: 'characters',
@@ -381,6 +562,99 @@ const en: Copy = {
       newDialog: 'New dialogue',
       placeholder: 'Reply…',
       send: 'Send',
+    },
+  },
+  live: {
+    welcome: {
+      kicker: 'TaVyro Executive Intelligence® Trust Room',
+      heading: 'Welcome.',
+      body:
+        'The Trust Room helps you reflect on sensitive leadership and organizational questions in ' +
+        "a structured way. It doesn't replace decisions — it helps you broaden perspectives, " +
+        'surface risks, and prepare well-founded decisions.',
+      trustPoints: [
+        'Confidential data processing',
+        'Processed via a dedicated Azure OpenAI environment',
+        'Your data is never used to train AI models',
+        'For CEOs, executive teams, and boards of directors',
+      ],
+    },
+    login: {
+      emailPlaceholder: 'Email address',
+      passwordPlaceholder: 'Password',
+      submit: 'Log in',
+      checking: 'Checking…',
+      invalidCredentials: 'Email or password incorrect.',
+      notVerified: 'Please confirm your email address first (see the link in your registration email).',
+      forgotPasswordLink: 'Forgot password?',
+      registerPrompt: "Don't have an account yet?",
+      registerLink: 'Create account',
+    },
+    register: {
+      kicker: 'Create account',
+      heading: 'Set up live access.',
+      body: 'For a permanent account and access — no limits, with automatically saved conversations.',
+      emailPlaceholder: 'Email address',
+      passwordPlaceholder: 'Password',
+      passwordHint: 'At least 8 characters.',
+      submit: 'Create account',
+      checking: 'Creating…',
+      successHeading: 'Almost there.',
+      successBody: (email) =>
+        `We've sent a confirmation link to ${email}. Please check your inbox and click the link to activate your account.`,
+      loginPrompt: 'Already have an account?',
+      loginLink: 'Log in',
+    },
+    verify: {
+      checking: 'Confirming…',
+      successHeading: 'Email address confirmed.',
+      successBody: 'Your account is now active. You can log in.',
+      errorHeading: 'Link invalid or expired.',
+      errorBody: 'Please request a new confirmation link by registering again.',
+      loginButton: 'Log in now',
+    },
+    forgotPassword: {
+      kicker: 'Forgot password',
+      heading: 'Request a new password.',
+      body: "We'll send you a link to set a new password.",
+      emailPlaceholder: 'Email address',
+      submit: 'Request link',
+      checking: 'Sending…',
+      sentHeading: 'Email sent.',
+      sentBody: "If this address has a registered account, you'll find a reset link in your inbox shortly.",
+      backToLogin: 'Back to login',
+    },
+    resetPassword: {
+      kicker: 'New password',
+      heading: 'Set a new password.',
+      body: 'Please choose a new password for your account.',
+      passwordPlaceholder: 'New password',
+      submit: 'Save password',
+      checking: 'Saving…',
+      successHeading: 'Password changed.',
+      successBody: 'You can now log in with your new password.',
+      errorHeading: 'Link invalid or expired.',
+      errorBody: 'Please request a new link via "Forgot password".',
+      loginButton: 'Go to login',
+      loginPrompt: 'Password changed —',
+    },
+    room: {
+      statusLabel: 'Live · confidential conversation',
+      logout: 'Log out',
+      newDialog: 'New conversation',
+      savedKicker: 'Saved conversations',
+      savedEmptyLabel: '(no text)',
+      deleteAria: 'Delete saved conversation',
+      empty: {
+        heading: "What's on your mind?",
+        body: 'Your conversation is saved automatically and available again every time you log in.',
+        placeholder: "Describe in a few sentences what's on your mind…",
+        startButton: 'Start dialogue →',
+      },
+      active: {
+        placeholder: 'Reply…',
+        send: 'Send',
+      },
     },
   },
 }

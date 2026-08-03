@@ -2,10 +2,26 @@ import { useEffect, useState } from 'react'
 import { Header } from './components/Header'
 import { Landing } from './components/Landing'
 import { TrustRoomChat, ExitConfirmDialog } from './components/TrustRoomChat'
+import {
+  LiveLoginScreen,
+  LiveRegisterScreen,
+  LiveVerifyScreen,
+  LiveForgotPasswordScreen,
+  LiveResetPasswordScreen,
+} from './components/LiveAuth'
+import { LiveChat } from './components/LiveChat'
 import { useTrustRoomChat } from './hooks/useTrustRoomChat'
+import { useLiveChat } from './hooks/useLiveChat'
+import { getLiveToken, liveLogout } from './lib/liveClient'
 import { applyDocumentMeta, detectInitialLang, getLangFromPath, hasEnPrefix, type Lang } from './lib/i18n'
 
-type View = 'landing' | 'room'
+// Live-Version-Views (siehe LiveAuth.tsx/LiveChat.tsx) sind bewusst
+// unabhängig vom Demo-Zugangscode-Gate (siehe AccessGate.tsx: /live-Pfade
+// überspringen dieses Gate komplett und rendern direkt App, das dann selbst
+// über den Sitzungs-Token entscheidet) — eigenes, offenes Login/Register
+// statt Zugangscode, keine Limits, kein Cliffhanger, siehe api/src/functions
+// /live*.ts.
+type View = 'landing' | 'room' | 'liveLogin' | 'liveRegister' | 'liveVerify' | 'liveForgotPassword' | 'liveResetPassword' | 'liveRoom'
 
 // Der echte, mehrteilige Trust-Room-Gespräch-Flow bekommt eine eigene URL
 // (/gespraech), damit er direkt verlinkt/geteilt werden kann. Er ist der
@@ -35,13 +51,36 @@ type View = 'landing' | 'room'
 // können.
 function pathToView(pathname: string): View {
   const withoutLangPrefix = hasEnPrefix(pathname) ? pathname.slice(3) : pathname
+  if (withoutLangPrefix === '/live' || withoutLangPrefix === '/live/') return 'liveLogin'
+  if (withoutLangPrefix.startsWith('/live/register')) return 'liveRegister'
+  if (withoutLangPrefix.startsWith('/live/verify')) return 'liveVerify'
+  if (withoutLangPrefix.startsWith('/live/forgot-password')) return 'liveForgotPassword'
+  if (withoutLangPrefix.startsWith('/live/reset-password')) return 'liveResetPassword'
+  if (withoutLangPrefix.startsWith('/live/gespraech')) return 'liveRoom'
   return withoutLangPrefix.startsWith('/gespraech') ? 'room' : 'landing'
 }
 
+const LIVE_VIEW_PATHS: Partial<Record<View, string>> = {
+  liveLogin: '/live',
+  liveRegister: '/live/register',
+  liveVerify: '/live/verify',
+  liveForgotPassword: '/live/forgot-password',
+  liveResetPassword: '/live/reset-password',
+  liveRoom: '/live/gespraech',
+}
+
 function buildPath(lang: Lang, view: View): string {
-  const base = view === 'room' ? '/gespraech' : '/'
+  const base = LIVE_VIEW_PATHS[view] ?? (view === 'room' ? '/gespraech' : '/')
   if (lang !== 'en') return base
   return base === '/' ? '/en' : `/en${base}`
+}
+
+/** Liest den ?token=-Query-Parameter aus der aktuellen URL — genutzt von
+ * /live/verify (E-Mail-Bestätigung) und /live/reset-password
+ * (Passwort-Reset), beide verlinkt aus den entsprechenden E-Mails (siehe
+ * emailSender.ts). */
+function tokenFromQuery(): string {
+  return new URLSearchParams(window.location.search).get('token') ?? ''
 }
 
 // Wohin nach einer Bestätigung (Speichern-Dialog) navigiert werden soll —
@@ -59,8 +98,14 @@ export default function App() {
   const [lang, setLang] = useState<Lang>(() => detectInitialLang(window.location.pathname))
   const [prefill, setPrefill] = useState('')
   const [pendingExit, setPendingExit] = useState<PendingExit>(null)
+  // Ob gerade eine gültige Live-Sitzung vorliegt (siehe liveClient.ts,
+  // localStorage-Token) — bewusst als eigener State statt bei jedem Render
+  // neu aus localStorage gelesen, damit ein Login/Logout sofort einen
+  // Re-Render auslöst.
+  const [liveLoggedIn, setLiveLoggedIn] = useState(() => getLiveToken().length > 0)
 
   const roomChat = useTrustRoomChat(lang)
+  const liveChat = useLiveChat(lang)
 
   useEffect(() => {
     function onPopState() {
@@ -70,6 +115,18 @@ export default function App() {
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
+
+  // Schützt /live/gespraech: ohne gültige Sitzung zurück zum Live-Login,
+  // statt eine leere/fehlerhafte Chat-Ansicht zu zeigen. replaceState (statt
+  // pushState/goToLiveView) lässt dabei bewusst keinen zusätzlichen
+  // Zurück-Schritt entstehen.
+  useEffect(() => {
+    if (view === 'liveRoom' && !liveLoggedIn) {
+      window.history.replaceState({}, '', buildPath(lang, 'liveLogin'))
+      setView('liveLogin')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, liveLoggedIn])
 
   // Hält html[lang]/Title/Meta-Description synchron mit lang — sowohl beim
   // ersten Rendern nach der Zugangscode-Gate (siehe AccessGate.tsx, das
@@ -137,6 +194,27 @@ export default function App() {
     }
   }
 
+  // Navigation zwischen den Live-Bildschirmen (Login/Register/Verify/
+  // Passwort-vergessen/Reset/Room) — bewusst simpel gehalten, da hier (im
+  // Unterschied zum Demo-Flow) kein ungespeichertes-Gespräch-Dialog nötig
+  // ist: Live-Gespräche sind ja immer schon serverseitig gespeichert.
+  function goToLiveView(nextView: View) {
+    window.history.pushState({}, '', buildPath(lang, nextView))
+    setView(nextView)
+  }
+
+  function handleLiveLoginSuccess() {
+    setLiveLoggedIn(true)
+    goToLiveView('liveRoom')
+  }
+
+  async function handleLiveLogout() {
+    await liveLogout()
+    setLiveLoggedIn(false)
+    liveChat.reset()
+    goToLiveView('liveLogin')
+  }
+
   function confirmPendingExit(withSave: boolean) {
     if (withSave) {
       roomChat.saveAndReset()
@@ -150,12 +228,70 @@ export default function App() {
   }
 
   const headerStage = view === 'room' ? 'room' : 'landing'
+  const isLiveView =
+    view === 'liveLogin' ||
+    view === 'liveRegister' ||
+    view === 'liveVerify' ||
+    view === 'liveForgotPassword' ||
+    view === 'liveResetPassword' ||
+    view === 'liveRoom'
+
+  // Live-Bildschirme bringen ihr eigenes Logo/Branding mit (siehe
+  // LiveAuth.tsx → Shell, LiveChat.tsx-Kopfzeile) — der globale <Header>
+  // (mit Demo-spezifischem "Dialog starten"/Buchungs-Link) würde hier nur
+  // doppelt und fehl am Platz wirken, deshalb komplett übersprungen.
+  if (isLiveView) {
+    return (
+      <div className="grain min-h-screen bg-ink-900">
+        {view === 'liveLogin' && (
+          <LiveLoginScreen
+            lang={lang}
+            onLoginSuccess={handleLiveLoginSuccess}
+            onNavigateRegister={() => goToLiveView('liveRegister')}
+            onNavigateForgotPassword={() => goToLiveView('liveForgotPassword')}
+          />
+        )}
+        {view === 'liveRegister' && (
+          <LiveRegisterScreen lang={lang} onNavigateLogin={() => goToLiveView('liveLogin')} />
+        )}
+        {view === 'liveVerify' && (
+          <LiveVerifyScreen lang={lang} token={tokenFromQuery()} onNavigateLogin={() => goToLiveView('liveLogin')} />
+        )}
+        {view === 'liveForgotPassword' && (
+          <LiveForgotPasswordScreen lang={lang} onNavigateLogin={() => goToLiveView('liveLogin')} />
+        )}
+        {view === 'liveResetPassword' && (
+          <LiveResetPasswordScreen
+            lang={lang}
+            token={tokenFromQuery()}
+            onNavigateLogin={() => goToLiveView('liveLogin')}
+          />
+        )}
+        {view === 'liveRoom' && liveLoggedIn && (
+          <LiveChat
+            lang={lang}
+            messages={liveChat.messages}
+            status={liveChat.status}
+            errorMessage={liveChat.errorMessage}
+            savedConversations={liveChat.savedConversations}
+            send={liveChat.send}
+            reset={liveChat.reset}
+            resumeConversation={liveChat.resumeConversation}
+            deleteSavedConversation={liveChat.deleteSavedConversation}
+            onLogout={handleLiveLogout}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="grain min-h-screen bg-ink-900">
       <Header stage={headerStage} lang={lang} onToggleLang={toggleLang} onReset={resetAll} />
       <div className="pt-14">
-        {view === 'landing' && <Landing lang={lang} onStart={(text) => goToRoom(text)} />}
+        {view === 'landing' && (
+          <Landing lang={lang} onStart={(text) => goToRoom(text)} onNavigateLive={() => goToLiveView('liveLogin')} />
+        )}
 
         {view === 'room' && (
           <TrustRoomChat

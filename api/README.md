@@ -150,6 +150,50 @@ Azure-Portal):
    App hinterlegen.
 6. Die Absenderadresse aus Schritt 2 als `ACS_SENDER_ADDRESS` hinterlegen.
 
+## Live-Version (echtes Login, keine Limits)
+
+Komplett eigenständige, parallele Ebene neben der Demo-Pilotphase oben —
+für Personen mit einem eigenen Konto statt eines geteilten Zugangscodes.
+Kein Wochenlimit, kein Nachrichten-Cap pro Gespräch, kein
+Cliffhanger-Hinweis Richtung Erstgespräch, dafür automatische
+serverseitige Speicherung jedes Gesprächs (geräteübergreifend abrufbar
+nach Login). Bewusst komplett getrennte Endpoints/Tabellen von der
+Demo-Ebene, damit dort nichts riskiert wird.
+
+**Zugang:** offene Selbstregistrierung (E-Mail + Passwort), Konto ist erst
+nach Klick auf den Bestätigungslink in der Verifikations-E-Mail
+einsatzfähig. Sitzung läuft nicht automatisch ab (bleibt bis aktivem
+Logout gültig), wird aber bei einem Passwort-Reset komplett invalidiert.
+
+**Endpoints** (alle unter `/api/live/*`, Frontend-Routen unter `/live/*`
+bzw. `/en/live/*`):
+- `POST /live/register` — Selbstregistrierung, verschickt Bestätigungs-E-Mail
+- `POST /live/verify-email` — bestätigt den Token aus der E-Mail
+- `POST /live/login` — liefert bei Erfolg einen Sitzungs-Token (Header `x-tei-live-token`)
+- `POST /live/request-password-reset` / `POST /live/reset-password`
+- `POST /live/logout`
+- `POST /live/chat` — wie `chat.ts`, aber ohne Limits/Cliffhanger, speichert automatisch
+- `GET /live/conversations`, `GET`/`DELETE /live/conversations/{id}`
+
+**Neue Tabellen** (dieselbe Storage-Verbindung wie oben,
+`QUOTA_STORAGE_CONNECTION_STRING`): `TeiLiveUsers` (Konten,
+Verifikations-/Reset-Tokens), `TeiLiveSessions` (Sitzungs-Tokens),
+`TeiLiveConversations` (gespeicherte Gespräche pro Person),
+`TeiLiveRateLimit` (IP-Rate-Limit für Registrierung/Login/Passwort-Reset —
+siehe `liveRateLimit.ts`, eigenständig statt geteilt mit
+`autoAccessRateLimit.ts`).
+
+| Variable | Zweck | Beispiel |
+|---|---|---|
+| `APP_BASE_URL` | Basis-URL des Frontends für Links in Live-E-Mails (Verifikation, Passwort-Reset) | `https://tei.tavyro.ch` |
+
+Passwörter werden mit `bcryptjs` gehasht (12 Runden), nie im Klartext
+gespeichert. Registrierung/Login/Passwort-Reset sind zusätzlich per
+IP-Rate-Limit abgesichert (siehe `liveRateLimit.ts`) — die eigentliche
+Kostenbremse gegen automatisierte Massenregistrierung bleibt aber die
+Pflicht-E-Mail-Bestätigung: ein Konto kann erst nach echtem E-Mail-Zugriff
+überhaupt eine Azure-OpenAI-Anfrage auslösen.
+
 ## Bekannte Grenze: Session-Store
 
 `sessionStore.ts` hält das Limit aktuell in einer In-Memory-Map — reicht für

@@ -1,6 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { verifyAccessCode, storeAccessCode, getStoredAccessCode, requestAutoAccess } from '../lib/aiClient'
-import { applyDocumentMeta, detectInitialLang, getCopy } from '../lib/i18n'
+import { applyDocumentMeta, detectInitialLang, getCopy, hasEnPrefix } from '../lib/i18n'
+
+/** /live-Pfade (Live-Version, siehe App.tsx/LiveAuth.tsx) haben ein
+ * komplett eigenständiges Login-System (E-Mail+Passwort statt
+ * Zugangscode) — das Demo-Zugangscode-Gate hier darf sie deshalb gar nicht
+ * erst abfangen, sonst bräuchte man BEIDE Systeme, um an den Live-Bereich
+ * zu kommen. */
+function isLivePath(pathname: string): boolean {
+  const withoutLangPrefix = hasEnPrefix(pathname) ? pathname.slice(3) : pathname
+  return withoutLangPrefix === '/live' || withoutLangPrefix.startsWith('/live/')
+}
 
 interface Props {
   children: ReactNode
@@ -37,6 +47,8 @@ export function AccessGate({ children }: Props) {
   useEffect(() => {
     applyDocumentMeta(lang)
   }, [lang])
+
+  if (isLivePath(window.location.pathname)) return <>{children}</>
 
   if (unlocked) return <>{children}</>
 
