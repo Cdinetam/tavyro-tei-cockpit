@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChatMessage } from '../types'
+import { chatMessageImageUrl, chatMessageText, type ChatMessage } from '../types'
 import type { ChatFlowStatus, SavedConversation } from '../hooks/useTrustRoomChat'
 import { extractDocument, isMockMode } from '../lib/aiClient'
 import { BOOKING_URL, DATE_LOCALE, getCopy, type Lang } from '../lib/i18n'
 import { useDocumentAttachment } from '../hooks/useDocumentAttachment'
-import { ACCEPTED_ATTACHMENT_ACCEPT, composeMessageWithAttachment, parseMessageAttachment } from '../lib/attachments'
+import {
+  ACCEPTED_ATTACHMENT_ACCEPT,
+  composeMessageWithAttachment,
+  composeMessageWithImage,
+  parseMessageAttachment,
+} from '../lib/attachments'
 
 // Muss mit MAX_MESSAGE_LENGTH in api/src/functions/chat.ts übereinstimmen —
 // hier nur zur frühzeitigen Rückmeldung beim Tippen, die eigentliche
@@ -32,6 +37,7 @@ function Bubble({ message, lang }: { message: ChatMessage; lang: Lang }) {
   const isUser = message.role === 'user'
   const copy = getCopy(lang).attachment
   const parsed = isUser ? parseMessageAttachment(message.content) : null
+  const imageUrl = isUser ? chatMessageImageUrl(message.content) : null
   const [expanded, setExpanded] = useState(false)
 
   if (parsed) {
@@ -56,6 +62,18 @@ function Bubble({ message, lang }: { message: ChatMessage; lang: Lang }) {
     )
   }
 
+  if (imageUrl) {
+    const text = chatMessageText(message.content)
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[75%] border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper">
+          <img src={imageUrl} alt={copy.imageAlt} className="max-h-72 w-auto rounded border border-line-soft" />
+          {text && <p className="mt-2.5 whitespace-pre-line">{text}</p>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -65,7 +83,7 @@ function Bubble({ message, lang }: { message: ChatMessage; lang: Lang }) {
             : 'max-w-[85%] whitespace-pre-line border border-line-soft bg-ink-800/60 px-5 py-3.5 font-display text-[16px] leading-relaxed text-paper-dim'
         }
       >
-        {message.content}
+        {chatMessageText(message.content)}
       </div>
     </div>
   )
@@ -104,8 +122,8 @@ function AttachmentBar({ attachment, lang }: { attachment: ReturnType<typeof use
       {attachment.status === 'uploading' && <span className="text-paper-faint">{copy.uploading}</span>}
       {attachment.status === 'ready' && attachment.attachment && (
         <span className="flex items-center gap-2 text-brass-light">
-          📎 {attachment.attachment.filename}
-          {attachment.attachment.truncated && (
+          {attachment.attachment.kind === 'image' ? '🖼️' : '📎'} {attachment.attachment.filename}
+          {attachment.attachment.kind === 'document' && attachment.attachment.truncated && (
             <span className="normal-case text-paper-faint">{copy.truncatedNote}</span>
           )}
           <button
@@ -171,7 +189,8 @@ function formatSavedAt(iso: string, lang: Lang): string {
 }
 
 function firstUserMessage(messages: ChatMessage[]): string {
-  return messages.find((m) => m.role === 'user')?.content ?? ''
+  const first = messages.find((m) => m.role === 'user')
+  return first ? chatMessageText(first.content) : ''
 }
 
 /**
@@ -237,7 +256,7 @@ interface Props {
    * dahin null — die UI zeigt dann nur allgemein "Demo-Version" ohne Zahl.
    */
   weeklyLimit: number | null
-  send: (text: string) => void
+  send: (content: ChatMessage['content']) => void
   resumeConversation: (id: string) => void
   deleteSavedConversation: (id: string) => void
   onRequestNewChat: () => void
@@ -273,10 +292,13 @@ export function TrustRoomChat({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!canSubmit || status === 'sending') return
-    const finalText = attachment.attachment
-      ? composeMessageWithAttachment(draft, attachment.attachment.filename, attachment.attachment.text)
-      : draft
-    send(finalText)
+    const content: ChatMessage['content'] =
+      attachment.attachment?.kind === 'document'
+        ? composeMessageWithAttachment(draft, attachment.attachment.filename, attachment.attachment.text)
+        : attachment.attachment?.kind === 'image'
+          ? composeMessageWithImage(draft, attachment.attachment.dataUrl)
+          : draft
+    send(content)
     setDraft('')
     attachment.clear()
   }

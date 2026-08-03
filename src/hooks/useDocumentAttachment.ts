@@ -1,14 +1,22 @@
 import { useRef, useState } from 'react'
 import type { Lang } from '../lib/i18n'
-import { ACCEPTED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
+import {
+  ACCEPTED_ATTACHMENT_EXTENSIONS,
+  ACCEPTED_IMAGE_EXTENSIONS,
+  MAX_ATTACHMENT_BYTES,
+  MAX_IMAGE_BYTES,
+} from '../lib/attachments'
 
 export type AttachmentStatus = 'idle' | 'uploading' | 'ready' | 'error'
 
-export interface AttachedDocument {
-  filename: string
-  text: string
-  truncated: boolean
-}
+/**
+ * Zwei grundverschiedene Anhang-Arten hinter demselben 📎-Button — siehe
+ * attachments.ts für die Begründung, warum Bilder rein clientseitig
+ * (kind: 'image') statt per Server-Extraktion (kind: 'document') laufen.
+ */
+export type AttachedItem =
+  | { kind: 'document'; filename: string; text: string; truncated: boolean }
+  | { kind: 'image'; filename: string; dataUrl: string }
 
 type ExtractResult = { status: 'ok'; text: string; truncated: boolean } | { status: 'error'; message: string }
 type ExtractFn = (filename: string, contentBase64: string, lang: Lang) => Promise<ExtractResult>
@@ -29,6 +37,28 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
+// Anders als fileToBase64 oben wird hier die VOLLSTÄNDIGE data:-URL
+// (inkl. "data:image/png;base64,"-Präfix) behalten statt abgeschnitten —
+// genau diese Form erwartet Azure OpenAI in image_url.url (siehe
+// composeMessageWithImage in attachments.ts) und genau diese Form kann ein
+// <img src>  direkt darstellen, ohne den MIME-Typ separat mitführen zu
+// müssen.
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      if (typeof result !== 'string') {
+        reject(new Error('READ_FAILED'))
+        return
+      }
+      resolve(result)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('READ_FAILED'))
+    reader.readAsDataURL(file)
+  })
+}
+
 /**
  * Datei auswählen → Base64 → Textextraktion beim Backend (extractFn, siehe
  * aiClient.ts/liveClient.ts → extractDocument) — geteilt zwischen
@@ -37,7 +67,7 @@ function fileToBase64(file: File): Promise<string> {
  * extractFn unterscheiden.
  */
 export function useDocumentAttachment(extractFn: ExtractFn, lang: Lang) {
-  const [attachment, setAttachment] = useState<AttachedDocument | null>(null)
+  const [attachment, setAttachment] = useState<AttachedItem | null>(null)
   const [status, setStatus] = useState<AttachmentStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -59,16 +89,43 @@ export function useDocumentAttachment(extractFn: ExtractFn, lang: Lang) {
     if (!file) return
 
     const ext = file.name.toLowerCase().split('.').pop() ?? ''
-    if (!ACCEPTED_ATTACHMENT_EXTENSIONS.includes(ext)) {
+    const isImage = ACCEPTED_IMAGE_EXTENSIONS.includes(ext)
+    const isDocument = ACCEPTED_ATTACHMENT_EXTENSIONS.includes(ext)
+    if (!isImage && !isDocument) {
       setAttachment(null)
       setStatus('error')
       setErrorMessage(
         lang === 'en'
-          ? 'Unsupported file type. Allowed: PDF, Word (.docx), text (.txt).'
-          : 'Dateityp nicht unterstützt. Erlaubt: PDF, Word (.docx), Text (.txt).',
+          ? 'Unsupported file type. Allowed: PDF, Word (.docx), text (.txt), images (JPG, PNG, WebP, GIF).'
+          : 'Dateityp nicht unterstützt. Erlaubt: PDF, Word (.docx), Text (.txt), Bilder (JPG, PNG, WebP, GIF).',
       )
       return
     }
+
+    // Bilder: rein clientseitig, kein Server-Roundtrip nötig (siehe
+    // attachments.ts) — läuft daher als eigener, kürzerer Zweig statt durch
+    // extractFn.
+    if (isImage) {
+      if (file.size > MAX_IMAGE_BYTES) {
+        setAttachment(null)
+        setStatus('error')
+        setErrorMessage(lang === 'en' ? 'Image is too large (max. 4 MB).' : 'Bild ist zu gross (max. 4 MB).')
+        return
+      }
+      setStatus('uploading')
+      setErrorMessage('')
+      try {
+        const dataUrl = await fileToDataUrl(file)
+        setAttachment({ kind: 'image', filename: file.name, dataUrl })
+        setStatus('ready')
+      } catch {
+        setAttachment(null)
+        setStatus('error')
+        setErrorMessage(lang === 'en' ? 'The image could not be read.' : 'Das Bild konnte nicht gelesen werden.')
+      }
+      return
+    }
+
     if (file.size > MAX_ATTACHMENT_BYTES) {
       setAttachment(null)
       setStatus('error')
@@ -82,7 +139,7 @@ export function useDocumentAttachment(extractFn: ExtractFn, lang: Lang) {
       const contentBase64 = await fileToBase64(file)
       const result = await extractFn(file.name, contentBase64, lang)
       if (result.status === 'ok') {
-        setAttachment({ filename: file.name, text: result.text, truncated: result.truncated })
+        setAttachment({ kind: 'document', filename: file.name, text: result.text, truncated: result.truncated })
         setStatus('ready')
       } else {
         setAttachment(null)

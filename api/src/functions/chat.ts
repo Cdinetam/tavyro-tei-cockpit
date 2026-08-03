@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { requestChatReply } from '../lib/openaiClient.js'
-import type { ChatMessage } from '../lib/schema.js'
+import { chatMessageHasContent, chatMessageText, type ChatMessage } from '../lib/schema.js'
 import { getUsageCount, recordUsage, getWeeklyLimit } from '../lib/quotaStore.js'
 import { isDemoExpired, getDemoExpiresAt } from '../lib/pilotWindow.js'
 import { notify } from '../lib/notify.js'
@@ -95,7 +95,7 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
   // Modells sprengt, liefert Azure OpenAI einen Fehler, den der catch-Block
   // unten ohnehin freundlich abfängt.
   const lastMessage = messages[messages.length - 1]
-  if (!lastMessage || lastMessage.role !== 'user' || !lastMessage.content?.trim()) {
+  if (!lastMessage || lastMessage.role !== 'user' || !chatMessageHasContent(lastMessage.content)) {
     return {
       status: 400,
       jsonBody: {
@@ -104,7 +104,9 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
       },
     }
   }
-  if (lastMessage.content.length > MAX_MESSAGE_LENGTH) {
+  // Zählt nur den Text-Anteil — ein Bild-Teil (siehe ChatContentPart) hat
+  // keine sinnvolle "Zeichenlänge" und wird hier bewusst nicht mitgezählt.
+  if (chatMessageText(lastMessage.content).length > MAX_MESSAGE_LENGTH) {
     return {
       status: 400,
       jsonBody: { status: 'error', message: lang === 'en' ? 'Message is too long.' : 'Nachricht ist zu lang.' },
@@ -228,7 +230,10 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
         await notify({
           kind: 'chat',
           sessionId,
-          question: lastMessage.content,
+          // notify() erwartet einen reinen String — bei einer Bild-Nachricht
+          // ohne getippten Text liefert chatMessageText('') einen leeren
+          // String, daher der Fallback.
+          question: chatMessageText(lastMessage.content) || (lang === 'en' ? '[Image]' : '[Bild]'),
           personName: access.ownerName ?? undefined,
         })
       } catch (err) {

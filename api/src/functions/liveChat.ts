@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { requestChatReply } from '../lib/openaiClient.js'
-import type { ChatMessage } from '../lib/schema.js'
+import { chatMessageHasContent, chatMessageText, type ChatMessage } from '../lib/schema.js'
 import { checkLiveSession } from '../lib/liveAuth.js'
 import { saveConversation } from '../lib/liveConversationStore.js'
 
@@ -54,7 +54,7 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
   }
 
   const lastMessage = messages[messages.length - 1]
-  if (!lastMessage || lastMessage.role !== 'user' || !lastMessage.content?.trim()) {
+  if (!lastMessage || lastMessage.role !== 'user' || !chatMessageHasContent(lastMessage.content)) {
     return {
       status: 400,
       jsonBody: {
@@ -63,7 +63,7 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
       },
     }
   }
-  if (lastMessage.content.length > MAX_MESSAGE_LENGTH) {
+  if (chatMessageText(lastMessage.content).length > MAX_MESSAGE_LENGTH) {
     return {
       status: 400,
       jsonBody: { status: 'error', message: lang === 'en' ? 'Message is too long.' : 'Nachricht ist zu lang.' },
