@@ -39,7 +39,34 @@ export function getLangFromPath(pathname: string): Lang {
   return hasEnPrefix(pathname) ? 'en' : 'de'
 }
 
+/**
+ * Ermittelt die Sprache für den ALLERERSTEN Seitenaufruf. Hat die URL einen
+ * expliziten /en-Präfix, gilt dieser immer (siehe hasEnPrefix) — explizite
+ * Navigation hat Vorrang. Fehlt der Präfix (z.B. ein Homepage-Link, der
+ * immer fest auf die Wurzel https://tei.tavyro.ch verlinkt, unabhängig von
+ * der Sprache der Homepage selbst — siehe CLAUDE.md), wird ersatzweise die
+ * bevorzugte Browsersprache herangezogen (navigator.languages), damit
+ * englischsprachige Besucher nicht erst manuell auf /en umschalten müssen.
+ * Bewusst getrennt von getLangFromPath: der popstate-Handler in App.tsx
+ * (Browser Vor-/Zurück) soll bei einer bereits sichtbaren, expliziten URL
+ * immer nur die URL lesen, ohne bei jeder Navigation erneut die
+ * Browsersprache heranzuziehen.
+ */
+export function detectInitialLang(pathname: string): Lang {
+  if (hasEnPrefix(pathname)) return 'en'
+  if (typeof navigator === 'undefined') return 'de'
+  const candidates =
+    navigator.languages && navigator.languages.length > 0 ? navigator.languages : [navigator.language]
+  const prefersEnglish = candidates.some((l) => typeof l === 'string' && l.toLowerCase().startsWith('en'))
+  return prefersEnglish ? 'en' : 'de'
+}
+
 interface Copy {
+  meta: {
+    htmlLang: string
+    title: string
+    description: string
+  }
   gate: {
     kicker: string
     heading: string
@@ -129,6 +156,11 @@ interface Copy {
 }
 
 const de: Copy = {
+  meta: {
+    htmlLang: 'de-CH',
+    title: 'TaVyro Executive Intelligence® — TEI® Trust Room',
+    description: 'Vertraulicher Reflexionsraum für Schweizer KMU-CEOs auf Basis der TaVyro Executive Intelligence® Methodik.',
+  },
   gate: {
     kicker: 'Vertrauliche Pilotphase',
     heading: 'Diese Vorschau ist auf ausgewählte Kontakte begrenzt.',
@@ -201,11 +233,11 @@ const de: Copy = {
       backToStart: 'Zurück zum Start',
     },
     conversationLimitReached: {
-      kicker: 'Maximale Gesprächslänge erreicht',
-      heading: 'Dieses Gespräch hat seine maximale Länge erreicht.',
+      kicker: 'Demo-Version · Limite erreicht',
+      heading: 'Die Limite der Demo-Version für dieses Gespräch ist erreicht.',
       body:
-        'Das ist eine rein technische Obergrenze pro einzelnem Gespräch, unabhängig von Ihrem ' +
-        'Wochenkontingent — Sie können sofort ein neues Gespräch starten.',
+        'Dieses Gespräch endet hier bewusst — die volle Tiefe entsteht im persönlichen ' +
+        'Erstgespräch mit Tam Nguyen. Sie können jederzeit auch ein neues Gespräch starten.',
       newDialog: 'Neues Gespräch starten',
       booking: 'Erstgespräch buchen →',
     },
@@ -239,6 +271,12 @@ const de: Copy = {
 }
 
 const en: Copy = {
+  meta: {
+    htmlLang: 'en',
+    title: 'TaVyro Executive Intelligence® — TEI® Trust Room',
+    description:
+      'A confidential reflection space for Swiss SME CEOs, grounded in the TaVyro Executive Intelligence® methodology.',
+  },
   gate: {
     kicker: 'Confidential pilot phase',
     heading: 'This preview is limited to selected contacts.',
@@ -310,11 +348,11 @@ const en: Copy = {
       backToStart: 'Back to start',
     },
     conversationLimitReached: {
-      kicker: 'Maximum conversation length reached',
-      heading: 'This conversation has reached its maximum length.',
+      kicker: 'Demo version · limit reached',
+      heading: 'This conversation has reached the demo version limit.',
       body:
-        "That's a purely technical cap per individual conversation, independent of your weekly " +
-        'quota — you can start a new conversation right away.',
+        'This conversation deliberately ends here — the full depth unfolds in a personal intro ' +
+        'call with Tam Nguyen. You can also start a new conversation any time.',
       newDialog: 'Start new conversation',
       booking: 'Book an intro call →',
     },
@@ -351,4 +389,21 @@ const dictionaries: Record<Lang, Copy> = { de, en }
 
 export function getCopy(lang: Lang): Copy {
   return dictionaries[lang]
+}
+
+/**
+ * Setzt html[lang], <title> und die Meta-Description passend zur aktuellen
+ * Sprache — index.html liefert dafür nur einen statischen deutschen
+ * Startwert (Server-Rendering gibt es hier nicht), ohne diesen Aufruf bliebe
+ * das Dokument z.B. auf /en dauerhaft als lang="de-CH" markiert. Wird sowohl
+ * von AccessGate.tsx (Zugangscode-Gate, rendert vor App.tsx) als auch von
+ * App.tsx (nach Freischaltung, inkl. D | EN-Umschaltung) aufgerufen, damit
+ * die Sprache in JEDER Phase des Flows korrekt im Dokument hinterlegt ist.
+ */
+export function applyDocumentMeta(lang: Lang): void {
+  const meta = getCopy(lang).meta
+  document.documentElement.lang = meta.htmlLang
+  document.title = meta.title
+  const descriptionTag = document.querySelector('meta[name="description"]')
+  if (descriptionTag) descriptionTag.setAttribute('content', meta.description)
 }

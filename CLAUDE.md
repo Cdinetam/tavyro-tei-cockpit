@@ -116,6 +116,50 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   Gate-Seite zeigt weiterhin bewusst "Vertrauliche Pilotphase / auf
   ausgewählte Kontakte begrenzt" (Produktentscheidung).
 
+- **Nachrichtenlimit pro Einzelgespräch** (`MAX_MESSAGES_PER_CONVERSATION`,
+  `api/src/functions/chat.ts`): unabhängig vom `PILOT_WEEKLY_LIMIT`
+  (zählt nur begonnene Gespräche, nicht einzelne Nachrichten) — live
+  festgestellt, dass eine einzelne, dauerhaft offene Konversation dadurch
+  beliebig viele kostenpflichtige Azure-OpenAI-Aufrufe auslösen konnte, ohne
+  je gegen das Wochenkontingent zu zählen. Harte Obergrenze (Standard `7`,
+  env-konfigurierbar) auf Nutzer-Nachrichten pro Gespräch, geprüft vor dem
+  Wochenlimit-Check, ebenfalls für `PILOT_UNLIMITED_IPS` ausgenommen. Neuer
+  Status `conversation_limit_reached` (`src/types.ts`,
+  `useTrustRoomChat.ts`, `i18n.ts` → `copy.chat.conversationLimitReached`,
+  `TrustRoomChat.tsx`) zeigt einen eigenen Bildschirm mit direktem Button
+  zum Starten eines neuen Gesprächs (nutzt den bereits bestehenden
+  `onRequestNewChat`-Flow aus `App.tsx`, inkl. Bestätigungsdialog bei noch
+  ungespeichertem Verlauf).
+
+- **Erzwungener Cliffhanger bei letzter erlaubter Nachricht** (`chat.ts`):
+  bei der 7. (letzten von `MAX_MESSAGES_PER_CONVERSATION` erlaubten)
+  Nachricht wird der an das Modell übergebene Turn-Hinweis
+  (`effectiveTopicTurnHint`) künstlich auf `CLIFFHANGER_TOPIC_TURN_THRESHOLD`
+  angehoben — dieselbe Prompt-Regel, die sonst bei Themenerschöpfung greift,
+  sorgt so dafür, dass diese letzte Antwort bewusst und sauber Richtung
+  echtes Gespräch abschliesst statt mitten im Gedanken abzubrechen, da danach
+  ohnehin keine weitere Antwort mehr folgt. Der anschliessende
+  `conversation_limit_reached`-Screen (8. Nachricht) formuliert seither
+  explizit "Demo-Version-Limite erreicht" mit "Erstgespräch buchen" als
+  primärem Button (analog zum Wochenlimit-Screen), "Neues Gespräch starten"
+  bleibt als sekundäre Option daneben bestehen.
+
+- **Automatische Spracherkennung beim Erstaufruf ohne /en-Präfix**
+  (`detectInitialLang` in `src/lib/i18n.ts`, genutzt in `AccessGate.tsx` und
+  `App.tsx` statt `getLangFromPath` NUR für den allerersten Render): löst das
+  Problem, dass die Homepage (tavyro.ch, separates Projekt) mit ihrem
+  "Dialog starten"-Button immer fest auf die Wurzel `https://tei.tavyro.ch`
+  verlinkt, unabhängig von der Sprache der Homepage selbst — englische
+  Homepage-Besucher landeten dadurch immer zuerst auf der deutschen
+  Zugangsseite. Hat die URL keinen expliziten `/en`-Präfix, wird jetzt
+  ersatzweise `navigator.languages` geprüft; beginnt die bevorzugte
+  Browsersprache mit "en", startet die Seite direkt auf Englisch. Explizite
+  `/en`- oder Root-URLs (z.B. per Lesezeichen oder Zurück-Navigation im
+  Browser, siehe `popstate`-Handler) haben weiterhin Vorrang und werden NICHT
+  erneut anhand der Browsersprache überschrieben — nur der allererste Render
+  nutzt die Erkennung, siehe Kommentar bei `getLangFromPath` vs.
+  `detectInitialLang`.
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde

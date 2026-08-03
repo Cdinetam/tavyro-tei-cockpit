@@ -3,7 +3,7 @@ import { Header } from './components/Header'
 import { Landing } from './components/Landing'
 import { TrustRoomChat, ExitConfirmDialog } from './components/TrustRoomChat'
 import { useTrustRoomChat } from './hooks/useTrustRoomChat'
-import { getLangFromPath, hasEnPrefix, type Lang } from './lib/i18n'
+import { applyDocumentMeta, detectInitialLang, getLangFromPath, hasEnPrefix, type Lang } from './lib/i18n'
 
 type View = 'landing' | 'room'
 
@@ -51,7 +51,12 @@ type PendingExit = 'toLanding' | 'newChat' | null
 
 export default function App() {
   const [view, setView] = useState<View>(() => pathToView(window.location.pathname))
-  const [lang, setLang] = useState<Lang>(() => getLangFromPath(window.location.pathname))
+  // Erstaufruf: siehe detectInitialLang in i18n.ts (explizite /en-URL hat
+  // Vorrang, sonst Browsersprache als Fallback — deckungsgleich mit
+  // AccessGate.tsx, das denselben Pfad schon vorher gesehen hat). Bei
+  // späterer Browser-Navigation (popstate unten) zählt dagegen bewusst nur
+  // noch die URL selbst, siehe getLangFromPath.
+  const [lang, setLang] = useState<Lang>(() => detectInitialLang(window.location.pathname))
   const [prefill, setPrefill] = useState('')
   const [pendingExit, setPendingExit] = useState<PendingExit>(null)
 
@@ -65,6 +70,14 @@ export default function App() {
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
+
+  // Hält html[lang]/Title/Meta-Description synchron mit lang — sowohl beim
+  // ersten Rendern nach der Zugangscode-Gate (siehe AccessGate.tsx, das
+  // dasselbe schon vorher für die Gate-Seite selbst setzt) als auch bei
+  // jedem D | EN-Wechsel im Header (toggleLang unten).
+  useEffect(() => {
+    applyDocumentMeta(lang)
+  }, [lang])
 
   // Warnt beim Schliessen/Neuladen des Tabs, solange ein ungesichertes
   // Gespräch offen ist — der Browser zeigt dabei einen generischen, nicht

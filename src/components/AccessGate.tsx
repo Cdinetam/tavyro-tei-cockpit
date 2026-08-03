@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { verifyAccessCode, storeAccessCode, getStoredAccessCode, requestAutoAccess } from '../lib/aiClient'
-import { getCopy, getLangFromPath } from '../lib/i18n'
+import { applyDocumentMeta, detectInitialLang, getCopy } from '../lib/i18n'
 
 interface Props {
   children: ReactNode
@@ -21,12 +21,22 @@ export function AccessGate({ children }: Props) {
   const [sentToEmail, setSentToEmail] = useState('')
   // AccessGate rendert in main.tsx VOR App.tsx (siehe dort) — hat also
   // keinen Zugriff auf Apps view/lang-State. Ermittelt die Sprache deshalb
-  // selbst, einmalig beim ersten Rendern, direkt aus der URL (gleiche
-  // Logik wie App.tsx, siehe src/lib/i18n.ts → getLangFromPath), damit ein
-  // Deep-Link auf /en/gespraech auch die Zugangscode-Gate auf Englisch
-  // zeigt statt immer Deutsch. Muss vor dem frühen Return unten stehen
-  // (Rules of Hooks: Hooks dürfen nicht bedingt aufgerufen werden).
-  const [lang] = useState(() => getLangFromPath(window.location.pathname))
+  // selbst, einmalig beim ersten Rendern (gleiche Logik wie App.tsx, siehe
+  // src/lib/i18n.ts → detectInitialLang): explizite /en-URL hat Vorrang,
+  // sonst greift ersatzweise die Browsersprache — damit z.B. ein Homepage-
+  // Link ohne /en-Präfix englischsprachigen Besuchern trotzdem automatisch
+  // Englisch zeigt, statt sie erst manuell umschalten zu lassen. Muss vor
+  // dem frühen Return unten stehen (Rules of Hooks: Hooks dürfen nicht
+  // bedingt aufgerufen werden).
+  const [lang] = useState(() => detectInitialLang(window.location.pathname))
+
+  // Setzt html[lang]/Title/Meta-Description schon auf der Gate-Seite (siehe
+  // applyDocumentMeta in i18n.ts) — sonst bliebe z.B. ein Deep-Link auf
+  // /en/gespraech im Dokument-Head fälschlich als Deutsch markiert, solange
+  // die Person noch keinen Zugangscode eingegeben hat.
+  useEffect(() => {
+    applyDocumentMeta(lang)
+  }, [lang])
 
   if (unlocked) return <>{children}</>
 
