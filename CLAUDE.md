@@ -204,6 +204,21 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   ("Ich akzeptiere die Datenschutzerklärung") vorgeschaltet, die den
   Submit-Button bis zur Zustimmung blockiert.
 
+- **DE/EN-Umschalter für Live-Bildschirme** (Bugfix): live festgestellt,
+  dass die Live-Version die Sprache beim ersten Aufruf still per
+  Browsersprache riet (`detectInitialLang`, siehe Eintrag weiter unten —
+  gilt pfad-übergreifend, also auch für `/live`), aber anders als die Demo
+  (Header hat einen DE|EN-Toggle) KEINE Möglichkeit bot, das danach zu
+  korrigieren — ein Nutzer mit englischsprachigem Betriebssystem/Browser,
+  der auf Deutsch tippt, bekam ohne jede Erklärung englische Antworten und
+  konnte nicht zurückschalten. Behoben durch einen neuen `LangToggle`
+  (identische Optik wie der bestehende Header-Toggle) auf allen
+  Live-Bildschirmen: `Shell` in `LiveAuth.tsx` (oben rechts neben Logo,
+  gilt für Login/Register/Verify/Activate/Passwort-vergessen/-Reset) sowie
+  im Kopfbereich von `LiveChat.tsx` (Empty-State und aktiver Chat, neben
+  dem Logout-Button). Nutzt dieselbe `toggleLang()`-Funktion aus `App.tsx`
+  wie der Demo-Header — kein neuer State, nur bisher fehlende UI-Anbindung.
+
 - **Manuelle Freigabe (Tam-Approval) zusätzlich zur E-Mail-Bestätigung**:
   live festgestellt, dass offene Selbstregistrierung + reine
   E-Mail-Bestätigung Tam nicht erlaubt, vor der ersten Nutzung zu prüfen,

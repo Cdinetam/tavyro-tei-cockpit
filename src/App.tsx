@@ -259,6 +259,7 @@ export default function App() {
         {view === 'liveLogin' && (
           <LiveLoginScreen
             lang={lang}
+            onToggleLang={toggleLang}
             onLoginSuccess={handleLiveLoginSuccess}
             onNavigateRegister={() => goToLiveView('liveRegister')}
             onNavigateForgotPassword={() => goToLiveView('liveForgotPassword')}
@@ -266,20 +267,26 @@ export default function App() {
           />
         )}
         {view === 'liveRegister' && (
-          <LiveRegisterScreen lang={lang} onNavigateLogin={() => goToLiveView('liveLogin')} />
+          <LiveRegisterScreen lang={lang} onToggleLang={toggleLang} onNavigateLogin={() => goToLiveView('liveLogin')} />
         )}
         {view === 'liveVerify' && (
-          <LiveVerifyScreen lang={lang} token={tokenFromQuery()} onNavigateLogin={() => goToLiveView('liveLogin')} />
+          <LiveVerifyScreen
+            lang={lang}
+            onToggleLang={toggleLang}
+            token={tokenFromQuery()}
+            onNavigateLogin={() => goToLiveView('liveLogin')}
+          />
         )}
         {view === 'liveActivate' && (
-          <LiveActivateScreen lang={lang} onNavigateLogin={() => goToLiveView('liveLogin')} />
+          <LiveActivateScreen lang={lang} onToggleLang={toggleLang} onNavigateLogin={() => goToLiveView('liveLogin')} />
         )}
         {view === 'liveForgotPassword' && (
-          <LiveForgotPasswordScreen lang={lang} onNavigateLogin={() => goToLiveView('liveLogin')} />
+          <LiveForgotPasswordScreen lang={lang} onToggleLang={toggleLang} onNavigateLogin={() => goToLiveView('liveLogin')} />
         )}
         {view === 'liveResetPassword' && (
           <LiveResetPasswordScreen
             lang={lang}
+            onToggleLang={toggleLang}
             token={tokenFromQuery()}
             onNavigateLogin={() => goToLiveView('liveLogin')}
           />
@@ -287,6 +294,7 @@ export default function App() {
         {view === 'liveRoom' && liveLoggedIn && (
           <LiveChat
             lang={lang}
+            onToggleLang={toggleLang}
             messages={liveChat.messages}
             status={liveChat.status}
             errorMessage={liveChat.errorMessage}

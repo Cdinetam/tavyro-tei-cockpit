@@ -18,16 +18,44 @@ import {
  * Zugangscode-Weg.
  */
 
-function Shell({ children, wide = false, lang }: { children: React.ReactNode; wide?: boolean; lang: Lang }) {
+function LangToggle({ lang, onToggleLang }: { lang: Lang; onToggleLang: () => void }) {
+  const copy = getCopy(lang)
+  return (
+    <button
+      onClick={onToggleLang}
+      aria-label={copy.header.langToggleAria}
+      className="flex shrink-0 items-center gap-1 font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+    >
+      <span className={lang === 'de' ? 'text-paper' : undefined}>DE</span>
+      <span aria-hidden="true">|</span>
+      <span className={lang === 'en' ? 'text-paper' : undefined}>EN</span>
+    </button>
+  )
+}
+
+function Shell({
+  children,
+  wide = false,
+  lang,
+  onToggleLang,
+}: {
+  children: React.ReactNode
+  wide?: boolean
+  lang: Lang
+  onToggleLang: () => void
+}) {
   const copy = getCopy(lang).live
   return (
     <div className="grain flex min-h-screen items-center justify-center bg-ink-900 px-6 py-12">
       <div className={`w-full ${wide ? 'max-w-md' : 'max-w-sm'} fade-in`}>
-        <div className="flex items-center gap-3">
-          <img src="/tavyro-logo.png" alt="TaVyro" className="h-10 w-auto" />
-          <span className="font-sans text-[12px] text-paper-faint">
-            TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI) – Trust Room
-          </span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <img src="/tavyro-logo.png" alt="TaVyro" className="h-10 w-auto" />
+            <span className="font-sans text-[12px] text-paper-faint">
+              TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI) – Trust Room
+            </span>
+          </div>
+          <LangToggle lang={lang} onToggleLang={onToggleLang} />
         </div>
         {children}
         <p className="mt-8 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
@@ -67,6 +95,7 @@ function TrustBox({ lang }: { lang: Lang }) {
 
 interface LoginProps {
   lang: Lang
+  onToggleLang: () => void
   onLoginSuccess: () => void
   onNavigateRegister: () => void
   onNavigateForgotPassword: () => void
@@ -75,6 +104,7 @@ interface LoginProps {
 
 export function LiveLoginScreen({
   lang,
+  onToggleLang,
   onLoginSuccess,
   onNavigateRegister,
   onNavigateForgotPassword,
@@ -100,7 +130,7 @@ export function LiveLoginScreen({
   }
 
   return (
-    <Shell wide lang={lang}>
+    <Shell wide lang={lang} onToggleLang={onToggleLang}>
       <TrustBox lang={lang} />
       <form onSubmit={handleSubmit} className="mt-6 space-y-3">
         <input
@@ -162,7 +192,15 @@ export function LiveLoginScreen({
   )
 }
 
-export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNavigateLogin: () => void }) {
+export function LiveRegisterScreen({
+  lang,
+  onToggleLang,
+  onNavigateLogin,
+}: {
+  lang: Lang
+  onToggleLang: () => void
+  onNavigateLogin: () => void
+}) {
   const copy = getCopy(lang).live
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -185,7 +223,7 @@ export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
 
   if (status === 'sent') {
     return (
-      <Shell lang={lang}>
+      <Shell lang={lang} onToggleLang={onToggleLang}>
         <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.register.kicker}</p>
         <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.register.successHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">
@@ -202,7 +240,7 @@ export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
   }
 
   return (
-    <Shell lang={lang}>
+    <Shell lang={lang} onToggleLang={onToggleLang}>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.register.kicker}</p>
       <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.register.heading}</h1>
       <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.register.body}</p>
@@ -276,7 +314,17 @@ export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
   )
 }
 
-export function LiveVerifyScreen({ lang, token, onNavigateLogin }: { lang: Lang; token: string; onNavigateLogin: () => void }) {
+export function LiveVerifyScreen({
+  lang,
+  onToggleLang,
+  token,
+  onNavigateLogin,
+}: {
+  lang: Lang
+  onToggleLang: () => void
+  token: string
+  onNavigateLogin: () => void
+}) {
   const copy = getCopy(lang).live.verify
   const [status, setStatus] = useState<'checking' | 'success' | 'error'>('checking')
 
@@ -292,7 +340,7 @@ export function LiveVerifyScreen({ lang, token, onNavigateLogin }: { lang: Lang;
   }, [])
 
   return (
-    <Shell lang={lang}>
+    <Shell lang={lang} onToggleLang={onToggleLang}>
       {status === 'checking' && <p className="mt-8 font-sans text-[14px] text-paper-faint">{copy.checking}</p>}
       {status === 'success' && (
         <>
@@ -316,7 +364,15 @@ export function LiveVerifyScreen({ lang, token, onNavigateLogin }: { lang: Lang;
   )
 }
 
-export function LiveForgotPasswordScreen({ lang, onNavigateLogin }: { lang: Lang; onNavigateLogin: () => void }) {
+export function LiveForgotPasswordScreen({
+  lang,
+  onToggleLang,
+  onNavigateLogin,
+}: {
+  lang: Lang
+  onToggleLang: () => void
+  onNavigateLogin: () => void
+}) {
   const copy = getCopy(lang).live.forgotPassword
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'checking' | 'sent'>('idle')
@@ -331,7 +387,7 @@ export function LiveForgotPasswordScreen({ lang, onNavigateLogin }: { lang: Lang
 
   if (status === 'sent') {
     return (
-      <Shell lang={lang}>
+      <Shell lang={lang} onToggleLang={onToggleLang}>
         <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.sentHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.sentBody}</p>
         <button
@@ -345,7 +401,7 @@ export function LiveForgotPasswordScreen({ lang, onNavigateLogin }: { lang: Lang
   }
 
   return (
-    <Shell lang={lang}>
+    <Shell lang={lang} onToggleLang={onToggleLang}>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.kicker}</p>
       <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.heading}</h1>
       <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.body}</p>
@@ -377,7 +433,15 @@ export function LiveForgotPasswordScreen({ lang, onNavigateLogin }: { lang: Lang
   )
 }
 
-export function LiveActivateScreen({ lang, onNavigateLogin }: { lang: Lang; onNavigateLogin: () => void }) {
+export function LiveActivateScreen({
+  lang,
+  onToggleLang,
+  onNavigateLogin,
+}: {
+  lang: Lang
+  onToggleLang: () => void
+  onNavigateLogin: () => void
+}) {
   const copy = getCopy(lang).live.activate
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -399,7 +463,7 @@ export function LiveActivateScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
 
   if (status === 'success') {
     return (
-      <Shell lang={lang}>
+      <Shell lang={lang} onToggleLang={onToggleLang}>
         <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.successHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.successBody}</p>
         <button
@@ -413,7 +477,7 @@ export function LiveActivateScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
   }
 
   return (
-    <Shell lang={lang}>
+    <Shell lang={lang} onToggleLang={onToggleLang}>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.kicker}</p>
       <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.heading}</h1>
       <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.body}</p>
@@ -462,10 +526,12 @@ export function LiveActivateScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
 
 export function LiveResetPasswordScreen({
   lang,
+  onToggleLang,
   token,
   onNavigateLogin,
 }: {
   lang: Lang
+  onToggleLang: () => void
   token: string
   onNavigateLogin: () => void
 }) {
@@ -489,7 +555,7 @@ export function LiveResetPasswordScreen({
 
   if (!token || status === 'error') {
     return (
-      <Shell lang={lang}>
+      <Shell lang={lang} onToggleLang={onToggleLang}>
         <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.errorHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{errorMessage || copy.errorBody}</p>
         <button
@@ -504,7 +570,7 @@ export function LiveResetPasswordScreen({
 
   if (status === 'success') {
     return (
-      <Shell lang={lang}>
+      <Shell lang={lang} onToggleLang={onToggleLang}>
         <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.successHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.successBody}</p>
         <button
@@ -518,7 +584,7 @@ export function LiveResetPasswordScreen({
   }
 
   return (
-    <Shell lang={lang}>
+    <Shell lang={lang} onToggleLang={onToggleLang}>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.kicker}</p>
       <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.heading}</h1>
       <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.body}</p>
