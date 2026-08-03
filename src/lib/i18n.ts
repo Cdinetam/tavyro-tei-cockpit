@@ -99,9 +99,10 @@ interface Copy {
     booking: string
     langToggleAria: string
   }
-  /** Dokument-Anhang im Chat (siehe attachments.ts/useDocumentAttachment.ts)
-   * — ein einziger, geteilter Block statt Duplikation unter chat/live.room,
-   * da Demo und Live denselben Anhang-Button bekommen. */
+  /** Dokument-/Bild-Anhang im Chat (siehe attachments.ts/
+   * useDocumentAttachment.ts) — ein einziger, geteilter Block statt
+   * Duplikation unter chat/live.room, da Demo und Live denselben
+   * Anhang-Button bekommen. */
   attachment: {
     buttonAria: string
     uploading: string
@@ -109,6 +110,8 @@ interface Copy {
     remove: string
     expand: string
     collapse: string
+    /** Alt-Text für ein als Bild-Anhang gerenderten Chat-Thumbnail. */
+    imageAlt: string
   }
   landing: {
     kicker: string
@@ -311,12 +314,13 @@ const de: Copy = {
     langToggleAria: 'Sprache wechseln',
   },
   attachment: {
-    buttonAria: 'Dokument anhängen',
+    buttonAria: 'Dokument oder Bild anhängen',
     uploading: 'Wird gelesen…',
     truncatedNote: '(gekürzt — nur die ersten Seiten wurden berücksichtigt)',
     remove: 'Anhang entfernen',
     expand: 'Dokumenttext anzeigen',
     collapse: 'Dokumenttext ausblenden',
+    imageAlt: 'Angehängtes Bild',
   },
   landing: {
     kicker: 'TEI® Trust Room',
@@ -551,12 +555,13 @@ const en: Copy = {
     langToggleAria: 'Switch language',
   },
   attachment: {
-    buttonAria: 'Attach document',
+    buttonAria: 'Attach document or image',
     uploading: 'Reading…',
     truncatedNote: '(truncated — only the first pages were included)',
     remove: 'Remove attachment',
     expand: 'Show document text',
     collapse: 'Hide document text',
+    imageAlt: 'Attached image',
   },
   landing: {
     kicker: 'TEI® Trust Room',

@@ -291,6 +291,62 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   IP-Rate-Limit-Tabelle `TeiExtractRateLimit` (`extractRateLimit.ts`,
   20/Std.), unabhängig von Demo-/Live-Limits.
 
+- **Bild-Anhänge im Chat (GPT-4o Vision)** — Folge-Feature zum
+  Dokument-Anhang oben, live gemeldet: "upload lässt keine Bilder zu."
+  Bewusst (per Rückfrage geklärt) mit ECHTEM Bild-Verständnis statt reiner
+  OCR-Textextraktion umgesetzt: TEI sieht das Bild tatsächlich (Screenshots,
+  Charts, Fotos) statt nur einen extrahierten Text daraus zu bekommen.
+  Dafür musste `ChatMessage.content` (in `src/types.ts` UND
+  `api/src/lib/schema.ts`, wie immer manuell synchron gehalten) von einem
+  reinen `string` auf `string | ChatContentPart[]` erweitert werden —
+  `ChatContentPart` (`{type:'text',text}` / `{type:'image_url',
+  image_url:{url}}`) entspricht bewusst 1:1 dem Format, das Azure OpenAI in
+  `messages[].content` erwartet, damit `openaiClient.ts` es unverändert
+  durchreichen kann (keine Umformung nötig). Weil `content` jetzt kein
+  reiner String mehr sein kann, wurde jede bisherige `.trim()`/`.length`-
+  Stelle auf zwei neue, in beiden Dateien synchron gehaltene Helfer
+  umgestellt: `chatMessageText()` (liefert nur den Text-Anteil) und
+  `chatMessageHasContent()` (true bei Text ODER Bild) — betroffen waren
+  `chat.ts`/`liveChat.ts` (Validierung, `MAX_MESSAGE_LENGTH`-Prüfung, die
+  `notify()`-Payload), `openaiClient.ts` (adviceGuard-Aufruf) und
+  `liveConversationStore.ts` (`deriveTitle`).
+  Bilder laufen anders als Dokumente OHNE Server-Roundtrip: rein
+  clientseitig als `data:image/...;base64,...`-URL gelesen
+  (`fileToDataUrl` in `useDocumentAttachment.ts`) und über
+  `composeMessageWithImage` (`src/lib/attachments.ts`) direkt zu einem
+  `ChatContentPart[]`-Array zusammengesetzt — anders als beim
+  Dokumenttext-Marker (`composeMessageWithAttachment`, bleibt ein String)
+  ist `content` bei einer Bild-Nachricht also kein String mehr, weshalb
+  `parseMessageAttachment` für Array-Content jetzt bewusst `null` liefert
+  (Bilder werden separat über `chatMessageImageUrl` aus `types.ts` erkannt
+  und als Thumbnail in den `Bubble`-Komponenten gerendert). Derselbe
+  📎-Button in `TrustRoomChat.tsx`/`LiveChat.tsx` nimmt jetzt beides
+  entgegen (`ACCEPTED_ATTACHMENT_ACCEPT` erweitert um
+  `.jpg,.jpeg,.png,.webp,.gif`), `useDocumentAttachment.ts` liefert
+  `AttachedItem` als `{kind:'document',...} | {kind:'image',...}`-Union.
+  Bildgrösse client-seitig auf `MAX_IMAGE_BYTES` (4 MB) begrenzt — kleiner
+  als der 8-MB-Dokument-Cap, da ein Bild zusätzlich als Base64 (~+33%)
+  durch Request UND (bei Live) mindestens einen Speicherzyklus läuft.
+  **Wichtige, bewusste Einschränkung bei Live** (Kompromiss statt Azure
+  Blob Storage): Azure Table Storage begrenzt eine einzelne
+  String-Eigenschaft auf ~64 KB und eine Entität auf ~1 MB — ein
+  eingebettetes Bild würde das bei JEDEM Speichern (nach jeder Antwort wird
+  der komplette Verlauf neu serialisiert, siehe `saveConversation`) sofort
+  reissen. Deshalb ersetzt `liveConversationStore.ts` →
+  `collapseImagesForStorage` ein Bild beim Speichern automatisch durch den
+  Platzhalter-Text `[Bild-Anhang]` (TEIs eigene, bereits im Verlauf
+  stehende Antwort dazu bleibt als Text vollständig erhalten). Praktisch
+  bedeutet das: innerhalb der AKTIVEN Sitzung (Seite nicht neu geladen)
+  sieht/beantwortet TEI das Bild mit echtem Vision-Verständnis und kann
+  sich in Folge-Nachrichten auch weiter darauf beziehen, weil
+  `useLiveChat.ts` nach dem Senden nur lokal ergänzt statt vom Server neu
+  zu laden; nach einem Seitenneuladen, Geräte-/Browserwechsel oder
+  "Gespräch fortsetzen" aus der gespeicherten Liste ist nur noch der
+  Platzhalter da, das Bild selbst nicht mehr abrufbar. Demo speichert
+  Gespräche ohnehin nur optional/manuell lokal (`localStorage`) — dort
+  bewusst keine entsprechende Kollabierung ergänzt (geringeres Risiko,
+  reine Browser-Speichergrenze statt harter Server-Grenze).
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde
