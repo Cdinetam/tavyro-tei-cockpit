@@ -59,6 +59,22 @@ export async function liveLogin(req: HttpRequest, context: InvocationContext): P
       }
     }
 
+    // Zusätzlich zur E-Mail-Bestätigung: manuelle Freigabe durch Tam, siehe
+    // liveUserStore.ts (Kopfkommentar) für den vollen Ablauf. Bestandskonten
+    // von vor dieser Änderung gelten automatisch als freigegeben.
+    if (user && user.emailVerified && !user.approved) {
+      return {
+        status: 403,
+        jsonBody: {
+          status: 'error',
+          message:
+            lang === 'en'
+              ? 'Your account is being reviewed. You will receive an activation code by email once it has been approved — enter it on the "Activate account" screen.'
+              : 'Ihr Konto wird geprüft. Sie erhalten einen Zugangscode per E-Mail, sobald es freigeschaltet ist — geben Sie ihn danach unter „Konto aktivieren“ ein.',
+        },
+      }
+    }
+
     const verified = await verifyPassword(email, password)
     if (!verified) {
       return { status: 401, jsonBody: { status: 'error', message: genericError } }

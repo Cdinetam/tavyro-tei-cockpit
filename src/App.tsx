@@ -6,6 +6,7 @@ import {
   LiveLoginScreen,
   LiveRegisterScreen,
   LiveVerifyScreen,
+  LiveActivateScreen,
   LiveForgotPasswordScreen,
   LiveResetPasswordScreen,
 } from './components/LiveAuth'
@@ -21,7 +22,16 @@ import { applyDocumentMeta, detectInitialLang, getLangFromPath, hasEnPrefix, typ
 // über den Sitzungs-Token entscheidet) — eigenes, offenes Login/Register
 // statt Zugangscode, keine Limits, kein Cliffhanger, siehe api/src/functions
 // /live*.ts.
-type View = 'landing' | 'room' | 'liveLogin' | 'liveRegister' | 'liveVerify' | 'liveForgotPassword' | 'liveResetPassword' | 'liveRoom'
+type View =
+  | 'landing'
+  | 'room'
+  | 'liveLogin'
+  | 'liveRegister'
+  | 'liveVerify'
+  | 'liveActivate'
+  | 'liveForgotPassword'
+  | 'liveResetPassword'
+  | 'liveRoom'
 
 // Der echte, mehrteilige Trust-Room-Gespräch-Flow bekommt eine eigene URL
 // (/gespraech), damit er direkt verlinkt/geteilt werden kann. Er ist der
@@ -54,6 +64,7 @@ function pathToView(pathname: string): View {
   if (withoutLangPrefix === '/live' || withoutLangPrefix === '/live/') return 'liveLogin'
   if (withoutLangPrefix.startsWith('/live/register')) return 'liveRegister'
   if (withoutLangPrefix.startsWith('/live/verify')) return 'liveVerify'
+  if (withoutLangPrefix.startsWith('/live/activate')) return 'liveActivate'
   if (withoutLangPrefix.startsWith('/live/forgot-password')) return 'liveForgotPassword'
   if (withoutLangPrefix.startsWith('/live/reset-password')) return 'liveResetPassword'
   if (withoutLangPrefix.startsWith('/live/gespraech')) return 'liveRoom'
@@ -64,6 +75,7 @@ const LIVE_VIEW_PATHS: Partial<Record<View, string>> = {
   liveLogin: '/live',
   liveRegister: '/live/register',
   liveVerify: '/live/verify',
+  liveActivate: '/live/activate',
   liveForgotPassword: '/live/forgot-password',
   liveResetPassword: '/live/reset-password',
   liveRoom: '/live/gespraech',
@@ -232,6 +244,7 @@ export default function App() {
     view === 'liveLogin' ||
     view === 'liveRegister' ||
     view === 'liveVerify' ||
+    view === 'liveActivate' ||
     view === 'liveForgotPassword' ||
     view === 'liveResetPassword' ||
     view === 'liveRoom'
@@ -249,6 +262,7 @@ export default function App() {
             onLoginSuccess={handleLiveLoginSuccess}
             onNavigateRegister={() => goToLiveView('liveRegister')}
             onNavigateForgotPassword={() => goToLiveView('liveForgotPassword')}
+            onNavigateActivate={() => goToLiveView('liveActivate')}
           />
         )}
         {view === 'liveRegister' && (
@@ -256,6 +270,9 @@ export default function App() {
         )}
         {view === 'liveVerify' && (
           <LiveVerifyScreen lang={lang} token={tokenFromQuery()} onNavigateLogin={() => goToLiveView('liveLogin')} />
+        )}
+        {view === 'liveActivate' && (
+          <LiveActivateScreen lang={lang} onNavigateLogin={() => goToLiveView('liveLogin')} />
         )}
         {view === 'liveForgotPassword' && (
           <LiveForgotPasswordScreen lang={lang} onNavigateLogin={() => goToLiveView('liveLogin')} />

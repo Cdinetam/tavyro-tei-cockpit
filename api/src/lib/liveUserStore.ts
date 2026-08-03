@@ -10,11 +10,12 @@ import crypto from 'node:crypto'
  * Nachrichten-Cap noch Cliffhanger, deshalb ein eigenständiges Auth-Modell
  * statt das bestehende zu überladen.
  *
- * Tabellenstruktur (eine Tabelle, drei Partitionen als Indizes — gleiches
+ * Tabellenstruktur (eine Tabelle, vier Partitionen als Indizes — gleiches
  * Muster wie issuedCodesStore.ts):
  *  - 'by-email'         RowKey = normalisierte E-Mail  → volles Nutzerkonto
  *  - 'by-verify-token'  RowKey = Verifikations-Token    → { email } Pointer
  *  - 'by-reset-token'   RowKey = Passwort-Reset-Token   → { email } Pointer
+ *  - 'by-approve-token' RowKey = Freigabe-Token (Tam)   → { email } Pointer
  * Die Token-Partitionen erlauben einen O(1)-Lookup beim Klick auf den
  * E-Mail-Link, ohne die E-Mail-Adresse selbst in der URL mitschicken zu
  * müssen. Abgelaufene/verbrauchte Pointer werden nicht aktiv gelöscht (bei
@@ -24,15 +25,30 @@ import crypto from 'node:crypto'
  *
  * Passwort-Hashing: bcryptjs (reine JS-Implementierung, keine native
  * Kompilierung nötig — wichtig für Azure Functions/Linux-Build-Umgebungen).
+ *
+ * Zusätzliche manuelle Freigabe (Tam-Approval, siehe liveApprove.ts/
+ * liveActivate.ts): offene Selbstregistrierung bleibt (E-Mail+Passwort
+ * sofort wählbar), aber ein Konto kann sich trotz bestätigter E-Mail-Adresse
+ * erst einloggen, wenn zusätzlich `approved` true ist. Ablauf: Tam klickt
+ * den Freigabe-Link aus der Registrierungs-Benachrichtigung
+ * (`approveToken`, /api/live/approve) → System generiert einen kurzen
+ * Zugangscode (`activationCode`) und schickt ihn per E-Mail an die Person →
+ * Person gibt E-Mail + Code auf /live/activate ein → `approved` wird true.
+ * Bereits VOR dieser Änderung bestehende Konten (ohne das `approved`-Feld in
+ * der Tabelle) gelten als automatisch freigegeben (siehe entityToRecord) —
+ * betrifft insbesondere Tams eigenes Testkonto, das nicht rückwirkend
+ * gesperrt werden soll.
  */
 
 const TABLE_NAME = 'TeiLiveUsers'
 const EMAIL_PARTITION = 'by-email'
 const VERIFY_TOKEN_PARTITION = 'by-verify-token'
 const RESET_TOKEN_PARTITION = 'by-reset-token'
+const APPROVE_TOKEN_PARTITION = 'by-approve-token'
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24 Stunden
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000 // 1 Stunde
+const ACTIVATION_CODE_TTL_MS = 24 * 60 * 60 * 1000 // 24 Stunden
 // Mindestabstand zwischen zwei tatsächlichen Versänden derselben Verifikations-
 // /Reset-E-Mail — gleiches Prinzip wie RESEND_COOLDOWN_MS in
 // issuedCodesStore.ts, verhindert E-Mail-Flut durch wiederholtes Absenden.
@@ -49,6 +65,14 @@ export interface LiveUserRecord {
   resetToken: string | null
   resetTokenExpiresAt: number | null
   lastResetEmailSentAt: number
+  /** Sprache bei der Registrierung (für die Zugangscode-E-Mail nach der
+   * Freigabe, die zeitlich unabhängig vom ursprünglichen Request passiert). */
+  lang: 'de' | 'en'
+  /** Manuelle Freigabe durch Tam — siehe Kopfkommentar. */
+  approved: boolean
+  approveToken: string | null
+  activationCode: string | null
+  activationCodeExpiresAt: number | null
   createdAt: number
 }
 
@@ -56,6 +80,7 @@ let tableClientPromise: Promise<TableClient | null> | null = null
 const memoryByEmail = new Map<string, LiveUserRecord>()
 const memoryByVerifyToken = new Map<string, string>() // token -> email
 const memoryByResetToken = new Map<string, string>() // token -> email
+const memoryByApproveToken = new Map<string, string>() // token -> email
 
 function getConnectionString(): string | null {
   // Siehe quotaStore.ts: AzureWebJobsStorage ist für die von Azure Static Web
@@ -107,6 +132,15 @@ function entityToRecord(entity: Record<string, unknown>): LiveUserRecord {
     resetToken: entity.resetToken ? String(entity.resetToken) : null,
     resetTokenExpiresAt: entity.resetTokenExpiresAt ? Number(entity.resetTokenExpiresAt) : null,
     lastResetEmailSentAt: Number(entity.lastResetEmailSentAt ?? 0),
+    lang: entity.lang === 'en' ? 'en' : 'de',
+    // Konten aus der Zeit VOR der Freigabe-Pflicht haben kein `approved`-Feld
+    // in der Tabelle (Azure Table Storage ist schemalos) — entity.approved
+    // ist dann `undefined`, nicht `false`. Solche Bestandskonten gelten als
+    // automatisch freigegeben statt rückwirkend gesperrt zu werden.
+    approved: entity.approved === undefined ? true : Boolean(entity.approved),
+    approveToken: entity.approveToken ? String(entity.approveToken) : null,
+    activationCode: entity.activationCode ? String(entity.activationCode) : null,
+    activationCodeExpiresAt: entity.activationCodeExpiresAt ? Number(entity.activationCodeExpiresAt) : null,
     createdAt: Number(entity.createdAt ?? Date.now()),
   }
 }
@@ -149,17 +183,27 @@ async function saveUser(record: LiveUserRecord): Promise<void> {
       resetToken: record.resetToken ?? '',
       resetTokenExpiresAt: record.resetTokenExpiresAt ?? 0,
       lastResetEmailSentAt: record.lastResetEmailSentAt,
+      lang: record.lang,
+      approved: record.approved,
+      approveToken: record.approveToken ?? '',
+      activationCode: record.activationCode ?? '',
+      activationCodeExpiresAt: record.activationCodeExpiresAt ?? 0,
       createdAt: record.createdAt,
     },
     'Replace',
   )
 }
 
+function memoryMapFor(partition: string): Map<string, string> {
+  if (partition === VERIFY_TOKEN_PARTITION) return memoryByVerifyToken
+  if (partition === RESET_TOKEN_PARTITION) return memoryByResetToken
+  return memoryByApproveToken
+}
+
 async function pointToken(partition: string, token: string, email: string): Promise<void> {
   const client = await getTableClient()
   if (!client) {
-    if (partition === VERIFY_TOKEN_PARTITION) memoryByVerifyToken.set(token, email)
-    else memoryByResetToken.set(token, email)
+    memoryMapFor(partition).set(token, email)
     return
   }
   await client.upsertEntity({ partitionKey: partition, rowKey: token, email }, 'Replace')
@@ -168,7 +212,7 @@ async function pointToken(partition: string, token: string, email: string): Prom
 async function resolveTokenPointer(partition: string, token: string): Promise<string | null> {
   const client = await getTableClient()
   if (!client) {
-    return (partition === VERIFY_TOKEN_PARTITION ? memoryByVerifyToken : memoryByResetToken).get(token) ?? null
+    return memoryMapFor(partition).get(token) ?? null
   }
   try {
     const entity = await client.getEntity<Record<string, unknown>>(partition, token)
@@ -191,7 +235,8 @@ async function resolveTokenPointer(partition: string, token: string): Promise<st
 export async function createOrRefreshUnverifiedUser(
   email: string,
   password: string,
-): Promise<{ verifyToken: string; canSendEmail: boolean; isNew: boolean }> {
+  lang: 'de' | 'en',
+): Promise<{ verifyToken: string; approveToken: string; canSendEmail: boolean; isNew: boolean }> {
   const existing = await getUserByEmail(email)
   const now = Date.now()
 
@@ -206,6 +251,11 @@ export async function createOrRefreshUnverifiedUser(
   // niemals verschickten Token entwertet (Person klickt alten Link, der
   // dann fälschlich als ungültig gilt).
   const verifyToken = canSendEmail || !existing?.verifyToken ? generateToken() : existing.verifyToken
+  // Freigabe-Token bleibt über die gesamte Kontolebensdauer stabil (einmal
+  // erzeugt, nie erneuert) — der Link in Tams Benachrichtigungs-E-Mail zu
+  // einer bestimmten Registrierung soll auch dann noch funktionieren, wenn
+  // die Person zwischenzeitlich ihre Verifikations-E-Mail erneut anfordert.
+  const approveToken = existing?.approveToken ?? generateToken()
 
   const record: LiveUserRecord = {
     email: normalizeEmailKey(email),
@@ -217,13 +267,19 @@ export async function createOrRefreshUnverifiedUser(
     resetToken: existing?.resetToken ?? null,
     resetTokenExpiresAt: existing?.resetTokenExpiresAt ?? null,
     lastResetEmailSentAt: existing?.lastResetEmailSentAt ?? 0,
+    lang: existing?.lang ?? lang,
+    approved: existing?.approved ?? false,
+    approveToken,
+    activationCode: existing?.activationCode ?? null,
+    activationCodeExpiresAt: existing?.activationCodeExpiresAt ?? null,
     createdAt: existing?.createdAt ?? now,
   }
 
   await saveUser(record)
   if (canSendEmail) await pointToken(VERIFY_TOKEN_PARTITION, verifyToken, record.email)
+  if (!existing?.approveToken) await pointToken(APPROVE_TOKEN_PARTITION, approveToken, record.email)
 
-  return { verifyToken, canSendEmail, isNew: !existing }
+  return { verifyToken, approveToken, canSendEmail, isNew: !existing }
 }
 
 /** Bestätigt eine E-Mail-Adresse anhand des Verifikations-Tokens aus dem
@@ -293,4 +349,46 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
   user.resetTokenExpiresAt = null
   await saveUser(user)
   return user.email
+}
+
+/**
+ * Löst Tams Freigabe-Link ein (siehe liveApprove.ts): erzeugt einen kurzen,
+ * an die Person zu verschickenden Zugangscode. Gibt 'already_approved'
+ * zurück statt erneut einen Code zu erzeugen, wenn das Konto bereits
+ * freigegeben ist (z.B. Doppelklick auf den Link) — vermeidet verwirrende
+ * zweite Codes, die den ersten stillschweigend entwerten würden.
+ */
+export async function issueActivationCode(
+  approveToken: string,
+): Promise<{ email: string; code: string; lang: 'de' | 'en' } | 'already_approved' | null> {
+  const email = await resolveTokenPointer(APPROVE_TOKEN_PARTITION, approveToken)
+  if (!email) return null
+
+  const user = await getUserByEmail(email)
+  if (!user) return null
+  if (user.approved) return 'already_approved'
+
+  const code = crypto.randomBytes(4).toString('hex').toUpperCase()
+  user.activationCode = code
+  user.activationCodeExpiresAt = Date.now() + ACTIVATION_CODE_TTL_MS
+  await saveUser(user)
+
+  return { email: user.email, code, lang: user.lang }
+}
+
+/** Schaltet ein Konto anhand von E-Mail + Zugangscode frei (Person gibt
+ * beides auf /live/activate ein, siehe liveActivate.ts). Gibt false zurück
+ * bei falschem/abgelaufenem Code statt zu werfen — der Aufrufer zeigt dafür
+ * eine generische Fehlermeldung. */
+export async function activateWithCode(email: string, code: string): Promise<boolean> {
+  const user = await getUserByEmail(email)
+  if (!user || !user.activationCode) return false
+  if (user.activationCode !== code.trim().toUpperCase()) return false
+  if (!user.activationCodeExpiresAt || user.activationCodeExpiresAt < Date.now()) return false
+
+  user.approved = true
+  user.activationCode = null
+  user.activationCodeExpiresAt = null
+  await saveUser(user)
+  return true
 }

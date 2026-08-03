@@ -99,6 +99,17 @@ interface Copy {
     booking: string
     langToggleAria: string
   }
+  /** Dokument-Anhang im Chat (siehe attachments.ts/useDocumentAttachment.ts)
+   * — ein einziger, geteilter Block statt Duplikation unter chat/live.room,
+   * da Demo und Live denselben Anhang-Button bekommen. */
+  attachment: {
+    buttonAria: string
+    uploading: string
+    truncatedNote: string
+    remove: string
+    expand: string
+    collapse: string
+  }
   landing: {
     kicker: string
     titlePrefix: string
@@ -180,6 +191,7 @@ interface Copy {
       invalidCredentials: string
       notVerified: string
       forgotPasswordLink: string
+      activateLink: string
       registerPrompt: string
       registerLink: string
     }
@@ -207,6 +219,20 @@ interface Copy {
       errorHeading: string
       errorBody: string
       loginButton: string
+    }
+    activate: {
+      kicker: string
+      heading: string
+      body: string
+      emailPlaceholder: string
+      codePlaceholder: string
+      submit: string
+      checking: string
+      successHeading: string
+      successBody: string
+      errorHeading: string
+      loginButton: string
+      backToLogin: string
     }
     forgotPassword: {
       kicker: string
@@ -283,6 +309,14 @@ const de: Copy = {
     confidential: 'Vertraulich',
     booking: 'Erstgespräch buchen →',
     langToggleAria: 'Sprache wechseln',
+  },
+  attachment: {
+    buttonAria: 'Dokument anhängen',
+    uploading: 'Wird gelesen…',
+    truncatedNote: '(gekürzt — nur die ersten Seiten wurden berücksichtigt)',
+    remove: 'Anhang entfernen',
+    expand: 'Dokumenttext anzeigen',
+    collapse: 'Dokumenttext ausblenden',
   },
   landing: {
     kicker: 'TEI® Trust Room',
@@ -394,6 +428,7 @@ const de: Copy = {
       invalidCredentials: 'E-Mail oder Passwort falsch.',
       notVerified: 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse (Link in der Registrierungs-E-Mail).',
       forgotPasswordLink: 'Passwort vergessen?',
+      activateLink: 'Zugangscode erhalten? Konto aktivieren →',
       registerPrompt: 'Noch kein Konto?',
       registerLink: 'Konto erstellen',
     },
@@ -411,17 +446,32 @@ const de: Copy = {
       checking: 'Wird angelegt…',
       successHeading: 'Fast geschafft.',
       successBody: (email) =>
-        `Wir haben einen Bestätigungslink an ${email} geschickt. Bitte prüfen Sie Ihr Postfach und klicken Sie auf den Link, um Ihr Konto zu aktivieren.`,
+        `Wir haben einen Bestätigungslink an ${email} geschickt. Bitte klicken Sie auf den Link, um Ihre E-Mail-Adresse zu bestätigen. Ihr Konto wird danach von uns geprüft — Sie erhalten im Anschluss einen Zugangscode per E-Mail, sobald es freigeschaltet ist.`,
       loginPrompt: 'Bereits ein Konto?',
       loginLink: 'Einloggen',
     },
     verify: {
       checking: 'Wird bestätigt…',
       successHeading: 'E-Mail-Adresse bestätigt.',
-      successBody: 'Ihr Konto ist jetzt aktiv. Sie können sich einloggen.',
+      successBody:
+        'Ihr Konto wird nun geprüft. Sie erhalten einen Zugangscode per E-Mail, sobald es freigeschaltet ist — geben Sie ihn danach unter „Konto aktivieren“ ein.',
       errorHeading: 'Link ungültig oder abgelaufen.',
       errorBody: 'Bitte fordern Sie einen neuen Bestätigungslink an, indem Sie sich erneut registrieren.',
       loginButton: 'Jetzt einloggen',
+    },
+    activate: {
+      kicker: 'Konto aktivieren',
+      heading: 'Zugangscode eingeben.',
+      body: 'Geben Sie Ihre E-Mail-Adresse und den Zugangscode ein, den Sie nach der Freigabe Ihres Kontos per E-Mail erhalten haben.',
+      emailPlaceholder: 'E-Mail-Adresse',
+      codePlaceholder: 'Zugangscode',
+      submit: 'Konto aktivieren',
+      checking: 'Wird aktiviert…',
+      successHeading: 'Konto aktiviert.',
+      successBody: 'Ihr Konto ist jetzt aktiv. Sie können sich einloggen.',
+      errorHeading: 'E-Mail oder Code falsch, oder der Code ist abgelaufen.',
+      loginButton: 'Jetzt einloggen',
+      backToLogin: 'Zurück zum Login',
     },
     forgotPassword: {
       kicker: 'Passwort vergessen',
@@ -499,6 +549,14 @@ const en: Copy = {
     confidential: 'Confidential',
     booking: 'Book an intro call →',
     langToggleAria: 'Switch language',
+  },
+  attachment: {
+    buttonAria: 'Attach document',
+    uploading: 'Reading…',
+    truncatedNote: '(truncated — only the first pages were included)',
+    remove: 'Remove attachment',
+    expand: 'Show document text',
+    collapse: 'Hide document text',
   },
   landing: {
     kicker: 'TEI® Trust Room',
@@ -608,6 +666,7 @@ const en: Copy = {
       invalidCredentials: 'Email or password incorrect.',
       notVerified: 'Please confirm your email address first (see the link in your registration email).',
       forgotPasswordLink: 'Forgot password?',
+      activateLink: 'Got an activation code? Activate account →',
       registerPrompt: "Don't have an account yet?",
       registerLink: 'Create account',
     },
@@ -625,17 +684,32 @@ const en: Copy = {
       checking: 'Creating…',
       successHeading: 'Almost there.',
       successBody: (email) =>
-        `We've sent a confirmation link to ${email}. Please check your inbox and click the link to activate your account.`,
+        `We've sent a confirmation link to ${email}. Please click the link to confirm your email address. Your account will then be reviewed by us — you'll receive an activation code by email once it has been approved.`,
       loginPrompt: 'Already have an account?',
       loginLink: 'Log in',
     },
     verify: {
       checking: 'Confirming…',
       successHeading: 'Email address confirmed.',
-      successBody: 'Your account is now active. You can log in.',
+      successBody:
+        "Your account is now being reviewed. You'll receive an activation code by email once it has been approved — enter it on the \"Activate account\" screen.",
       errorHeading: 'Link invalid or expired.',
       errorBody: 'Please request a new confirmation link by registering again.',
       loginButton: 'Log in now',
+    },
+    activate: {
+      kicker: 'Activate account',
+      heading: 'Enter your activation code.',
+      body: 'Enter your email address and the activation code you received by email once your account was approved.',
+      emailPlaceholder: 'Email address',
+      codePlaceholder: 'Activation code',
+      submit: 'Activate account',
+      checking: 'Activating…',
+      successHeading: 'Account activated.',
+      successBody: 'Your account is now active. You can log in.',
+      errorHeading: 'Email or code incorrect, or the code has expired.',
+      loginButton: 'Log in now',
+      backToLogin: 'Back to login',
     },
     forgotPassword: {
       kicker: 'Forgot password',

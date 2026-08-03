@@ -54,7 +54,7 @@ function senderAddress(): string {
  * Reset) — env-konfigurierbar, damit lokale Entwicklung/ein Staging-Deploy
  * nicht versehentlich Links auf die Produktions-URL verschickt. Fällt ohne
  * Konfiguration auf die bekannte Produktions-Domain zurück. */
-function appBaseUrl(): string {
+export function appBaseUrl(): string {
   return (process.env.APP_BASE_URL ?? 'https://tei.tavyro.ch').replace(/\/$/, '')
 }
 
@@ -126,6 +126,46 @@ export async function sendLiveVerificationEmail({ to, token, lang }: SendLiveEma
     lang === 'en'
       ? `<p>Please confirm your email address to activate your TEI® Trust Room account:</p><p><a href="${link}">${link}</a></p><p>This link remains valid for 24 hours. If you didn't request this, you can ignore this email.</p>`
       : `<p>Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr TEI® Trust Room Konto zu aktivieren:</p><p><a href="${link}">${link}</a></p><p>Dieser Link ist 24 Stunden gültig. Falls Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren.</p>`
+
+  const poller = await client.beginSend({
+    senderAddress: senderAddress(),
+    content: { subject, plainText, html },
+    recipients: { to: [{ address: to }] },
+  })
+  const result = await poller.pollUntilDone()
+  if (result.status !== 'Succeeded') {
+    throw new Error(`ACS Email Versand fehlgeschlagen (Status: ${result.status}).`)
+  }
+}
+
+interface SendActivationCodeArgs {
+  to: string
+  code: string
+  lang: 'de' | 'en'
+}
+
+/**
+ * Zugangscode-E-Mail nach Tams manueller Freigabe (siehe liveUserStore.ts →
+ * issueActivationCode/liveApprove.ts) — zusätzliche Hürde neben der
+ * E-Mail-Bestätigung: die Person muss den Code aktiv auf /live/activate
+ * eingeben, das Konto schaltet sich nicht allein durch Tams Klick frei.
+ */
+export async function sendLiveActivationCodeEmail({ to, code, lang }: SendActivationCodeArgs): Promise<void> {
+  const client = getClient()
+  const link = `${appBaseUrl()}/live/activate`
+
+  const subject =
+    lang === 'en' ? 'Your TEI® Trust Room account has been approved' : 'Ihr TEI® Trust Room Konto wurde freigegeben'
+
+  const plainText =
+    lang === 'en'
+      ? `Your account has been reviewed and approved.\n\nActivation code: ${code}\n\nEnter this code together with your email address here to activate your account:\n${link}\n\nThis code remains valid for 24 hours.`
+      : `Ihr Konto wurde geprüft und freigegeben.\n\nZugangscode: ${code}\n\nGeben Sie diesen Code zusammen mit Ihrer E-Mail-Adresse hier ein, um Ihr Konto zu aktivieren:\n${link}\n\nDieser Code ist 24 Stunden gültig.`
+
+  const html =
+    lang === 'en'
+      ? `<p>Your account has been reviewed and approved.</p><p style="font-size:20px;font-weight:600;letter-spacing:0.05em;">${code}</p><p>Enter this code together with your email address here to activate your account:</p><p><a href="${link}">${link}</a></p><p>This code remains valid for 24 hours.</p>`
+      : `<p>Ihr Konto wurde geprüft und freigegeben.</p><p style="font-size:20px;font-weight:600;letter-spacing:0.05em;">${code}</p><p>Geben Sie diesen Code zusammen mit Ihrer E-Mail-Adresse hier ein, um Ihr Konto zu aktivieren:</p><p><a href="${link}">${link}</a></p><p>Dieser Code ist 24 Stunden gültig.</p>`
 
   const poller = await client.beginSend({
     senderAddress: senderAddress(),

@@ -168,11 +168,13 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   Richtung Erstgespräch, dafür automatische serverseitige Speicherung jedes
   Gesprächs (geräteübergreifend abrufbar nach Login). Offene
   Selbstregistrierung (E-Mail + Passwort), Konto erst nach Klick auf den
-  Bestätigungslink in der Verifikations-E-Mail einsatzfähig (Kostenschutz
-  gegen automatisierte Massenregistrierung, da unlimitiert). Sitzung läuft
-  nicht automatisch ab (bis aktivem Logout gültig), wird aber bei einem
-  Passwort-Reset komplett invalidiert (siehe `invalidateAllSessionsForEmail`
-  in `liveSessionStore.ts`). `AccessGate.tsx` überspringt für `/live`-Pfade
+  Bestätigungslink in der Verifikations-E-Mail UND nach zusätzlicher
+  manueller Freigabe durch Tam einsatzfähig (siehe eigener Eintrag
+  "Manuelle Freigabe" unten; Kostenschutz gegen automatisierte
+  Massenregistrierung, da unlimitiert). Sitzung läuft nicht automatisch ab
+  (bis aktivem Logout gültig), wird aber bei einem Passwort-Reset komplett
+  invalidiert (siehe `invalidateAllSessionsForEmail` in
+  `liveSessionStore.ts`). `AccessGate.tsx` überspringt für `/live`-Pfade
   komplett das Demo-Zugangscode-Gate (siehe `isLivePath`) — Live hat sein
   eigenes, unabhängiges Login. Frontend: `LiveAuth.tsx` (Login/Register/
   Verify/Passwort-vergessen/-Reset-Bildschirme, alle im selben visuellen
@@ -201,6 +203,78 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   Nutzerdaten). Bei der Registrierung ist zusätzlich eine Pflicht-Checkbox
   ("Ich akzeptiere die Datenschutzerklärung") vorgeschaltet, die den
   Submit-Button bis zur Zustimmung blockiert.
+
+- **Manuelle Freigabe (Tam-Approval) zusätzlich zur E-Mail-Bestätigung**:
+  live festgestellt, dass offene Selbstregistrierung + reine
+  E-Mail-Bestätigung Tam nicht erlaubt, vor der ersten Nutzung zu prüfen,
+  wer sich anmeldet — mit einer manuellen Freigabe nachgerüstet, OHNE die
+  bestehende Registrierung (E-Mail+Passwort sofort wählbar) anzutasten.
+  Neues Feld `approved` auf `LiveUserRecord` (`api/src/lib/
+  liveUserStore.ts`): ein Konto kann sich trotz bestätigter E-Mail-Adresse
+  erst einloggen, wenn zusätzlich `approved` true ist. Ablauf: Registrierung
+  erzeugt einen stabilen `approveToken`, dessen Freigabe-Link
+  (`/api/live/approve?token=...`) in der bestehenden
+  Registrierungs-Benachrichtigung landet (`notify.ts`, Kind `live_register`,
+  `note`-Feld) — Tam muss also nur draufklicken, keine eigene Oberfläche
+  nötig. Der Klick (`liveApprove.ts`, GET, liefert eine schlichte
+  HTML-Seite statt JSON, da typischerweise direkt aus dem E-Mail-Client
+  angeklickt) generiert einen kurzen Zugangscode
+  (`issueActivationCode` in `liveUserStore.ts`) und verschickt ihn per
+  E-Mail an die Person (`sendLiveActivationCodeEmail`,
+  `api/src/lib/emailSender.ts`). Die Person gibt E-Mail + Code auf der
+  neuen Seite `/live/activate` ein (`LiveActivateScreen` in
+  `LiveAuth.tsx`, `POST /api/live/activate` → `liveActivate.ts` →
+  `activateWithCode`) — erst danach ist das Konto nutzbar. Login
+  (`liveLogin.ts`) prüft `approved` direkt nach dem
+  `emailVerified`-Check und gibt bei Bedarf eine eigene,
+  DE/EN-lokalisierte Meldung zurück ("Konto wird geprüft…"). Ein
+  permanenter Link "Zugangscode erhalten? Konto aktivieren →" auf dem
+  Login-Bildschirm führt dorthin. **Bestandskonten**: Konten, die vor
+  dieser Änderung angelegt wurden, haben kein `approved`-Feld in der
+  Tabelle (Azure Table Storage ist schemalos) — `entityToRecord` behandelt
+  ein fehlendes Feld als `true` (automatisch freigegeben), damit z.B. Tams
+  eigenes Testkonto nicht rückwirkend gesperrt wird; neue Registrierungen
+  setzen das Feld dagegen immer explizit auf `false`. Neue Tabellen-Felder
+  (keine neue Tabelle): `approveToken`, `activationCode`,
+  `activationCodeExpiresAt` (24h TTL), plus `lang` (Sprache bei
+  Registrierung, damit die Zugangscode-E-Mail — die zeitlich unabhängig von
+  der ursprünglichen Anfrage passiert — in der richtigen Sprache
+  ankommt). Neue Rate-Limit-Kategorie `activate` in `liveRateLimit.ts`
+  (10/Stunde pro IP).
+
+- **Dokument-Anhänge im Chat (PDF/Word/Text)** — sowohl Demo
+  (`TrustRoomChat.tsx`) als auch Live (`LiveChat.tsx`) haben einen
+  Anhang-Button (📎) neben dem Nachrichtenfeld. Ablauf: Datei wird
+  clientseitig als Base64 gelesen (`useDocumentAttachment.ts`) und an den
+  neuen, geteilten Endpoint `POST /api/extract-document`
+  (`extractDocument.ts`) geschickt — akzeptiert ENTWEDER einen gültigen
+  Demo-Zugangscode ODER eine gültige Live-Sitzung, da beide Chat-Flows
+  denselben Button nutzen. Die eigentliche Extraktion
+  (`api/src/lib/documentExtract.ts`) nutzt `pdf-parse@1.x` (bewusst NICHT
+  2.x, siehe Kopfkommentar dort — 2.x zieht `@napi-rs/canvas` als ~50 MB
+  native Abhängigkeit nach, ein Azure-Functions-Build-Risiko wie bei
+  bcrypt/bcryptjs) und `mammoth` (.docx). **Bekannter pdf-parse@1.x-Stolperstein**:
+  der normale Package-Entry-Point (`index.js`) hat ein
+  `isDebugMode = !module.parent`-Konstrukt, das unter ESM-Interop
+  fälschlich `true` ergibt und beim blossen Importieren abstürzt (versucht,
+  eine hartcodierte Test-PDF zu lesen) — live reproduziert und umgangen,
+  indem `documentExtract.ts` das innere Implementierungsmodul
+  (`pdf-parse/lib/pdf-parse.js`) direkt per `createRequire` lädt statt eines
+  normalen ESM-Imports von `pdf-parse` selbst.
+  Extrahierter Text wird auf `MAX_EXTRACTED_CHARS` (12'000 Zeichen)
+  gekürzt und NICHT dauerhaft gespeichert — die Datei selbst verlässt den
+  Server-Request nie. Frontend bettet den Text direkt in den normalen
+  `ChatMessage.content`-String ein (`src/lib/attachments.ts` →
+  `composeMessageWithAttachment`/`parseMessageAttachment`, ein Delimiter-
+  Format), damit er als Kontext im Gesprächsverlauf erhalten bleibt (Demo
+  schickt bei jeder Anfrage den ganzen Verlauf neu, Live speichert ihn
+  serverseitig) — die Bubble-Komponenten parsen das beim Rendern wieder
+  heraus und zeigen nur einen klickbaren "📎 Dateiname"-Chip statt des
+  vollen Dokumenttexts. Deshalb `MAX_MESSAGE_LENGTH` in `chat.ts`/
+  `liveChat.ts` von ursprünglich 2000 auf 16'000 Zeichen angehoben (muss
+  Platz für getippten Text + eingebetteten Dokumenttext bieten). Eigene
+  IP-Rate-Limit-Tabelle `TeiExtractRateLimit` (`extractRateLimit.ts`,
+  20/Std.), unabhängig von Demo-/Live-Limits.
 
 ## Bekannte offene Punkte
 

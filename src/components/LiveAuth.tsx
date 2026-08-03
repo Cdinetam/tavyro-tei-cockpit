@@ -6,6 +6,7 @@ import {
   liveVerifyEmail,
   liveRequestPasswordReset,
   liveResetPassword,
+  liveActivate,
 } from '../lib/liveClient'
 
 /**
@@ -69,9 +70,16 @@ interface LoginProps {
   onLoginSuccess: () => void
   onNavigateRegister: () => void
   onNavigateForgotPassword: () => void
+  onNavigateActivate: () => void
 }
 
-export function LiveLoginScreen({ lang, onLoginSuccess, onNavigateRegister, onNavigateForgotPassword }: LoginProps) {
+export function LiveLoginScreen({
+  lang,
+  onLoginSuccess,
+  onNavigateRegister,
+  onNavigateForgotPassword,
+  onNavigateActivate,
+}: LoginProps) {
   const copy = getCopy(lang).live
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -127,12 +135,18 @@ export function LiveLoginScreen({ lang, onLoginSuccess, onNavigateRegister, onNa
           {status === 'checking' ? copy.login.checking : copy.login.submit}
         </button>
       </form>
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex flex-col gap-2">
         <button
           onClick={onNavigateForgotPassword}
-          className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+          className="text-left font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
         >
           {copy.login.forgotPasswordLink}
+        </button>
+        <button
+          onClick={onNavigateActivate}
+          className="text-left font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+        >
+          {copy.login.activateLink}
         </button>
       </div>
       <div className="mt-6 flex items-center gap-3">
@@ -348,6 +362,89 @@ export function LiveForgotPasswordScreen({ lang, onNavigateLogin }: { lang: Lang
         <button
           type="submit"
           disabled={status === 'checking' || !email.trim()}
+          className="w-full border border-brass-dim bg-brass/[0.08] px-5 py-3 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-paper-faint"
+        >
+          {status === 'checking' ? copy.checking : copy.submit}
+        </button>
+      </form>
+      <button
+        onClick={onNavigateLogin}
+        className="mt-6 font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+      >
+        {copy.backToLogin}
+      </button>
+    </Shell>
+  )
+}
+
+export function LiveActivateScreen({ lang, onNavigateLogin }: { lang: Lang; onNavigateLogin: () => void }) {
+  const copy = getCopy(lang).live.activate
+  const [email, setEmail] = useState('')
+  const [code, setCode] = useState('')
+  const [status, setStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email.trim() || !code.trim()) return
+    setStatus('checking')
+    const result = await liveActivate(email.trim(), code.trim(), lang)
+    if (result.status === 'ok') {
+      setStatus('success')
+    } else {
+      setErrorMessage(result.message)
+      setStatus('error')
+    }
+  }
+
+  if (status === 'success') {
+    return (
+      <Shell lang={lang}>
+        <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.successHeading}</h1>
+        <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.successBody}</p>
+        <button
+          onClick={onNavigateLogin}
+          className="mt-6 w-full border border-brass-dim bg-brass/[0.08] px-5 py-3 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14]"
+        >
+          {copy.loginButton}
+        </button>
+      </Shell>
+    )
+  }
+
+  return (
+    <Shell lang={lang}>
+      <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.kicker}</p>
+      <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.heading}</h1>
+      <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.body}</p>
+      <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+        <input
+          type="email"
+          autoFocus
+          required
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value)
+            if (status === 'error') setStatus('idle')
+          }}
+          placeholder={copy.emailPlaceholder}
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+        />
+        <input
+          type="text"
+          required
+          value={code}
+          onChange={(e) => {
+            setCode(e.target.value)
+            if (status === 'error') setStatus('idle')
+          }}
+          placeholder={copy.codePlaceholder}
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] uppercase tracking-widest text-paper placeholder:text-paper-faint/70 placeholder:normal-case placeholder:tracking-normal transition-colors focus:border-brass-dim"
+        />
+        {status === 'error' && <p className="font-sans text-[13px] text-paper-dim">{errorMessage || copy.errorHeading}</p>}
+        <button
+          type="submit"
+          disabled={status === 'checking' || !email.trim() || !code.trim()}
           className="w-full border border-brass-dim bg-brass/[0.08] px-5 py-3 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-paper-faint"
         >
           {status === 'checking' ? copy.checking : copy.submit}

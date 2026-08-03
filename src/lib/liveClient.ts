@@ -79,6 +79,26 @@ export async function liveRequestPasswordReset(email: string, lang: Lang): Promi
   return postJson('/live/request-password-reset', { email, lang }, fallbackError(lang))
 }
 
+export async function liveActivate(email: string, code: string, lang: Lang): Promise<ApiResult<Record<string, never>>> {
+  return postJson('/live/activate', { email, code, lang }, fallbackError(lang))
+}
+
+export type ExtractDocumentResult =
+  | { status: 'ok'; text: string; truncated: boolean }
+  | { status: 'error'; message: string }
+
+/** Textextraktion für einen Chat-Anhang (PDF/Word/Text) — siehe
+ * api/src/functions/extractDocument.ts. Nutzt denselben Sitzungs-Token wie
+ * die übrigen Live-Endpoints (liveHeaders()). */
+export async function extractDocument(filename: string, contentBase64: string, lang: Lang): Promise<ExtractDocumentResult> {
+  const result = await postJson<{ text: string; truncated: boolean }>(
+    '/extract-document',
+    { filename, contentBase64, lang },
+    fallbackError(lang),
+  )
+  return result as ExtractDocumentResult
+}
+
 export async function liveResetPassword(
   token: string,
   newPassword: string,

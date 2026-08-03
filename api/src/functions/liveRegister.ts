@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { createOrRefreshUnverifiedUser } from '../lib/liveUserStore.js'
-import { sendLiveVerificationEmail } from '../lib/emailSender.js'
+import { sendLiveVerificationEmail, appBaseUrl } from '../lib/emailSender.js'
 import { getClientIp } from '../lib/clientIp.js'
 import { checkLiveRateLimit } from '../lib/liveRateLimit.js'
 import { notify } from '../lib/notify.js'
@@ -73,7 +73,7 @@ export async function liveRegister(req: HttpRequest, context: InvocationContext)
   }
 
   try {
-    const { verifyToken, canSendEmail, isNew } = await createOrRefreshUnverifiedUser(email, password)
+    const { verifyToken, approveToken, canSendEmail, isNew } = await createOrRefreshUnverifiedUser(email, password, lang)
 
     if (canSendEmail) {
       try {
@@ -95,7 +95,8 @@ export async function liveRegister(req: HttpRequest, context: InvocationContext)
 
     if (isNew) {
       try {
-        await notify({ kind: 'live_register', sessionId: 'live-register', question: '', email })
+        const approveLink = `${appBaseUrl()}/api/live/approve?token=${encodeURIComponent(approveToken)}`
+        await notify({ kind: 'live_register', sessionId: 'live-register', question: '', email, note: approveLink })
       } catch (err) {
         context.error('TEI live register: Benachrichtigung fehlgeschlagen', err)
       }

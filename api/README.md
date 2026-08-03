@@ -161,14 +161,32 @@ nach Login). Bewusst komplett getrennte Endpoints/Tabellen von der
 Demo-Ebene, damit dort nichts riskiert wird.
 
 **Zugang:** offene Selbstregistrierung (E-Mail + Passwort), Konto ist erst
-nach Klick auf den Bestätigungslink in der Verifikations-E-Mail
-einsatzfähig. Sitzung läuft nicht automatisch ab (bleibt bis aktivem
-Logout gültig), wird aber bei einem Passwort-Reset komplett invalidiert.
+nach Klick auf den Bestätigungslink in der Verifikations-E-Mail UND nach
+zusätzlicher manueller Freigabe durch Tam einsatzfähig (siehe unten).
+Sitzung läuft nicht automatisch ab (bleibt bis aktivem Logout gültig), wird
+aber bei einem Passwort-Reset komplett invalidiert.
+
+**Manuelle Freigabe (Tam-Approval):** zusätzlich zur E-Mail-Bestätigung
+kann sich ein Konto erst einloggen, wenn Tam es manuell freigegeben hat.
+Ablauf: bei jeder neuen Registrierung enthält die Benachrichtigung
+(`notify.ts`, Kind `live_register`) einen Freigabe-Link
+(`GET /api/live/approve?token=...`, `liveApprove.ts`) — ein Klick genügt,
+kein Login/Admin-UI nötig. Der Klick generiert einen kurzen Zugangscode
+(`liveUserStore.ts` → `issueActivationCode`) und verschickt ihn per E-Mail
+an die Person (`sendLiveActivationCodeEmail`). Die Person gibt E-Mail +
+Code danach auf `/live/activate` ein (`POST /api/live/activate`,
+`liveActivate.ts`) — erst dann ist `approved` true und der Login
+funktioniert. Konten aus der Zeit VOR dieser Änderung (kein `approved`-Feld
+in der Tabelle, Azure Table Storage ist schemalos) gelten automatisch als
+freigegeben, damit z.B. Tams eigenes Testkonto nicht rückwirkend gesperrt
+wird (siehe `entityToRecord` in `liveUserStore.ts`).
 
 **Endpoints** (alle unter `/api/live/*`, Frontend-Routen unter `/live/*`
 bzw. `/en/live/*`):
 - `POST /live/register` — Selbstregistrierung, verschickt Bestätigungs-E-Mail
 - `POST /live/verify-email` — bestätigt den Token aus der E-Mail
+- `GET /live/approve?token=...` — Tams Freigabe-Link aus der Benachrichtigung, verschickt den Zugangscode
+- `POST /live/activate` — Person gibt E-Mail + Zugangscode ein, schaltet das Konto frei
 - `POST /live/login` — liefert bei Erfolg einen Sitzungs-Token (Header `x-tei-live-token`)
 - `POST /live/request-password-reset` / `POST /live/reset-password`
 - `POST /live/logout`
@@ -177,11 +195,11 @@ bzw. `/en/live/*`):
 
 **Neue Tabellen** (dieselbe Storage-Verbindung wie oben,
 `QUOTA_STORAGE_CONNECTION_STRING`): `TeiLiveUsers` (Konten,
-Verifikations-/Reset-Tokens), `TeiLiveSessions` (Sitzungs-Tokens),
-`TeiLiveConversations` (gespeicherte Gespräche pro Person),
-`TeiLiveRateLimit` (IP-Rate-Limit für Registrierung/Login/Passwort-Reset —
-siehe `liveRateLimit.ts`, eigenständig statt geteilt mit
-`autoAccessRateLimit.ts`).
+Verifikations-/Reset-/Freigabe-Tokens, Zugangscode), `TeiLiveSessions`
+(Sitzungs-Tokens), `TeiLiveConversations` (gespeicherte Gespräche pro
+Person), `TeiLiveRateLimit` (IP-Rate-Limit für Registrierung/Login/
+Passwort-Reset/Aktivierung — siehe `liveRateLimit.ts`, eigenständig statt
+geteilt mit `autoAccessRateLimit.ts`).
 
 | Variable | Zweck | Beispiel |
 |---|---|---|
@@ -193,6 +211,37 @@ IP-Rate-Limit abgesichert (siehe `liveRateLimit.ts`) — die eigentliche
 Kostenbremse gegen automatisierte Massenregistrierung bleibt aber die
 Pflicht-E-Mail-Bestätigung: ein Konto kann erst nach echtem E-Mail-Zugriff
 überhaupt eine Azure-OpenAI-Anfrage auslösen.
+
+## Dokument-Anhänge im Chat (PDF/Word/Text)
+
+`POST /api/extract-document` (`extractDocument.ts`) — geteilter Endpoint für
+Demo UND Live: akzeptiert entweder einen gültigen Demo-Zugangscode
+(`x-tei-access-code`) oder eine gültige Live-Sitzung (`x-tei-live-token`).
+Nimmt `{ filename, contentBase64, lang }` entgegen, extrahiert Text via
+`documentExtract.ts` (`pdf-parse@1.x`, `mammoth` für .docx, roher UTF-8 für
+.txt) und liefert `{ status: 'ok', text, truncated }` zurück — die Datei
+selbst wird nirgends gespeichert. Extrahierter Text ist auf 12'000 Zeichen
+begrenzt (`MAX_EXTRACTED_CHARS`), Datei-Upload auf 8 MB (`MAX_FILE_BYTES`).
+
+**Wichtig — pdf-parse@1.x-Stolperstein**: der normale Package-Entry-Point
+stürzt beim Import unter ESM ab (`isDebugMode`-Konstrukt versucht eine
+Test-Fixture zu lesen). `documentExtract.ts` umgeht das, indem es
+`pdf-parse/lib/pdf-parse.js` direkt per `createRequire` lädt statt eines
+normalen `import ... from 'pdf-parse'`. **Bewusst pdf-parse 1.x statt 2.x**:
+2.x hat `@napi-rs/canvas` als harte native Abhängigkeit (~50 MB, mehrere
+Plattform-Binärdateien) — dasselbe Build-Risiko für Azure Functions/Linux,
+weshalb schon `bcryptjs` statt `bcrypt` gewählt wurde.
+
+Eigenes IP-Rate-Limit (`extractRateLimit.ts`, Tabelle `TeiExtractRateLimit`,
+20/Std., fail-open) — unabhängig von den Demo-/Live-Limits, da der Endpoint
+selbst keine Azure-OpenAI-Kosten auslöst, aber Datei-Parsing (CPU) trotzdem
+missbrauchbar ist.
+
+Frontend bettet den extrahierten Text direkt in den normalen
+`ChatMessage.content`-String ein (`src/lib/attachments.ts`, Delimiter-
+Format) statt ihn als separates Feld zu übertragen — deshalb wurde
+`MAX_MESSAGE_LENGTH` in `chat.ts`/`liveChat.ts` von 2000 auf 16'000 Zeichen
+angehoben.
 
 ## Bekannte Grenze: Session-Store
 

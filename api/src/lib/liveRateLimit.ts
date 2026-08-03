@@ -15,10 +15,11 @@ import { TableClient } from '@azure/data-tables'
 const TABLE_NAME = 'TeiLiveRateLimit'
 const WINDOW_MS = 60 * 60 * 1000 // 1 Stunde, gleitendes Fenster
 
-const LIMITS: Record<'register' | 'login' | 'password-reset', number> = {
+const LIMITS: Record<'register' | 'login' | 'password-reset' | 'activate', number> = {
   register: 5,
   login: 20,
   'password-reset': 5,
+  activate: 10,
 }
 
 let tableClientPromise: Promise<TableClient | null> | null = null

@@ -44,7 +44,9 @@ export async function notify(payload: NotifyPayload): Promise<void> {
               : payload.kind === 'access'
                 ? `TEI®-Zugang automatisch vergeben · ${who} · ${payload.question}`
                 : payload.kind === 'live_register'
-                  ? `TEI® Live-Version: neue Registrierung · ${payload.email}`
+                  ? `TEI® Live-Version: neue Registrierung · ${payload.email}${
+                      payload.note ? ` · Freigeben: ${payload.note}` : ''
+                    }`
                   : `TEI®-Kontaktanfrage · ${who} · ${payload.email} · Frage: "${payload.question}"${
                     payload.note ? ` · Notiz: ${payload.note}` : ''
                   }`,
