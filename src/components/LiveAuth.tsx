@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getCopy, type Lang } from '../lib/i18n'
+import { getCopy, PRIVACY_URL, type Lang } from '../lib/i18n'
 import {
   liveLogin,
   liveRegister,
@@ -17,7 +17,8 @@ import {
  * Zugangscode-Weg.
  */
 
-function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+function Shell({ children, wide = false, lang }: { children: React.ReactNode; wide?: boolean; lang: Lang }) {
+  const copy = getCopy(lang).live
   return (
     <div className="grain flex min-h-screen items-center justify-center bg-ink-900 px-6 py-12">
       <div className={`w-full ${wide ? 'max-w-md' : 'max-w-sm'} fade-in`}>
@@ -28,6 +29,17 @@ function Shell({ children, wide = false }: { children: React.ReactNode; wide?: b
           </span>
         </div>
         {children}
+        <p className="mt-8 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
+          {copy.footer} ·{' '}
+          <a
+            href={PRIVACY_URL[lang]}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-paper-faint/40 underline-offset-2 transition-colors hover:text-paper"
+          >
+            {copy.privacyLinkText}
+          </a>
+        </p>
       </div>
     </div>
   )
@@ -80,7 +92,7 @@ export function LiveLoginScreen({ lang, onLoginSuccess, onNavigateRegister, onNa
   }
 
   return (
-    <Shell wide>
+    <Shell wide lang={lang}>
       <TrustBox lang={lang} />
       <form onSubmit={handleSubmit} className="mt-6 space-y-3">
         <input
@@ -140,12 +152,13 @@ export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
   const copy = getCopy(lang).live
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [status, setStatus] = useState<'idle' | 'checking' | 'error' | 'sent'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim() || !password) return
+    if (!email.trim() || !password || !acceptedPrivacy) return
     setStatus('checking')
     const result = await liveRegister(email.trim(), password, lang)
     if (result.status === 'ok') {
@@ -158,7 +171,7 @@ export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
 
   if (status === 'sent') {
     return (
-      <Shell>
+      <Shell lang={lang}>
         <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.register.kicker}</p>
         <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.register.successHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">
@@ -175,7 +188,7 @@ export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
   }
 
   return (
-    <Shell>
+    <Shell lang={lang}>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.register.kicker}</p>
       <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.register.heading}</h1>
       <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.register.body}</p>
@@ -209,10 +222,31 @@ export function LiveRegisterScreen({ lang, onNavigateLogin }: { lang: Lang; onNa
             {copy.register.passwordHint}
           </p>
         </div>
+        <label className="flex items-start gap-2.5 font-sans text-[13px] leading-snug text-paper-dim">
+          <input
+            type="checkbox"
+            required
+            checked={acceptedPrivacy}
+            onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 border-line bg-ink-800/60 accent-brass"
+          />
+          <span>
+            {copy.register.privacyBefore}
+            <a
+              href={PRIVACY_URL[lang]}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brass-light underline decoration-brass-dim/50 underline-offset-2 transition-colors hover:text-paper"
+            >
+              {copy.register.privacyLinkText}
+            </a>
+            {copy.register.privacyAfter}
+          </span>
+        </label>
         {status === 'error' && <p className="font-sans text-[13px] text-paper-dim">{errorMessage}</p>}
         <button
           type="submit"
-          disabled={status === 'checking' || !email.trim() || password.length < 8}
+          disabled={status === 'checking' || !email.trim() || password.length < 8 || !acceptedPrivacy}
           className="w-full border border-brass-dim bg-brass/[0.08] px-5 py-3 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-paper-faint"
         >
           {status === 'checking' ? copy.register.checking : copy.register.submit}
@@ -244,7 +278,7 @@ export function LiveVerifyScreen({ lang, token, onNavigateLogin }: { lang: Lang;
   }, [])
 
   return (
-    <Shell>
+    <Shell lang={lang}>
       {status === 'checking' && <p className="mt-8 font-sans text-[14px] text-paper-faint">{copy.checking}</p>}
       {status === 'success' && (
         <>
@@ -283,7 +317,7 @@ export function LiveForgotPasswordScreen({ lang, onNavigateLogin }: { lang: Lang
 
   if (status === 'sent') {
     return (
-      <Shell>
+      <Shell lang={lang}>
         <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.sentHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.sentBody}</p>
         <button
@@ -297,7 +331,7 @@ export function LiveForgotPasswordScreen({ lang, onNavigateLogin }: { lang: Lang
   }
 
   return (
-    <Shell>
+    <Shell lang={lang}>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.kicker}</p>
       <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.heading}</h1>
       <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.body}</p>
@@ -358,7 +392,7 @@ export function LiveResetPasswordScreen({
 
   if (!token || status === 'error') {
     return (
-      <Shell>
+      <Shell lang={lang}>
         <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.errorHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{errorMessage || copy.errorBody}</p>
         <button
@@ -373,7 +407,7 @@ export function LiveResetPasswordScreen({
 
   if (status === 'success') {
     return (
-      <Shell>
+      <Shell lang={lang}>
         <h1 className="mt-8 font-display text-2xl font-medium leading-snug text-paper">{copy.successHeading}</h1>
         <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.successBody}</p>
         <button
@@ -387,7 +421,7 @@ export function LiveResetPasswordScreen({
   }
 
   return (
-    <Shell>
+    <Shell lang={lang}>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.kicker}</p>
       <h1 className="mt-3 font-display text-2xl font-medium leading-snug text-paper">{copy.heading}</h1>
       <p className="mt-3 font-sans text-[14px] leading-relaxed text-paper-faint">{copy.body}</p>

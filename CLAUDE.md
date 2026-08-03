@@ -193,7 +193,14 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   "Bereits Live-Zugang? Hier einloggen →" als Einstieg, bis eine eigene
   Skalierungs-Homepage (separates, noch nicht existierendes Projekt unter
   einer neu zu registrierenden Domain `tavyro.com`, siehe Diskussion) einen
-  eigenen Login-Button bekommt.
+  eigenen Login-Button bekommt. **Datenschutz-Link + Zustimmung**: alle
+  Live-Bildschirme (`Shell` in `LiveAuth.tsx`) zeigen im Footer einen Link
+  zur bestehenden, bereits Trust-Room-spezifischen Datenschutzerklärung
+  (`PRIVACY_URL` in `i18n.ts` → `tavyro.ch/de|en/datenschutz`, Abschnitt zur
+  Azure-OpenAI-Verarbeitung in der Schweiz, kein KI-Training mit
+  Nutzerdaten). Bei der Registrierung ist zusätzlich eine Pflicht-Checkbox
+  ("Ich akzeptiere die Datenschutzerklärung") vorgeschaltet, die den
+  Submit-Button bis zur Zustimmung blockiert.
 
 ## Bekannte offene Punkte
 

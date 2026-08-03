@@ -16,6 +16,15 @@ export const BOOKING_URL: Record<Lang, string> = {
   en: 'https://tavyro.ch/en/erstgespraech-buchen',
 }
 
+/** Datenschutzerklärung auf tavyro.ch — deckt den Trust Room bereits
+ * explizit ab (eigener Abschnitt zur Azure-OpenAI-Verarbeitung in der
+ * Schweiz, kein KI-Modell-Training). Verlinkt aus der Live-Registrierung
+ * (Zustimmungs-Checkbox) und als Fussnote auf allen Live-Bildschirmen. */
+export const PRIVACY_URL: Record<Lang, string> = {
+  de: 'https://tavyro.ch/de/datenschutz',
+  en: 'https://tavyro.ch/en/datenschutz',
+}
+
 /** Locale für Datum/Zeit-Formatierung (z.B. gespeicherte Gespräche). */
 export const DATE_LOCALE: Record<Lang, string> = {
   de: 'de-CH',
@@ -155,6 +164,8 @@ interface Copy {
     }
   }
   live: {
+    footer: string
+    privacyLinkText: string
     welcome: {
       kicker: string
       heading: string
@@ -179,6 +190,9 @@ interface Copy {
       emailPlaceholder: string
       passwordPlaceholder: string
       passwordHint: string
+      privacyBefore: string
+      privacyLinkText: string
+      privacyAfter: string
       submit: string
       checking: string
       successHeading: string
@@ -355,6 +369,8 @@ const de: Copy = {
     },
   },
   live: {
+    footer: "Verarbeitet innerhalb der geschützten Azure-OpenAI-Umgebung von TaVyro",
+    privacyLinkText: 'Datenschutzerklärung',
     welcome: {
       kicker: 'TaVyro Executive Intelligence® Trust Room',
       heading: 'Willkommen.',
@@ -388,6 +404,9 @@ const de: Copy = {
       emailPlaceholder: 'E-Mail-Adresse',
       passwordPlaceholder: 'Passwort',
       passwordHint: 'Mindestens 8 Zeichen.',
+      privacyBefore: 'Ich akzeptiere die ',
+      privacyLinkText: 'Datenschutzerklärung',
+      privacyAfter: '.',
       submit: 'Konto erstellen',
       checking: 'Wird angelegt…',
       successHeading: 'Fast geschafft.',
@@ -565,6 +584,8 @@ const en: Copy = {
     },
   },
   live: {
+    footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    privacyLinkText: 'Privacy policy',
     welcome: {
       kicker: 'TaVyro Executive Intelligence® Trust Room',
       heading: 'Welcome.',
@@ -597,6 +618,9 @@ const en: Copy = {
       emailPlaceholder: 'Email address',
       passwordPlaceholder: 'Password',
       passwordHint: 'At least 8 characters.',
+      privacyBefore: 'I accept the ',
+      privacyLinkText: 'privacy policy',
+      privacyAfter: '.',
       submit: 'Create account',
       checking: 'Creating…',
       successHeading: 'Almost there.',
