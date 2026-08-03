@@ -1,6 +1,6 @@
 import { TableClient } from '@azure/data-tables'
 import crypto from 'node:crypto'
-import type { ChatMessage } from './schema.js'
+import { chatMessageText, type ChatMessage } from './schema.js'
 import { normalizeEmailKey } from './liveUserStore.js'
 
 /**
@@ -58,8 +58,39 @@ async function getTableClient(): Promise<TableClient | null> {
 function deriveTitle(messages: ChatMessage[]): string {
   const firstUser = messages.find((m) => m.role === 'user')
   if (!firstUser) return ''
-  const text = firstUser.content.trim()
+  const text = chatMessageText(firstUser.content).trim()
   return text.length > TITLE_MAX_LENGTH ? `${text.slice(0, TITLE_MAX_LENGTH)}…` : text
+}
+
+/**
+ * Ersetzt Bild-Inhalte (siehe ChatContentPart in schema.ts) durch einen
+ * kurzen Text-Platzhalter, BEVOR ein Gesprächsverlauf serverseitig
+ * gespeichert wird. Grund: Azure Table Storage begrenzt eine einzelne
+ * String-Eigenschaft auf ~64 KB und eine Entität insgesamt auf ~1 MB —
+ * ein base64-kodiertes Bild (schon ein einzelnes Foto leicht mehrere
+ * 100 KB bis wenige MB) würde diesen Grenzwert bei jedem erneuten
+ * Speichern (nach JEDER Chat-Antwort, siehe saveConversation) sofort
+ * reissen, noch dazu wachsend, weil messagesJson bei jedem Turn den
+ * KOMPLETTEN bisherigen Verlauf neu serialisiert.
+ *
+ * Bewusster Kompromiss statt z.B. Azure Blob Storage: das Bild bleibt für
+ * die gesamte AKTIVE Sitzung im Browser voll erhalten (die React-Nachrichten-
+ * Liste in useLiveChat.ts wird nach dem Senden nur lokal ergänzt, nicht vom
+ * Server neu geladen) — TEI sieht und beantwortet das Bild also mit echtem
+ * GPT-4o-Vision-Verständnis. Erst beim Speichern für SPÄTER (Geräte-
+ * wechsel, Seite neu laden, "Gespräch fortsetzen") wird das Bild selbst
+ * durch diesen Platzhalter ersetzt; TEIs eigene, bereits im Verlauf
+ * stehende Antwort dazu bleibt als Text vollständig erhalten, damit der
+ * rote Faden nachvollziehbar bleibt, auch ohne das Bild erneut zu sehen.
+ */
+function collapseImagesForStorage(messages: ChatMessage[]): ChatMessage[] {
+  return messages.map((m) => {
+    if (typeof m.content === 'string') return m
+    const hasImage = m.content.some((p) => p.type === 'image_url')
+    if (!hasImage) return m
+    const text = chatMessageText(m.content)
+    return { ...m, content: text ? `${text}\n\n[Bild-Anhang]` : '[Bild-Anhang]' }
+  })
 }
 
 /**
@@ -79,7 +110,11 @@ export async function saveConversation(
   const key = normalizeEmailKey(email)
   const id = conversationId || crypto.randomUUID()
   const now = Date.now()
-  const title = deriveTitle(messages)
+  // Siehe collapseImagesForStorage oben: was hier gespeichert wird, ist NICHT
+  // zwangsläufig identisch mit dem, was der Client gerade in seinem eigenen
+  // React-State hält (der behält Bilder für die laufende Sitzung voll bei).
+  const storedMessages = collapseImagesForStorage(messages)
+  const title = deriveTitle(storedMessages)
 
   const client = await getTableClient()
 
@@ -89,7 +124,7 @@ export async function saveConversation(
     userMap.set(id, {
       id,
       title,
-      messages,
+      messages: storedMessages,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     })
@@ -110,7 +145,7 @@ export async function saveConversation(
       partitionKey: key,
       rowKey: id,
       title,
-      messagesJson: JSON.stringify(messages),
+      messagesJson: JSON.stringify(storedMessages),
       createdAt,
       updatedAt: now,
     },

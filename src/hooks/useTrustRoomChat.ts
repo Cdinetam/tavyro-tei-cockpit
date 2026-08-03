@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChatMessage } from '../types'
+import { chatMessageHasContent, type ChatMessage } from '../types'
 import { sendChatMessage } from '../lib/aiClient'
 import type { Lang } from '../lib/i18n'
 
@@ -79,11 +79,14 @@ export function useTrustRoomChat(lang: Lang = 'de') {
   // vorher zeigt die UI nur allgemein "Demo-Version", ohne konkrete Zahl.
   const [weeklyLimit, setWeeklyLimit] = useState<number | null>(null)
 
-  async function send(text: string) {
-    const trimmed = text.trim()
-    if (!trimmed || status === 'sending') return
+  async function send(content: ChatMessage['content']) {
+    if (!chatMessageHasContent(content) || status === 'sending') return
+    // Nur ein reiner String wird noch getrimmt (bisheriges Verhalten) — ein
+    // ChatContentPart[]-Array (Bild-Anhang, siehe attachments.ts →
+    // composeMessageWithImage) ist bereits fertig aufgebaut.
+    const finalContent = typeof content === 'string' ? content.trim() : content
 
-    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: trimmed }]
+    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: finalContent }]
     setMessages(nextMessages)
     setStatus('sending')
     setErrorMessage('')

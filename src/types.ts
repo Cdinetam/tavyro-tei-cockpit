@@ -115,9 +115,26 @@ export interface AnalyzeResponse {
 // Ergebnis ist. Hier gibt es stattdessen einen Nachrichtenverlauf.
 // ---------------------------------------------------------------------------
 
+/**
+ * Ein einzelner Inhaltsteil einer Nachricht, wenn `content` kein reiner Text
+ * ist — Bild-Uploads (GPT-4o Vision). Muss synchron mit api/src/lib/
+ * schema.ts (ChatContentPart) gehalten werden. Form entspricht 1:1 dem
+ * Azure-OpenAI-Format, damit openaiClient.ts es unverändert durchreichen
+ * kann.
+ */
+export type ChatContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
-  content: string
+  /**
+   * Normalerweise ein reiner Text-String. Bei einer Nachricht mit
+   * Bild-Anhang (siehe src/lib/attachments.ts → composeMessageWithImage)
+   * stattdessen ein Array aus Text-/Bild-Teilen — Dokument-Anhänge bleiben
+   * weiterhin als eingebetteter String kodiert. IMMER über
+   * chatMessageText()/chatMessageHasContent() lesen statt direkt
+   * .trim()/.length auf content aufzurufen.
+   */
+  content: string | ChatContentPart[]
   /**
    * Nur bei role: 'assistant' gesetzt — markiert eine Antwort, die bewusst
    * mit einem klaren Cliffhanger Richtung echtes Gespräch abschliesst
@@ -126,6 +143,30 @@ export interface ChatMessage {
    * Frontend (siehe TrustRoomChat.tsx).
    */
   cliffhanger?: boolean
+}
+
+/** Siehe api/src/lib/schema.ts → chatMessageText (muss synchron gehalten werden). */
+export function chatMessageText(content: ChatMessage['content']): string {
+  if (typeof content === 'string') return content
+  return content
+    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+    .map((p) => p.text)
+    .join(' ')
+    .trim()
+}
+
+/** Siehe api/src/lib/schema.ts → chatMessageHasContent (muss synchron gehalten werden). */
+export function chatMessageHasContent(content: ChatMessage['content']): boolean {
+  if (typeof content === 'string') return content.trim().length > 0
+  return content.length > 0
+}
+
+/** Liefert die image_url des ersten Bild-Teils einer Nachricht, falls
+ * vorhanden — sonst null. Für die Bubble-Darstellung (Bild-Thumbnail). */
+export function chatMessageImageUrl(content: ChatMessage['content']): string | null {
+  if (typeof content === 'string') return null
+  const part = content.find((p) => p.type === 'image_url')
+  return part && part.type === 'image_url' ? part.image_url.url : null
 }
 
 export type ChatResponseStatus = 'ok' | 'limit_reached' | 'conversation_limit_reached' | 'demo_expired' | 'error'

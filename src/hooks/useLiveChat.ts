@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChatMessage } from '../types'
+import { chatMessageHasContent, type ChatMessage } from '../types'
 import {
   sendLiveChatMessage,
   listLiveConversations,
@@ -40,11 +40,11 @@ export function useLiveChat(lang: Lang = 'de') {
     refreshConversations()
   }, [])
 
-  async function send(text: string) {
-    const trimmed = text.trim()
-    if (!trimmed || status === 'sending') return
+  async function send(content: ChatMessage['content']) {
+    if (!chatMessageHasContent(content) || status === 'sending') return
+    const finalContent = typeof content === 'string' ? content.trim() : content
 
-    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: trimmed }]
+    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: finalContent }]
     setMessages(nextMessages)
     setStatus('sending')
     setErrorMessage('')

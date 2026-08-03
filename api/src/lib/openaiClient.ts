@@ -1,5 +1,6 @@
 import {
   aiAnalysisJsonSchema,
+  chatMessageText,
   chatReplyJsonSchema,
   type AiAnalysisResult,
   type ChatMessage,
@@ -152,6 +153,10 @@ async function callChatReplyCompletion(
   const body: Record<string, unknown> = {
     messages: [
       { role: 'system', content: systemContent },
+      // m.content wird unverändert durchgereicht — bei einer Bild-Nachricht
+      // ist das bereits ein Array aus {type:'text'|'image_url', ...}-Teilen
+      // in exakt der Form, die Azure OpenAI (GPT-4o Vision) erwartet (siehe
+      // ChatContentPart in schema.ts), keine weitere Umformung nötig.
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ],
     temperature,
@@ -263,7 +268,11 @@ export async function requestChatReply(
   // unabhängig davon, ob isExplicitAdviceRequest zusätzlich zutrifft (bleibt
   // nur für Logging/Diagnose erhalten, siehe adviceGuard.ts).
   const lastUserMessage = [...history].reverse().find((m) => m.role === 'user')
-  const adviceWasRequested = !!lastUserMessage && isExplicitAdviceRequest(lastUserMessage.content, lang)
+  // adviceGuard-Regex-Prüfungen laufen bewusst nur auf dem Text-Anteil — ein
+  // Bild-Teil (siehe ChatContentPart) hat keinen Text, den eine Regex prüfen
+  // könnte.
+  const adviceWasRequested =
+    !!lastUserMessage && isExplicitAdviceRequest(chatMessageText(lastUserMessage.content), lang)
 
   // Zeitbudget für die GESAMTE Funktion (Erstversuch + alle Nachforderungs-
   // Versuche zusammen): Azure Static Web Apps' verwaltete Functions laufen

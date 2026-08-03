@@ -15,13 +15,34 @@
  */
 
 /**
+ * Ein einzelner Inhaltsteil einer Nachricht, wenn `content` kein reiner Text
+ * ist (siehe ChatMessage unten) — Bild-Uploads (GPT-4o Vision). Die Form
+ * entspricht bewusst 1:1 dem, was Azure OpenAI in `messages[].content`
+ * erwartet (`{type:'text',text}` / `{type:'image_url',image_url:{url}}`),
+ * damit openaiClient.ts den Wert unverändert durchreichen kann, ohne ihn
+ * erst umzuformen.
+ */
+export type ChatContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }
+
+/**
  * Eine einzelne Nachricht im echten, mehrteiligen Trust-Room-Gespräch
  * (api/src/functions/chat.ts) — im Unterschied zur Einmal-Analyse unten,
  * die kein Gesprächsverlauf ist, sondern ein festes 5-Felder-Ergebnis.
  */
 export interface ChatMessage {
   role: 'user' | 'assistant'
-  content: string
+  /**
+   * Normalerweise ein reiner Text-String. Bei einer Nachricht mit
+   * Bild-Anhang (Vision-Upload, siehe src/lib/attachments.ts →
+   * composeMessageWithImage) stattdessen ein Array aus Text-/Bild-Teilen —
+   * Dokument-Anhänge (PDF/Word/Text) bleiben dagegen weiterhin als
+   * eingebetteter String kodiert (siehe composeMessageWithAttachment), nur
+   * echte Bilder brauchen dieses Array-Format, weil Azure OpenAI Bilder nur
+   * so entgegennimmt. IMMER über chatMessageText()/chatMessageHasContent()
+   * lesen statt direkt .trim()/.length auf content aufzurufen — beides
+   * bricht sonst bei einem Array-Wert.
+   */
+  content: string | ChatContentPart[]
   /**
    * Nur bei role: 'assistant' gesetzt — markiert eine Antwort, die bewusst
    * mit einem klaren Cliffhanger Richtung echtes Gespräch abschliesst (siehe
@@ -29,6 +50,29 @@ export interface ChatMessage {
    * Frontend, hat keine Bedeutung für das Modell selbst.
    */
   cliffhanger?: boolean
+}
+
+/** Extrahiert den reinen Text aus ChatMessage.content, unabhängig davon, ob
+ * es ein String oder ein Array aus Text-/Bild-Teilen ist (Bild-Teile werden
+ * ignoriert) — zentraler Lesezugriff, siehe Kommentar bei ChatMessage.content
+ * oben. */
+export function chatMessageText(content: ChatMessage['content']): string {
+  if (typeof content === 'string') return content
+  return content
+    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+    .map((p) => p.text)
+    .join(' ')
+    .trim()
+}
+
+/** true, wenn content irgendeinen sinnvollen Inhalt hat (Text ODER
+ * mindestens ein Bild) — Ersatz für das früher direkt genutzte
+ * `content?.trim()`, das bei einem Array bricht und ausserdem eine
+ * bild-only-Nachricht (kein getippter Text) fälschlich als leer werten
+ * würde. */
+export function chatMessageHasContent(content: ChatMessage['content']): boolean {
+  if (typeof content === 'string') return content.trim().length > 0
+  return content.length > 0
 }
 
 /**
