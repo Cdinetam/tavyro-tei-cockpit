@@ -27,7 +27,13 @@ interface ChatRequestBody {
   lang?: string
 }
 
-const MAX_MESSAGE_LENGTH = 2000
+// Angehoben von ursprünglich 2000: eine Nachricht kann jetzt einen
+// beigefügten Dokumentanhang enthalten (siehe extractDocument.ts,
+// MAX_EXTRACTED_CHARS=12000 in documentExtract.ts), der clientseitig in
+// denselben content-String eingebettet wird (src/lib/attachments.ts) —
+// dieser Cap muss also Platz für getippten Text + eingebetteten
+// Dokumenttext bieten.
+const MAX_MESSAGE_LENGTH = 16000
 // Ab dieser Nachrichtenzahl zum selben Thema schliesst TEI® spätestens mit
 // einem klaren Cliffhanger ab, siehe CHAT_SYSTEM_PROMPT.
 const CLIFFHANGER_TOPIC_TURN_THRESHOLD = 5

@@ -171,6 +171,39 @@ export async function sendChatMessage(
   return (await response.json()) as ChatResponse
 }
 
+export type ExtractDocumentResult =
+  | { status: 'ok'; text: string; truncated: boolean }
+  | { status: 'error'; message: string }
+
+/**
+ * Textextraktion für einen Chat-Anhang (PDF/Word/Text) — siehe
+ * api/src/functions/extractDocument.ts. Nutzt denselben Zugangscode-Header
+ * wie die übrigen Demo-Endpoints (accessHeaders()).
+ */
+export async function extractDocument(filename: string, contentBase64: string, lang: Lang): Promise<ExtractDocumentResult> {
+  const fallbackMessage =
+    lang === 'en' ? 'The file could not be read. Please try again.' : 'Die Datei konnte nicht gelesen werden. Bitte erneut versuchen.'
+
+  if (!API_BASE_URL) {
+    return { status: 'error', message: lang === 'en' ? 'Not available in mock mode.' : 'Im Mock-Modus nicht verfügbar.' }
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/extract-document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...accessHeaders() },
+      body: JSON.stringify({ filename, contentBase64, lang }),
+    })
+    const data = await response.json().catch(() => null)
+    if (!response.ok) {
+      return { status: 'error', message: (data && (data as { message?: string }).message) || fallbackMessage }
+    }
+    return data as ExtractDocumentResult
+  } catch {
+    return { status: 'error', message: fallbackMessage }
+  }
+}
+
 export async function submitLead(
   payload: Omit<LeadRequest, 'sessionId'>,
   lang: Lang = 'de',

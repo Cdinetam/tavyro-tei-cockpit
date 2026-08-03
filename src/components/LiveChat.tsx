@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChatMessage } from '../types'
 import type { LiveChatStatus } from '../hooks/useLiveChat'
-import type { LiveConversationSummary } from '../lib/liveClient'
+import { extractDocument, type LiveConversationSummary } from '../lib/liveClient'
 import { getCopy, type Lang } from '../lib/i18n'
+import { useDocumentAttachment } from '../hooks/useDocumentAttachment'
+import { ACCEPTED_ATTACHMENT_ACCEPT, composeMessageWithAttachment, parseMessageAttachment } from '../lib/attachments'
 
 const MAX_MESSAGE_LENGTH = 2000
 const WARN_THRESHOLD = MAX_MESSAGE_LENGTH - 200
@@ -19,8 +21,34 @@ function CharCounter({ length, lang }: { length: number; lang: Lang }) {
   )
 }
 
-function Bubble({ message }: { message: ChatMessage }) {
+function Bubble({ message, lang }: { message: ChatMessage; lang: Lang }) {
   const isUser = message.role === 'user'
+  const copy = getCopy(lang).attachment
+  const parsed = isUser ? parseMessageAttachment(message.content) : null
+  const [expanded, setExpanded] = useState(false)
+
+  if (parsed) {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[75%] border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper">
+          {parsed.userText && <p className="whitespace-pre-line">{parsed.userText}</p>}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className={`flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper ${parsed.userText ? 'mt-2.5' : ''}`}
+          >
+            📎 {parsed.filename} · {expanded ? copy.collapse : copy.expand}
+          </button>
+          {expanded && (
+            <div className="mt-2 max-h-64 overflow-y-auto whitespace-pre-line border border-line-soft bg-ink-900/50 p-3 font-mono text-[12px] leading-relaxed text-paper-faint">
+              {parsed.documentText}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -32,6 +60,65 @@ function Bubble({ message }: { message: ChatMessage }) {
       >
         {message.content}
       </div>
+    </div>
+  )
+}
+
+function AttachButton({ attachment, lang }: { attachment: ReturnType<typeof useDocumentAttachment>; lang: Lang }) {
+  const copy = getCopy(lang).attachment
+  return (
+    <>
+      <input
+        ref={attachment.inputRef}
+        type="file"
+        accept={ACCEPTED_ATTACHMENT_ACCEPT}
+        onChange={attachment.handleFileSelected}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={attachment.openPicker}
+        aria-label={copy.buttonAria}
+        title={copy.buttonAria}
+        disabled={attachment.status === 'uploading'}
+        className="shrink-0 border border-line-strong px-3.5 py-3 text-paper-dim transition-colors hover:border-brass-dim hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        📎
+      </button>
+    </>
+  )
+}
+
+function AttachmentBar({ attachment, lang }: { attachment: ReturnType<typeof useDocumentAttachment>; lang: Lang }) {
+  const copy = getCopy(lang).attachment
+  if (attachment.status === 'idle') return null
+  return (
+    <div className="mb-2 flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-widest2">
+      {attachment.status === 'uploading' && <span className="text-paper-faint">{copy.uploading}</span>}
+      {attachment.status === 'ready' && attachment.attachment && (
+        <span className="flex items-center gap-2 text-brass-light">
+          📎 {attachment.attachment.filename}
+          {attachment.attachment.truncated && (
+            <span className="normal-case text-paper-faint">{copy.truncatedNote}</span>
+          )}
+          <button
+            type="button"
+            onClick={attachment.clear}
+            aria-label={copy.remove}
+            className="text-paper-faint transition-colors hover:text-paper"
+          >
+            ✕
+          </button>
+        </span>
+      )}
+      {attachment.status === 'error' && (
+        <span className="flex items-center gap-2 normal-case text-paper-dim">
+          {attachment.errorMessage}
+          <button type="button" onClick={attachment.clear} className="text-paper-faint transition-colors hover:text-paper">
+            ✕
+          </button>
+        </span>
+      )}
     </div>
   )
 }
@@ -88,27 +175,36 @@ export function LiveChat({
   const liveCopy = copy.live.room
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
+  const attachment = useDocumentAttachment(extractDocument, lang)
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, status])
 
   const overLimit = draft.length > MAX_MESSAGE_LENGTH
+  const canSubmit = (draft.trim() || attachment.attachment) && attachment.status !== 'uploading' && !overLimit
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!draft.trim() || status === 'sending' || overLimit) return
-    send(draft)
+    if (!canSubmit || status === 'sending') return
+    const finalText = attachment.attachment
+      ? composeMessageWithAttachment(draft, attachment.attachment.filename, attachment.attachment.text)
+      : draft
+    send(finalText)
     setDraft('')
+    attachment.clear()
   }
 
   if (messages.length === 0) {
     return (
       <section className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6 py-16">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-widest2 text-brass-light">
-            {liveCopy.statusLabel}
-          </span>
+          <div className="flex items-center gap-3">
+            <img src="/tavyro-logo.png" alt="TaVyro" className="h-8 w-auto" />
+            <span className="font-mono text-[10px] uppercase tracking-widest2 text-brass-light">
+              {liveCopy.statusLabel}
+            </span>
+          </div>
           <button
             onClick={onLogout}
             className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
@@ -121,18 +217,22 @@ export function LiveChat({
         </h1>
         <p className="mt-3 max-w-lg font-sans text-[15px] leading-relaxed text-paper-dim">{liveCopy.empty.body}</p>
         <form onSubmit={handleSubmit} className="mt-8">
-          <textarea
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={liveCopy.empty.placeholder}
-            rows={4}
-            className="w-full resize-none border border-line bg-ink-800/40 px-4 py-3.5 font-sans text-[15px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim"
-          />
+          <AttachmentBar attachment={attachment} lang={lang} />
+          <div className="flex items-end gap-3">
+            <AttachButton attachment={attachment} lang={lang} />
+            <textarea
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={liveCopy.empty.placeholder}
+              rows={4}
+              className="w-full resize-none border border-line bg-ink-800/40 px-4 py-3.5 font-sans text-[15px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim"
+            />
+          </div>
           <CharCounter length={draft.length} lang={lang} />
           <button
             type="submit"
-            disabled={!draft.trim() || overLimit}
+            disabled={!canSubmit}
             className="mt-4 inline-flex items-center gap-2 border border-brass-dim bg-gradient-to-b from-brass/[0.14] to-brass/[0.06] px-6 py-3 font-sans text-[14px] font-medium text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:from-brass/[0.2] hover:to-brass/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {liveCopy.empty.startButton}
@@ -177,7 +277,8 @@ export function LiveChat({
   return (
     <div className="mx-auto flex h-screen max-w-3xl flex-col px-6">
       <div className="flex items-center justify-between gap-3 border-b border-line-soft py-4">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
+          <img src="/tavyro-logo.png" alt="TaVyro" className="h-7 w-auto" />
           <span className="h-1.5 w-1.5 rounded-full bg-brass" />
           <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">
             {liveCopy.statusLabel}
@@ -202,7 +303,7 @@ export function LiveChat({
       <div ref={listRef} className="flex-1 overflow-y-auto py-6">
         <div className="flex flex-col gap-4">
           {messages.map((m, i) => (
-            <Bubble key={i} message={m} />
+            <Bubble key={i} message={m} lang={lang} />
           ))}
           {status === 'sending' && (
             <div className="flex justify-start">
@@ -222,7 +323,9 @@ export function LiveChat({
       </div>
 
       <form onSubmit={handleSubmit} className="border-t border-line-soft py-4">
+        <AttachmentBar attachment={attachment} lang={lang} />
         <div className="flex items-end gap-3">
+          <AttachButton attachment={attachment} lang={lang} />
           <textarea
             autoFocus
             value={draft}
@@ -239,7 +342,7 @@ export function LiveChat({
           />
           <button
             type="submit"
-            disabled={!draft.trim() || status === 'sending' || overLimit}
+            disabled={!canSubmit || status === 'sending'}
             className="shrink-0 border border-brass-dim bg-brass/[0.08] px-5 py-3 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {liveCopy.active.send}

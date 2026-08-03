@@ -4,7 +4,10 @@ import type { ChatMessage } from '../lib/schema.js'
 import { checkLiveSession } from '../lib/liveAuth.js'
 import { saveConversation } from '../lib/liveConversationStore.js'
 
-const MAX_MESSAGE_LENGTH = 2000
+// Siehe chat.ts für die Begründung der Anhebung von ursprünglich 2000 —
+// muss Platz für einen eingebetteten Dokumentanhang bieten (siehe
+// extractDocument.ts/documentExtract.ts, src/lib/attachments.ts).
+const MAX_MESSAGE_LENGTH = 16000
 
 interface LiveChatRequestBody {
   conversationId?: string | null

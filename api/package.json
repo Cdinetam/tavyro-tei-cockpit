@@ -15,7 +15,9 @@
     "@azure/communication-email": "^1.1.0",
     "@azure/data-tables": "^13.2.2",
     "@azure/functions": "^4.5.1",
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "mammoth": "^1.12.0",
+    "pdf-parse": "^1.1.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
