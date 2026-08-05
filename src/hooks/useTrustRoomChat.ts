@@ -83,7 +83,7 @@ export function useTrustRoomChat(lang: Lang = 'de') {
     if (!chatMessageHasContent(content) || status === 'sending') return
     // Nur ein reiner String wird noch getrimmt (bisheriges Verhalten) — ein
     // ChatContentPart[]-Array (Bild-Anhang, siehe attachments.ts →
-    // composeMessageWithImage) ist bereits fertig aufgebaut.
+    // composeMessageWithAttachments) ist bereits fertig aufgebaut.
     const finalContent = typeof content === 'string' ? content.trim() : content
 
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: finalContent }]

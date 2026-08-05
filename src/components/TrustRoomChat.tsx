@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { chatMessageImageUrl, chatMessageText, type ChatMessage } from '../types'
+import { chatMessageImageUrls, chatMessageText, type ChatMessage } from '../types'
 import type { ChatFlowStatus, SavedConversation } from '../hooks/useTrustRoomChat'
 import { extractDocument, isMockMode } from '../lib/aiClient'
 import { BOOKING_URL, DATE_LOCALE, getCopy, type Lang } from '../lib/i18n'
 import { useDocumentAttachment } from '../hooks/useDocumentAttachment'
 import {
   ACCEPTED_ATTACHMENT_ACCEPT,
-  composeMessageWithAttachment,
-  composeMessageWithImage,
-  parseMessageAttachment,
+  composeMessageWithAttachments,
+  MAX_ATTACHMENTS_COUNT,
+  parseMessageAttachments,
 } from '../lib/attachments'
 
 // Muss mit MAX_MESSAGE_LENGTH in api/src/functions/chat.ts übereinstimmen —
@@ -36,39 +36,52 @@ function CharCounter({ length, lang }: { length: number; lang: Lang }) {
 function Bubble({ message, lang }: { message: ChatMessage; lang: Lang }) {
   const isUser = message.role === 'user'
   const copy = getCopy(lang).attachment
-  const parsed = isUser ? parseMessageAttachment(message.content) : null
-  const imageUrl = isUser ? chatMessageImageUrl(message.content) : null
-  const [expanded, setExpanded] = useState(false)
+  const parsed = isUser ? parseMessageAttachments(message.content) : null
+  const imageUrls = isUser ? chatMessageImageUrls(message.content) : []
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
-  if (parsed) {
-    return (
-      <div className="flex justify-end">
-        <div className="max-w-[75%] border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper">
-          {parsed.userText && <p className="whitespace-pre-line">{parsed.userText}</p>}
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className={`flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper ${parsed.userText ? 'mt-2.5' : ''}`}
-          >
-            📎 {parsed.filename} · {expanded ? copy.collapse : copy.expand}
-          </button>
-          {expanded && (
-            <div className="mt-2 max-h-64 overflow-y-auto whitespace-pre-line border border-line-soft bg-ink-900/50 p-3 font-mono text-[12px] leading-relaxed text-paper-faint">
-              {parsed.documentText}
-            </div>
-          )}
-        </div>
-      </div>
-    )
+  function toggleExpanded(i: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
   }
 
-  if (imageUrl) {
-    const text = chatMessageText(message.content)
+  if (parsed || imageUrls.length > 0) {
+    const text = parsed ? parsed.userText : chatMessageText(message.content)
     return (
       <div className="flex justify-end">
         <div className="max-w-[75%] border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper">
-          <img src={imageUrl} alt={copy.imageAlt} className="max-h-72 w-auto rounded border border-line-soft" />
-          {text && <p className="mt-2.5 whitespace-pre-line">{text}</p>}
+          {imageUrls.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {imageUrls.map((url, i) => (
+                <img key={i} src={url} alt={copy.imageAlt} className="max-h-56 w-auto rounded border border-line-soft" />
+              ))}
+            </div>
+          )}
+          {text && <p className={`whitespace-pre-line ${imageUrls.length > 0 ? 'mt-2.5' : ''}`}>{text}</p>}
+          {parsed && parsed.documents.length > 0 && (
+            <div className={`flex flex-col gap-1.5 ${imageUrls.length > 0 || text ? 'mt-2.5' : ''}`}>
+              {parsed.documents.map((doc, i) => (
+                <div key={i}>
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(i)}
+                    className="flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper"
+                  >
+                    📎 {doc.filename} · {expanded.has(i) ? copy.collapse : copy.expand}
+                  </button>
+                  {expanded.has(i) && (
+                    <div className="mt-2 max-h-64 overflow-y-auto whitespace-pre-line border border-line-soft bg-ink-900/50 p-3 font-mono text-[12px] leading-relaxed text-paper-faint">
+                      {doc.documentText}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -97,7 +110,8 @@ function AttachButton({ attachment, lang }: { attachment: ReturnType<typeof useD
         ref={attachment.inputRef}
         type="file"
         accept={ACCEPTED_ATTACHMENT_ACCEPT}
-        onChange={attachment.handleFileSelected}
+        multiple
+        onChange={attachment.handleFilesSelected}
         className="hidden"
       />
       <button
@@ -105,7 +119,7 @@ function AttachButton({ attachment, lang }: { attachment: ReturnType<typeof useD
         onClick={attachment.openPicker}
         aria-label={copy.buttonAria}
         title={copy.buttonAria}
-        disabled={attachment.status === 'uploading'}
+        disabled={attachment.status === 'uploading' || attachment.attachments.length >= MAX_ATTACHMENTS_COUNT}
         className="shrink-0 border border-line-strong px-3.5 py-3 text-paper-dim transition-colors hover:border-brass-dim hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
       >
         📎
@@ -116,34 +130,34 @@ function AttachButton({ attachment, lang }: { attachment: ReturnType<typeof useD
 
 function AttachmentBar({ attachment, lang }: { attachment: ReturnType<typeof useDocumentAttachment>; lang: Lang }) {
   const copy = getCopy(lang).attachment
-  if (attachment.status === 'idle') return null
+  if (attachment.status === 'idle' && attachment.attachments.length === 0) return null
   return (
-    <div className="mb-2 flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-widest2">
+    <div className="mb-2 flex flex-col gap-1.5 font-mono text-[10.5px] uppercase tracking-widest2">
       {attachment.status === 'uploading' && <span className="text-paper-faint">{copy.uploading}</span>}
-      {attachment.status === 'ready' && attachment.attachment && (
-        <span className="flex items-center gap-2 text-brass-light">
-          {attachment.attachment.kind === 'image' ? '🖼️' : '📎'} {attachment.attachment.filename}
-          {attachment.attachment.kind === 'document' && attachment.attachment.truncated && (
-            <span className="normal-case text-paper-faint">{copy.truncatedNote}</span>
-          )}
-          <button
-            type="button"
-            onClick={attachment.clear}
-            aria-label={copy.remove}
-            className="text-paper-faint transition-colors hover:text-paper"
-          >
-            ✕
-          </button>
-        </span>
+      {attachment.attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {attachment.attachments.map((item, i) => (
+            <span
+              key={i}
+              className="flex items-center gap-2 border border-line-soft bg-ink-800/40 px-2.5 py-1 text-brass-light"
+            >
+              {item.kind === 'image' ? '🖼️' : '📎'} {item.filename}
+              {item.kind === 'document' && item.truncated && (
+                <span className="normal-case text-paper-faint">{copy.truncatedNote}</span>
+              )}
+              <button
+                type="button"
+                onClick={() => attachment.removeAt(i)}
+                aria-label={copy.remove}
+                className="text-paper-faint transition-colors hover:text-paper"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
       )}
-      {attachment.status === 'error' && (
-        <span className="flex items-center gap-2 normal-case text-paper-dim">
-          {attachment.errorMessage}
-          <button type="button" onClick={attachment.clear} className="text-paper-faint transition-colors hover:text-paper">
-            ✕
-          </button>
-        </span>
-      )}
+      {attachment.errorMessage && <span className="normal-case text-paper-dim">{attachment.errorMessage}</span>}
     </div>
   )
 }
@@ -287,17 +301,12 @@ export function TrustRoomChat({
   }, [messages, status])
 
   const overLimit = draft.length > MAX_MESSAGE_LENGTH
-  const canSubmit = (draft.trim() || attachment.attachment) && attachment.status !== 'uploading' && !overLimit
+  const canSubmit = (draft.trim() || attachment.attachments.length > 0) && attachment.status !== 'uploading' && !overLimit
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!canSubmit || status === 'sending') return
-    const content: ChatMessage['content'] =
-      attachment.attachment?.kind === 'document'
-        ? composeMessageWithAttachment(draft, attachment.attachment.filename, attachment.attachment.text)
-        : attachment.attachment?.kind === 'image'
-          ? composeMessageWithImage(draft, attachment.attachment.dataUrl)
-          : draft
+    const content = composeMessageWithAttachments(draft, attachment.attachments)
     send(content)
     setDraft('')
     attachment.clear()

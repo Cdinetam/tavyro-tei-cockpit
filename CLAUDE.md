@@ -347,6 +347,44 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   bewusst keine entsprechende Kollabierung ergänzt (geringeres Risiko,
   reine Browser-Speichergrenze statt harter Server-Grenze).
 
+- **Verlauf-Button im aktiven Live-Chat + Mehrfach-Anhänge** — zwei
+  Nutzer-Wünsche in einem Rutsch umgesetzt: (1) In `LiveChat.tsx` gab es
+  bisher keinen Weg, während eines laufenden Gesprächs die Liste
+  gespeicherter Gespräche zu sehen, ausser über den Umweg "Neues Gespräch"
+  (ruft `reset()` auf, beendet also erst das aktuelle Gespräch, bevor die
+  Liste — die ohnehin nur auf dem Startbildschirm sichtbar war — erscheint).
+  Neuer `historyButton` im aktiven Chat-Header öffnet stattdessen direkt ein
+  Overlay (`HistoryPanel`, neue Komponente in `LiveChat.tsx`), das dieselbe
+  gespeicherte-Gespräche-Liste als Modal zeigt (`resumeConversation`/
+  `deleteSavedConversation` unverändert wiederverwendet), ohne `reset()`
+  aufzurufen — das laufende Gespräch bleibt bis zur bewussten Auswahl
+  erhalten. Bewusst NUR in der Live-Version (explizite Nutzer-Anfrage "für
+  die Live Version"), nicht in der Demo übernommen.
+  (2) Der Anhang-Button liess bisher nur EINEN Anhang gleichzeitig zu.
+  `useDocumentAttachment.ts` hält jetzt ein `AttachedItem[]`-Array statt
+  eines einzelnen Anhangs, `handleFilesSelected` (vormals
+  `handleFileSelected`) verarbeitet mehrere gleichzeitig ausgewählte
+  Dateien sequenziell (File-Input hat jetzt `multiple`), gedeckelt auf
+  `MAX_ATTACHMENTS_COUNT` (5) pro Nachricht — überzählige Dateien werden
+  übersprungen und als Hinweis gemeldet statt die ganze Auswahl abzulehnen,
+  einzelne fehlgeschlagene Dateien blockieren die übrigen erfolgreichen
+  nicht. `attachments.ts`: `composeMessageWithAttachment`/
+  `composeMessageWithImage` (je ein Anhang) durch eine einzige
+  `composeMessageWithAttachments(userText, attachments[])` ersetzt — hängt
+  beliebig viele Dokument-Marker hintereinander an (content bleibt ein
+  reiner String, solange kein Bild dabei ist) und baut bei mindestens einem
+  Bild ein `ChatContentPart[]`-Array. Spiegelbildlich liefert
+  `parseMessageAttachments` (vormals `parseMessageAttachment`) jetzt ALLE
+  eingebetteten Dokument-Marker als Array statt nur den ersten, und
+  `chatMessageImageUrls` (`types.ts`, vormals `chatMessageImageUrl`) alle
+  Bild-URLs statt nur der ersten. Die `Bubble`-Komponenten in
+  `TrustRoomChat.tsx`/`LiveChat.tsx` rendern entsprechend eine
+  Bild-Galerie (`flex-wrap`) plus eine Liste unabhängig auf-/zuklappbarer
+  Dokument-Chips (statt vorher genau einem Anhang). Betrifft beide
+  Chat-Flows (Demo UND Live), da die Anhang-Logik geteilt ist
+  (`attachments.ts`/`useDocumentAttachment.ts`) — der Verlauf-Button aus
+  Punkt (1) bleibt trotzdem Live-exklusiv.
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde

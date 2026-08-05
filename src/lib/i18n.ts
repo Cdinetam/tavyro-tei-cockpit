@@ -269,6 +269,11 @@ interface Copy {
       savedKicker: string
       savedEmptyLabel: string
       deleteAria: string
+      /** Button im aktiven Chat-Header, öffnet historyEmpty/savedKicker-Panel
+       * direkt — ohne den Umweg über "Neues Gespräch" (das reset() aufruft). */
+      historyButton: string
+      historyEmpty: string
+      historyCloseAria: string
       empty: {
         heading: string
         body: string
@@ -509,6 +514,9 @@ const de: Copy = {
       savedKicker: 'Gespeicherte Gespräche',
       savedEmptyLabel: '(ohne Text)',
       deleteAria: 'Gespeichertes Gespräch löschen',
+      historyButton: 'Verlauf',
+      historyEmpty: 'Noch keine gespeicherten Gespräche.',
+      historyCloseAria: 'Verlauf schliessen',
       empty: {
         heading: 'Worüber möchten Sie nachdenken?',
         body: 'Ihr Gespräch wird automatisch gespeichert und ist bei jedem Login wieder abrufbar.',
@@ -748,6 +756,9 @@ const en: Copy = {
       savedKicker: 'Saved conversations',
       savedEmptyLabel: '(no text)',
       deleteAria: 'Delete saved conversation',
+      historyButton: 'History',
+      historyEmpty: 'No saved conversations yet.',
+      historyCloseAria: 'Close history',
       empty: {
         heading: "What's on your mind?",
         body: 'Your conversation is saved automatically and available again every time you log in.',

@@ -128,7 +128,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   /**
    * Normalerweise ein reiner Text-String. Bei einer Nachricht mit
-   * Bild-Anhang (siehe src/lib/attachments.ts → composeMessageWithImage)
+   * Bild-Anhang (siehe src/lib/attachments.ts → composeMessageWithAttachments)
    * stattdessen ein Array aus Text-/Bild-Teilen — Dokument-Anhänge bleiben
    * weiterhin als eingebetteter String kodiert. IMMER über
    * chatMessageText()/chatMessageHasContent() lesen statt direkt
@@ -161,12 +161,15 @@ export function chatMessageHasContent(content: ChatMessage['content']): boolean 
   return content.length > 0
 }
 
-/** Liefert die image_url des ersten Bild-Teils einer Nachricht, falls
- * vorhanden — sonst null. Für die Bubble-Darstellung (Bild-Thumbnail). */
-export function chatMessageImageUrl(content: ChatMessage['content']): string | null {
-  if (typeof content === 'string') return null
-  const part = content.find((p) => p.type === 'image_url')
-  return part && part.type === 'image_url' ? part.image_url.url : null
+/** Liefert die image_url ALLER Bild-Teile einer Nachricht (0 bis n) — eine
+ * Nachricht kann mehrere Bild-Anhänge auf einmal enthalten (siehe
+ * composeMessageWithAttachments in attachments.ts). Für die
+ * Bubble-Darstellung (Bild-Thumbnails). */
+export function chatMessageImageUrls(content: ChatMessage['content']): string[] {
+  if (typeof content === 'string') return []
+  return content
+    .filter((p): p is { type: 'image_url'; image_url: { url: string } } => p.type === 'image_url')
+    .map((p) => p.image_url.url)
 }
 
 export type ChatResponseStatus = 'ok' | 'limit_reached' | 'conversation_limit_reached' | 'demo_expired' | 'error'
