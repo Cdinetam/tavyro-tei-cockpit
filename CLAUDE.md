@@ -385,6 +385,36 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   (`attachments.ts`/`useDocumentAttachment.ts`) — der Verlauf-Button aus
   Punkt (1) bleibt trotzdem Live-exklusiv.
 
+- **Bug: Browsersprache-Erkennung erzwang bei jedem Refresh Englisch trotz
+  deutscher Präferenz** — live gemeldet ("wenn ich refreshe kommt immer
+  zuerst EN"). Ursache in `detectInitialLang` (`src/lib/i18n.ts`): prüfte
+  per `.some()`, ob IRGENDEINE Sprache in `navigator.languages` mit "en"
+  beginnt, statt nur die PRIMÄRE (erste) Sprache zu betrachten. Viele
+  Browser führen "en-US" o.ä. weiter hinten in der Sprachliste als
+  Rückfall mit, selbst wenn die tatsächlich bevorzugte Sprache Deutsch ist
+  — das `.some()` erkannte dieses "en" fälschlich als Präferenz und zwang
+  die Seite bei jedem Neuladen auf Englisch. Behoben: liest jetzt nur noch
+  `navigator.languages[0]` (mit `navigator.language` als Fallback), analog
+  zur Spezifikation, dass diese Liste nach Präferenz sortiert ist. Betraf
+  sowohl Demo als auch Live (Funktion ist pfad-übergreifend, siehe
+  Eintrag weiter oben).
+  Zusätzlich, unabhängig von diesem Bug: `CHAT_SYSTEM_PROMPT`/
+  `CHAT_SYSTEM_PROMPT_EN` (`api/src/lib/prompt.ts`) um eine explizite Regel
+  ergänzt — TEI antwortet jetzt immer in der Sprache der letzten
+  Nutzer-Nachricht, unabhängig von der aktuell eingestellten
+  Oberflächensprache (die weiterhin nur bestimmt, welcher der beiden
+  Prompts/welches adviceGuard-Regelwerk geladen wird). Grund: die Person
+  soll auch dann eine deutsche Antwort bekommen, wenn sie auf Deutsch
+  schreibt, selbst falls die UI (z.B. durch obigen Bug oder bewusste
+  EN-Einstellung) gerade Englisch zeigt — "unabhängig von der
+  Layout-Sprache". Bekannte Einschränkung: adviceGuard.ts prüft weiterhin
+  nur die zur Oberflächensprache passenden Regex-Muster (verbotene
+  Eröffnungen, Festlegungs-Formulierungen) — bei einem seltenen
+  Sprachwechsel mitten im Gespräch (UI bleibt z.B. Deutsch, Person
+  schreibt aber auf Englisch) greift das mechanische Sicherheitsnetz dann
+  ggf. nicht zuverlässig, das eigentliche Sprach-Mirroring der Antwort
+  selbst ist davon aber unberührt.
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde

@@ -418,13 +418,13 @@ export function LiveChat({
         <div className="flex items-center gap-4">
           <button
             onClick={() => setShowHistory(true)}
-            className="border border-line-strong px-3.5 py-1.5 font-sans text-[12.5px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper"
+            className="min-w-[148px] border border-line-strong px-3.5 py-1.5 text-center font-sans text-[12.5px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper"
           >
             {liveCopy.historyButton}
           </button>
           <button
             onClick={reset}
-            className="border border-line-strong px-3.5 py-1.5 font-sans text-[12.5px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper"
+            className="min-w-[148px] border border-line-strong px-3.5 py-1.5 text-center font-sans text-[12.5px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper"
           >
             {liveCopy.newDialog}
           </button>

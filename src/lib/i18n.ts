@@ -64,10 +64,18 @@ export function getLangFromPath(pathname: string): Lang {
 export function detectInitialLang(pathname: string): Lang {
   if (hasEnPrefix(pathname)) return 'en'
   if (typeof navigator === 'undefined') return 'de'
-  const candidates =
-    navigator.languages && navigator.languages.length > 0 ? navigator.languages : [navigator.language]
-  const prefersEnglish = candidates.some((l) => typeof l === 'string' && l.toLowerCase().startsWith('en'))
-  return prefersEnglish ? 'en' : 'de'
+  // Bewusst NUR die PRIMÄRE Browsersprache (navigator.languages[0], mit
+  // navigator.language als Fallback), NICHT .some() über die gesamte Liste —
+  // live gemeldeter Bug: viele Browser führen "en-US" o.ä. irgendwo weiter
+  // hinten in der Sprachliste als Rückfall mit, selbst wenn die tatsächlich
+  // eingestellte, bevorzugte Sprache Deutsch ist. Ein .some()-Check über die
+  // ganze Liste erkannte dieses "en" fälschlich als Präferenz und zwang die
+  // Seite bei JEDEM Neuladen auf Englisch, obwohl die Person tatsächlich
+  // Deutsch bevorzugt (siehe navigator.languages-Dokumentation: die Liste ist
+  // nach Präferenz sortiert, nur der erste Eintrag zählt als "bevorzugt").
+  const primary =
+    (navigator.languages && navigator.languages.length > 0 ? navigator.languages[0] : navigator.language) ?? ''
+  return primary.toLowerCase().startsWith('en') ? 'en' : 'de'
 }
 
 interface Copy {
