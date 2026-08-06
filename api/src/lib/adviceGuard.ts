@@ -165,6 +165,13 @@ export function hasBannedOpener(reply: string, lang: GuardLang = 'de'): boolean 
 // (Verb zuerst) genauso vorkommt wie "ein offenes Gespräch führen" (Verb
 // zuletzt) — die blosse Kombination aus Adjektiv und "Gespräch" ist schon
 // der eigentliche Signalgeber, unabhängig von der Satzstellung.
+// "Externe Berater/Expertise hinzuziehen" ist selbst eine Ausweich-Antwort
+// (siehe Steuerungsblock Punkt 14 im Prompt) — live beobachtet: das Modell
+// wich bei wiederholter Nachfrage nach konkreten Tools/Vorschlägen mehrfach
+// hintereinander auf genau diese Formulierung aus, statt reale Kategorien
+// oder Beispiele zu nennen ("Wieso machst du kein Excel?"-Feedback von Tam).
+// Kein legitimer Vorkommens-Fall dieser Formulierung im Prompt selbst (siehe
+// Grep-Check), daher bewusst grosszügig gehalten.
 const VAGUE_ACTION_PATTERNS_DE: RegExp[] = [
   /(kl[äa]rendes|ehrliches|offenes)\s+gespr[äa]ch/i,
   /transparent\s+(zu\s+)?kommunizieren/i,
@@ -172,6 +179,7 @@ const VAGUE_ACTION_PATTERNS_DE: RegExp[] = [
   /kl[äa]ren\s+sie\s+.{0,20}erwartungen/i,
   /langfristige\s+ziele\s+(zu\s+)?ber[üu]cksichtigen/i,
   /vor-?\s*und\s+nachteile\s+(ab)?w[äa]gen/i,
+  /externe[nr]?\s+(berater(in)?|beratung|expert(en|innen|ise)?|unterst[üu]tzung|hilfe)/i,
 ]
 
 const VAGUE_ACTION_PATTERNS_EN: RegExp[] = [
@@ -180,6 +188,7 @@ const VAGUE_ACTION_PATTERNS_EN: RegExp[] = [
   /clarify\s+expectations/i,
   /take\s+long-?term\s+goals\s+into\s+account/i,
   /weigh(ing)?\s+(the\s+)?pros\s+and\s+cons/i,
+  /external\s+(consultant|advisor|expert|support|help)/i,
 ]
 
 /** Erkennt, ob eine Antwort eine der nicht-konkretisierten Pauschal-

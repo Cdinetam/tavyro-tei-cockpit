@@ -415,6 +415,51 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   ggf. nicht zuverlässig, das eigentliche Sprach-Mirroring der Antwort
   selbst ist davon aber unberührt.
 
+- **Diagnose-Endpoint für Anzahl vergebener Auto-Zugangscodes**
+  (`GET /api/auto-access-debug`, `api/src/functions/autoAccessDebug.ts`):
+  beantwortet die wiederkehrende Frage "wie viele Leute haben die TEI Trust
+  Room Demo bereits über 'Code per E-Mail anfordern' genutzt" (sichtbar an
+  der Anzahl vergebener `auto-00x`-Codes, siehe `issuedCodesStore.ts`), ohne
+  Azure-Portal-Zugriff auf die `TeiIssuedCodes`-Tabelle zu benötigen. Neue,
+  rein lesende Funktion `getIssuedCodeCount()` in `issuedCodesStore.ts`
+  liest den bestehenden Zähler (`counter`/`sequence`/`value`), OHNE ihn wie
+  `getOrIssueCodeForEmail()` zu erhöhen. Auth wie bei `quotaDebug.ts` primär
+  per Header (`x-tei-access-code`, `checkAccessCode()`) — zusätzlich, NUR
+  für diesen einen Endpoint, akzeptiert er denselben Code auch als
+  `?code=...`-Query-Parameter, damit er sich ohne Zusatz-Tool (Postman,
+  curl, Browser-Erweiterung) direkt per Browser-URL aufrufen lässt, da ein
+  Custom-Header sich bei normaler Navigation nicht setzen lässt — der
+  geteilte `checkAccessCode()` selbst bleibt für den echten Chat-/
+  Analyse-Traffic bewusst unverändert Header-only. Aufruf z.B.:
+  `https://tei.tavyro.ch/api/auto-access-debug?code=<eigener Zugangscode>`.
+  Antwort: `{issuedCodeCount, latestCode, ownerName}`.
+
+- **Bug: Antwort-Schlaufe "externe Berater/Expertise hinzuziehen"** — live
+  gemeldet (Tam, mit Screenshots): bei wiederholter Nachfrage nach etwas
+  Konkretem ("Was für Tools?", "Konkreter Vorschlag?", "Wieso machst du kein
+  Excel?") wich das Modell mehrfach hintereinander auf praktisch dieselbe
+  Ausweich-Formulierung aus — "externe Berater/Expertise/Unterstützung
+  hinzuziehen" — statt eine Stufe konkreter zu werden. Der bestehende
+  Steuerungsblock im Prompt verlangte zwar generell Konkretheit (Punkt 10),
+  verbot diese eine spezifische Ausweich-Formulierung aber nicht explizit,
+  und das mechanische Sicherheitsnetz (`adviceGuard.ts`) erkannte eine
+  Antwort schon als "nicht ausweichend", sobald irgendeine der
+  COMMITMENT_PATTERNS-Floskeln ("Meine vorläufige Empfehlung ist...")
+  vorkam — auch wenn der Inhalt dahinter nur "externe Hilfe holen" war.
+  Behoben an zwei Stellen: (1) neuer Punkt 14 im Steuerungsblock
+  (`CHAT_SYSTEM_PROMPT`/`_EN`) verbietet diese Formulierung als
+  Standardausweg, verlangt bei konkreten Tool-/Methoden-Fragen reale
+  Kategorien/Beispiele (z.B. bei Eignungsdiagnostik: strukturierte
+  Interviews, psychometrische Tests, Assessment-Center, Referenzchecks) und
+  eine explizite Anti-Schlaufe-Regel (konkretere Nachfrage = vorherige
+  Antwort war zu allgemein, Antwort in derselben Wortwahl NICHT
+  wiederholen). (2) `adviceGuard.ts` → `VAGUE_ACTION_PATTERNS_DE/EN` erkennt
+  "externe Berater/Beratung/Expertise/Unterstützung/Hilfe" jetzt zusätzlich
+  als Ausweich-Muster und löst denselben bestehenden
+  Nachforderungs-Retry-Mechanismus aus wie die anderen vagen
+  Formulierungen (kein neuer Code-Pfad nötig, nur eine weitere Regex in der
+  bestehenden Liste).
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde
