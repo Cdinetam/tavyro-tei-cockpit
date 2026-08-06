@@ -388,7 +388,7 @@ const de: Copy = {
       heading: 'Die Limite der Demo-Version für dieses Gespräch ist erreicht.',
       body:
         'Dieses Gespräch endet hier bewusst — die volle Tiefe entsteht im persönlichen ' +
-        'Erstgespräch mit Tam Nguyen. Sie können jederzeit auch ein neues Gespräch starten.',
+        'Erstgespräch mit Tam Nguyen. Für einen vollen Zugang können Sie ein Erstgespräch vereinbaren.',
       newDialog: 'Neues Gespräch starten',
       booking: 'Erstgespräch buchen →',
     },
@@ -631,7 +631,7 @@ const en: Copy = {
       heading: 'This conversation has reached the demo version limit.',
       body:
         'This conversation deliberately ends here — the full depth unfolds in a personal intro ' +
-        'call with Tam Nguyen. You can also start a new conversation any time.',
+        'call with Tam Nguyen. For full access, you can arrange an intro call.',
       newDialog: 'Start new conversation',
       booking: 'Book an intro call →',
     },
