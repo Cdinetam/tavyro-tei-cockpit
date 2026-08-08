@@ -282,6 +282,8 @@ interface Copy {
       historyButton: string
       historyEmpty: string
       historyCloseAria: string
+      menuOpenAria: string
+      menuCloseAria: string
       empty: {
         heading: string
         body: string
@@ -525,6 +527,8 @@ const de: Copy = {
       historyButton: 'Verlauf',
       historyEmpty: 'Noch keine gespeicherten Gespräche.',
       historyCloseAria: 'Verlauf schliessen',
+      menuOpenAria: 'Menü öffnen',
+      menuCloseAria: 'Menü schliessen',
       empty: {
         heading: 'Worüber möchten Sie nachdenken?',
         body: 'Ihr Gespräch wird automatisch gespeichert und ist bei jedem Login wieder abrufbar.',
@@ -767,6 +771,8 @@ const en: Copy = {
       historyButton: 'History',
       historyEmpty: 'No saved conversations yet.',
       historyCloseAria: 'Close history',
+      menuOpenAria: 'Open menu',
+      menuCloseAria: 'Close menu',
       empty: {
         heading: "What's on your mind?",
         body: 'Your conversation is saved automatically and available again every time you log in.',
