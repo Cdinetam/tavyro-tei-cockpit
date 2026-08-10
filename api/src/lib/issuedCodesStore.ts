@@ -81,7 +81,7 @@ async function getTableClient(): Promise<TableClient | null> {
   return tableClientPromise
 }
 
-function formatCode(n: number): string {
+export function formatCode(n: number): string {
   return `auto-${String(n).padStart(3, '0')}`
 }
 
@@ -165,6 +165,47 @@ export async function getOrIssueCodeForEmail(
   await client.upsertEntity({ partitionKey: CODE_PARTITION, rowKey: code, name, email: key }, 'Replace')
 
   return { code, name, isNew: true, canSend: true }
+}
+
+/** Alle bisher automatisch vergebenen Codes (Partition by-code) — für
+ * Diagnose-Reports, siehe autoAccessDebug.ts. */
+export async function listIssuedCodes(): Promise<Array<{ code: string; name: string }>> {
+  const client = await getTableClient()
+
+  if (!client) {
+    return Array.from(memoryByCode.entries())
+      .map(([code, name]) => ({ code, name }))
+      .sort((a, b) => a.code.localeCompare(b.code))
+  }
+
+  const results: Array<{ code: string; name: string }> = []
+  for await (const entity of client.listEntities({
+    queryOptions: { filter: `PartitionKey eq '${CODE_PARTITION}'` },
+  })) {
+    results.push({ code: String(entity.rowKey), name: String(entity.name ?? '') })
+  }
+
+  results.sort((a, b) => a.code.localeCompare(b.code))
+  return results
+}
+
+/** Liefert die Anzahl bisher insgesamt automatisch vergebener Zugangscodes
+ * zurück (rein lesend, erhöht den Zähler NICHT) — für Diagnosezwecke, z.B.
+ * "wie viele Personen haben 'Code per E-Mail anfordern' schon genutzt".
+ * Siehe autoAccessDebug.ts. */
+export async function getIssuedCodeCount(): Promise<number> {
+  const client = await getTableClient()
+
+  if (!client) {
+    return memoryCounter
+  }
+
+  try {
+    const counterEntity = await client.getEntity<Record<string, unknown>>(COUNTER_PARTITION, COUNTER_ROW)
+    return Number(counterEntity.value ?? 0)
+  } catch {
+    return 0
+  }
 }
 
 /** Löst einen bereits automatisch vergebenen Code auf einen Namen auf — für

@@ -42,6 +42,12 @@ export function isAccessControlEnabled(): boolean {
   return loadCodes().length > 0
 }
 
+/** Alle statisch konfigurierten Pilot-Codes (PILOT_ACCESS_CODES) — für
+ * Diagnose-Reports, siehe autoAccessDebug.ts. */
+export function listPilotAccessCodes(): AccessCodeEntry[] {
+  return loadCodes()
+}
+
 /** Gibt den Namen der Person zurück, falls der Code gültig ist, sonst null. */
 export function resolveAccessCode(code: string): string | null {
   if (!code) return null
