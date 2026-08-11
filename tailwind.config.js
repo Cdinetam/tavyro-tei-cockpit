@@ -19,9 +19,9 @@ export default {
           strong: '#44567A',
         },
         paper: {
-          DEFAULT: '#EDEEF0',
-          dim: '#B7BCC4',
-          faint: '#7C8391',
+          DEFAULT: '#F0F2F4',
+          dim: '#C8CED6',
+          faint: '#9AA4B0',
         },
         brass: {
           DEFAULT: '#B08C4F',

@@ -3,6 +3,7 @@ import { requestChatReply } from '../lib/openaiClient.js'
 import { chatMessageHasContent, chatMessageText, type ChatMessage } from '../lib/schema.js'
 import { checkLiveSession } from '../lib/liveAuth.js'
 import { saveConversation } from '../lib/liveConversationStore.js'
+import { detectReplyLang } from '../lib/replyLang.js'
 
 // Siehe chat.ts für die Begründung der Anhebung von ursprünglich 2000 —
 // muss Platz für einen eingebetteten Dokumentanhang bieten (siehe
@@ -70,10 +71,12 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
     }
   }
 
+  const replyLang = detectReplyLang(messages, lang)
+
   try {
     // topicTurnHint bewusst konstant 1 — siehe Kommentar oben, verhindert
     // jede Cliffhanger-/Abschluss-Tendenz im Modell für Live-Nutzer.
-    const result = await requestChatReply(messages, 1, lang, (msg) => context.log(msg))
+    const result = await requestChatReply(messages, 1, replyLang, (msg) => context.log(msg))
 
     const fullHistory: ChatMessage[] = [...messages, { role: 'assistant', content: result.reply, cliffhanger: false }]
 

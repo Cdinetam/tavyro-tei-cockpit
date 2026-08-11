@@ -16,6 +16,12 @@
     font-feature-settings: 'tnum' 1, 'cv11' 1;
   }
 
+  input::placeholder,
+  textarea::placeholder {
+    color: #C8CED6;
+    opacity: 1;
+  }
+
   ::selection {
     background-color: rgba(176, 140, 79, 0.28);
     color: #fff;

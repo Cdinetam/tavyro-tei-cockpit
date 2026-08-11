@@ -141,7 +141,11 @@ async function callChatReplyCompletion(
     lang === 'en'
       ? `\n\nCURRENT TURN HINT (internal context, not visible to the person): If the latest user message continues the existing topic, it would be message number ${topicTurnHint} on this topic — see CLIFFHANGER NOTE FOR THIS REPLY above.`
       : `\n\nAKTUELLER TURN-HINWEIS (interner Kontext, nicht für die Person sichtbar): Falls die neueste Nutzer-Nachricht das bisherige Thema fortsetzt, wäre sie die ${topicTurnHint}. Nachricht zu diesem Thema — siehe CLIFFHANGER-HINWEIS FÜR DIESE ANTWORT oben.`
-  let systemContent = `${getChatSystemPrompt(lang)}${turnHintText}`
+  const languageLockText =
+    lang === 'en'
+      ? '\n\nMANDATORY LANGUAGE (overrides interface language): Write the reply field exclusively in English.'
+      : '\n\nVERBINDLICHE SPRACHE (hat Vorrang vor der Oberflächensprache): Schreibe das reply-Feld ausschliesslich auf Deutsch.'
+  let systemContent = `${getChatSystemPrompt(lang)}${turnHintText}${languageLockText}`
   // Nur beim automatischen Nachforderungs-Versuch gesetzt (siehe
   // requestChatReply/adviceGuard.ts) — verschärft die RATSCHLÄGE-Regel
   // gezielt für diesen einen Retry, statt den Haupt-Prompt dauerhaft zu

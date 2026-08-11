@@ -6,6 +6,7 @@ import { isDemoExpired, getDemoExpiresAt } from '../lib/pilotWindow.js'
 import { notify } from '../lib/notify.js'
 import { checkAccessCode } from '../lib/accessGate.js'
 import { getClientIp, isUnlimitedIp } from '../lib/clientIp.js'
+import { detectReplyLang } from '../lib/replyLang.js'
 
 interface ChatRequestBody {
   sessionId?: string
@@ -113,6 +114,8 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
     }
   }
 
+  const replyLang = detectReplyLang(messages, lang)
+
   const topicTurnHint =
     Number.isFinite(body.topicTurnHint) && (body.topicTurnHint as number) > 0
       ? (body.topicTurnHint as number)
@@ -211,7 +214,7 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
     : topicTurnHint
 
   try {
-    const result = await requestChatReply(messages, effectiveTopicTurnHint, lang, (msg) => context.log(msg))
+    const result = await requestChatReply(messages, effectiveTopicTurnHint, replyLang, (msg) => context.log(msg))
     const cliffhanger =
       isFinalAllowedMessage || effectiveTopicTurnHint >= CLIFFHANGER_TOPIC_TURN_THRESHOLD || result.themenwechsel
 
