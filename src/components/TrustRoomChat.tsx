@@ -22,14 +22,26 @@ function CharCounter({ length, lang }: { length: number; lang: Lang }) {
   const overLimit = length > MAX_MESSAGE_LENGTH
   const copy = getCopy(lang)
   return (
-    <p
-      className={`mt-2 font-mono text-[10.5px] uppercase tracking-widest2 ${
-        overLimit ? 'text-paper' : 'text-paper-faint'
-      }`}
-    >
-      {length} / {MAX_MESSAGE_LENGTH} {copy.chat.charCounterSuffix}
-      {overLimit ? copy.chat.charCounterOverLimit : ''}
-    </p>
+    <div className="mt-2">
+      <p
+        className={`font-mono text-[10.5px] uppercase tracking-widest2 ${
+          overLimit ? 'text-paper' : 'text-paper-faint'
+        }`}
+      >
+        {length} / {MAX_MESSAGE_LENGTH} {copy.chat.charCounterSuffix}
+      </p>
+      {overLimit && (
+        <p className="mt-1.5 font-sans text-[13px] leading-relaxed text-paper-dim">
+          {copy.chat.charCounterOverLimit}{' '}
+          <a
+            href={`mailto:${copy.chat.charCounterUpgradeMail}`}
+            className="text-brass-light underline decoration-brass-dim/50 underline-offset-2 transition-colors hover:text-paper"
+          >
+            {copy.chat.charCounterUpgradeMail}
+          </a>
+        </p>
+      )}
+    </div>
   )
 }
 

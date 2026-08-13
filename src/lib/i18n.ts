@@ -140,6 +140,7 @@ interface Copy {
   chat: {
     charCounterSuffix: string
     charCounterOverLimit: string
+    charCounterUpgradeMail: string
     cliffhangerLabel: string
     cliffhangerBooking: string
     exitDialog: {
@@ -370,7 +371,9 @@ const de: Copy = {
   },
   chat: {
     charCounterSuffix: 'Zeichen',
-    charCounterOverLimit: ' — bitte kürzen',
+    charCounterOverLimit:
+      'In der Demo-Version sind max. 2000 Zeichen zulässig. Für ein Upgrade kontaktieren Sie',
+    charCounterUpgradeMail: 'hello@tavyro.ch',
     cliffhangerLabel: 'Für das persönliche Gespräch',
     cliffhangerBooking: 'Erstgespräch buchen →',
     exitDialog: {
@@ -619,7 +622,9 @@ const en: Copy = {
   },
   chat: {
     charCounterSuffix: 'characters',
-    charCounterOverLimit: ' — please shorten',
+    charCounterOverLimit:
+      'The demo version allows a maximum of 2000 characters. For an upgrade, contact',
+    charCounterUpgradeMail: 'hello@tavyro.ch',
     cliffhangerLabel: 'For the personal conversation',
     cliffhangerBooking: 'Book an intro call →',
     exitDialog: {
