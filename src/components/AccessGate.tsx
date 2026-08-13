@@ -19,6 +19,7 @@ interface Props {
 export function AccessGate({ children }: Props) {
   const [unlocked, setUnlocked] = useState(() => getStoredAccessCode().length > 0)
   const [code, setCode] = useState('')
+  const [showCode, setShowCode] = useState(false)
   const [status, setStatus] = useState<'idle' | 'checking' | 'invalid'>('idle')
   // Eigener Status für den E-Mail-Gate-Weg (siehe autoAccess.ts) — getrennt
   // von `status` oben, da beide Wege unabhängig voneinander fehlschlagen/
@@ -152,16 +153,28 @@ export function AccessGate({ children }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6">
-          <input
-            type="password"
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value)
-              setStatus('idle')
-            }}
-            placeholder={copy.gate.inputPlaceholder}
-            className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
-          />
+          <div className="relative">
+            <input
+              type={showCode ? 'text' : 'password'}
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value)
+                setStatus('idle')
+              }}
+              placeholder={copy.gate.inputPlaceholder}
+              autoComplete="off"
+              className="w-full border border-line bg-ink-800/60 px-4 py-3 pr-14 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCode((open) => !open)}
+              aria-label={showCode ? copy.gate.hideCodeAria : copy.gate.showCodeAria}
+              aria-pressed={showCode}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+            >
+              {showCode ? copy.gate.hideCodeLabel : copy.gate.showCodeLabel}
+            </button>
+          </div>
           {status === 'invalid' && (
             <p className="mt-2 font-sans text-[13px] text-paper-dim">{copy.gate.invalidCode}</p>
           )}

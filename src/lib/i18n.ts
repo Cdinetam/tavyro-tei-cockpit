@@ -94,6 +94,10 @@ interface Copy {
     checking: string
     submit: string
     footer: string
+    showCodeAria: string
+    hideCodeAria: string
+    showCodeLabel: string
+    hideCodeLabel: string
     autoAccessCta: string
     autoAccessChecking: string
     autoAccessError: string
@@ -314,6 +318,10 @@ const de: Copy = {
     checking: 'Wird geprüft…',
     submit: 'Zugang bestätigen',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    showCodeAria: 'Zugangscode anzeigen',
+    hideCodeAria: 'Zugangscode verbergen',
+    showCodeLabel: 'Anzeigen',
+    hideCodeLabel: 'Verbergen',
     autoAccessCta: 'Code per E-Mail anfordern →',
     autoAccessChecking: 'Wird verschickt…',
     autoAccessError: 'Der Code konnte gerade nicht verschickt werden. Bitte in Kürze erneut versuchen.',
@@ -560,6 +568,10 @@ const en: Copy = {
     checking: 'Checking…',
     submit: 'Confirm access',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    showCodeAria: 'Show access code',
+    hideCodeAria: 'Hide access code',
+    showCodeLabel: 'Show',
+    hideCodeLabel: 'Hide',
     autoAccessCta: 'Request code by email →',
     autoAccessChecking: 'Sending…',
     autoAccessError: 'The code could not be sent right now. Please try again shortly.',
