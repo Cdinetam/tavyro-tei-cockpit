@@ -11,7 +11,9 @@ import {
   parseMessageAttachments,
 } from '../lib/attachments'
 
-const MAX_MESSAGE_LENGTH = 2000
+// Muss mit MAX_MESSAGE_LENGTH in api/src/functions/liveChat.ts übereinstimmen
+// (16'000 — Platz für getippten Text + eingebetteten Dokumentanhang).
+const MAX_MESSAGE_LENGTH = 16000
 const WARN_THRESHOLD = MAX_MESSAGE_LENGTH - 200
 
 function CharCounter({ length, lang }: { length: number; lang: Lang }) {
