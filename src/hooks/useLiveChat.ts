@@ -36,9 +36,14 @@ export function useLiveChat(lang: Lang = 'de') {
     setSavedConversations(list)
   }
 
+  // Bewusst NICHT nur einmal beim Mount: App mountet oft schon VOR dem Login
+  // (oder mit einem nach Passwort-Reset invaliden Token). Ohne erneutes Laden
+  // nach Login wirkten gespeicherte Gespräche "verschwunden", obwohl sie
+  // serverseitig noch unter der E-Mail liegen (Passwort-Reset löscht sie nie —
+  // siehe liveResetPassword.ts, nur Sitzungen werden invalidiert).
   useEffect(() => {
     refreshConversations()
-  }, [])
+  }, [lang])
 
   async function send(content: ChatMessage['content']) {
     if (!chatMessageHasContent(content) || status === 'sending') return
@@ -92,6 +97,7 @@ export function useLiveChat(lang: Lang = 'de') {
     savedConversations,
     send,
     reset,
+    refreshConversations,
     resumeConversation,
     deleteSavedConversation,
   }

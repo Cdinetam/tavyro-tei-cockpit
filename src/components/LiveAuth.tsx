@@ -7,6 +7,7 @@ import {
   liveRequestPasswordReset,
   liveResetPassword,
   liveActivate,
+  clearLiveToken,
 } from '../lib/liveClient'
 
 /**
@@ -546,6 +547,10 @@ export function LiveResetPasswordScreen({
     setStatus('checking')
     const result = await liveResetPassword(token, password, lang)
     if (result.status === 'ok') {
+      // Server invalidiert alle Sitzungen — lokalen Token ebenfalls sofort
+      // verwerfen, sonst bleibt ein toter Token im localStorage und die
+      // Gesprächsliste wird mit 401 als leere Liste gelesen.
+      clearLiveToken()
       setStatus('success')
     } else {
       setErrorMessage(result.message)

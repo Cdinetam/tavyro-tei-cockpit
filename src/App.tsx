@@ -140,6 +140,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, liveLoggedIn])
 
+  // Gesprächsliste nachladen, sobald der Live-Raum mit gültiger Sitzung
+  // sichtbar ist (z.B. nach Passwort-Reset + erneutem Login, Deep-Link,
+  // Tab-Wiederaufnahme) — unabhängig vom einmaligen Mount-Load in useLiveChat.
+  useEffect(() => {
+    if (view === 'liveRoom' && liveLoggedIn) {
+      void liveChat.refreshConversations()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, liveLoggedIn])
+
   // Hält html[lang]/Title/Meta-Description synchron mit lang — sowohl beim
   // ersten Rendern nach der Zugangscode-Gate (siehe AccessGate.tsx, das
   // dasselbe schon vorher für die Gate-Seite selbst setzt) als auch bei
@@ -215,8 +225,13 @@ export default function App() {
     setView(nextView)
   }
 
-  function handleLiveLoginSuccess() {
+  async function handleLiveLoginSuccess() {
     setLiveLoggedIn(true)
+    liveChat.reset()
+    // Nach Login (z.B. nach Passwort-Reset) Liste neu laden — sonst bleibt
+    // die einmal beim App-Start leere/401-Liste stehen und Gespräche wirken
+    // fälschlich gelöscht, obwohl sie serverseitig noch existieren.
+    await liveChat.refreshConversations()
     goToLiveView('liveRoom')
   }
 

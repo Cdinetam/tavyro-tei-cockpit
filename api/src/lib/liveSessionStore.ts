@@ -52,7 +52,10 @@ async function getTableClient(): Promise<TableClient | null> {
 export async function createSession(email: string): Promise<string> {
   const token = crypto.randomBytes(32).toString('hex')
   const client = await getTableClient()
-  const entity: SessionEntity = { email, createdAt: Date.now() }
+  // Immer normalisierte E-Mail speichern — muss exakt dem PartitionKey der
+  // Gespräche (liveConversationStore.ts → normalizeEmailKey) entsprechen,
+  // sonst findet listConversations nach Login nichts.
+  const entity: SessionEntity = { email: email.trim().toLowerCase(), createdAt: Date.now() }
 
   if (!client) {
     memoryStore.set(token, entity)
