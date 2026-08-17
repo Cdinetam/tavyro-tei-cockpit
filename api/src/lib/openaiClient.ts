@@ -17,6 +17,7 @@ import {
   stripListMarkers,
   type GuardLang,
 } from './adviceGuard.js'
+import { getRepetitionReinforcement, isRepetitiveReply } from './repetitionGuard.js'
 
 interface AzureOpenAiConfig {
   endpoint: string
@@ -300,7 +301,8 @@ export async function requestChatReply(
 
   for (
     let attempt = 1;
-    attempt <= MAX_REINFORCED_ATTEMPTS && needsReinforcedRetry(result.reply, lang);
+    attempt <= MAX_REINFORCED_ATTEMPTS &&
+    (needsReinforcedRetry(result.reply, lang) || isRepetitiveReply(result.reply, history));
     attempt++
   ) {
     if (Date.now() - startedAt >= TIME_BUDGET_MS) {
@@ -309,18 +311,29 @@ export async function requestChatReply(
       )
       break
     }
-    const reason = isEvasiveReply(result.reply, lang)
-      ? 'keine erkennbare vorläufige Einschätzung in der Antwort'
-      : 'verbotene Listen-/Aufzählungs-Formatierung in der Antwort'
+    const isRepetition = isRepetitiveReply(result.reply, history)
+    const reason = isRepetition
+      ? 'Antwort inhaltlich zu nah an einer früheren Assistenten-Antwort (Wiederholung)'
+      : isEvasiveReply(result.reply, lang)
+        ? 'keine erkennbare vorläufige Einschätzung in der Antwort'
+        : 'verbotene Listen-/Aufzählungs-Formatierung in der Antwort'
     log?.(
       `TEI chat: ${reason}${
-        adviceWasRequested ? ' (trotz expliziter Nachfrage)' : ''
+        adviceWasRequested && !isRepetition ? ' (trotz expliziter Nachfrage)' : ''
       } — Nachforderungs-Versuch ${attempt}/${MAX_REINFORCED_ATTEMPTS}.`,
     )
-    // Der letzte Versuch läuft mit niedrigerer Temperatur, um deterministischer
-    // der Anweisung zu folgen, statt erneut auf Sampling-Varianz zu hoffen.
-    const temperature = attempt === MAX_REINFORCED_ATTEMPTS ? 0.2 : undefined
-    result = await callOnce(getAdviceReinforcement(lang), temperature)
+    // Wiederholung: etwas höhere Temperatur, damit Sampling neue Formulierungen/
+    // Blickwinkel liefert. Ausweich-/Listen-Fälle: am letzten Versuch eher
+    // deterministisch (niedrige Temperatur), wie bisher.
+    const temperature = isRepetition
+      ? 0.7
+      : attempt === MAX_REINFORCED_ATTEMPTS
+        ? 0.2
+        : undefined
+    const reinforcement = isRepetition
+      ? getRepetitionReinforcement(lang)
+      : getAdviceReinforcement(lang)
+    result = await callOnce(reinforcement, temperature)
   }
 
   // Letzte, deterministische Absicherung: bleiben die verbotene Eröffnung
