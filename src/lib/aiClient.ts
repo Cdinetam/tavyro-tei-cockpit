@@ -37,15 +37,21 @@ function accessHeaders(): Record<string, string> {
  * wird. Ohne Backend (Mock-Modus) wird jeder nicht-leere Code akzeptiert,
  * damit sich der Flow lokal testen lässt.
  */
-export async function verifyAccessCode(code: string): Promise<boolean> {
+export async function verifyAccessCode(code: string, email?: string): Promise<boolean> {
+  const normalizedCode = code.trim().toLowerCase()
   if (!API_BASE_URL) {
-    return code.trim().length > 0
+    return normalizedCode.length > 0
   }
 
   try {
+    const trimmedEmail = email?.trim()
     const response = await fetch(`${API_BASE_URL}/verify-access`, {
       method: 'POST',
-      headers: { 'x-tei-access-code': code },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tei-access-code': normalizedCode,
+      },
+      body: JSON.stringify(trimmedEmail ? { email: trimmedEmail } : {}),
     })
     return response.ok
   } catch {

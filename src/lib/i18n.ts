@@ -315,7 +315,8 @@ const de: Copy = {
     body: 'Den Zugangscode haben Sie von Tam Nguyen persönlich erhalten.',
     noCode: 'Kein Zugangscode?',
     inputPlaceholder: 'Zugangscode',
-    invalidCode: 'Dieser Code ist nicht gültig. Bitte prüfen Sie Gross-/Kleinschreibung.',
+    invalidCode:
+      'Dieser Code ist nicht gültig. Bitte exakt den Code aus der E-Mail übernehmen (Format auto-XXX, alles klein).',
     checking: 'Wird geprüft…',
     submit: 'Zugang bestätigen',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
@@ -567,7 +568,8 @@ const en: Copy = {
     body: 'You received your access code personally from Tam Nguyen.',
     noCode: "Don't have an access code?",
     inputPlaceholder: 'Access code',
-    invalidCode: 'This code is not valid. Please check upper/lower case.',
+    invalidCode:
+      'This code is not valid. Please copy the code from your email exactly (format auto-XXX, all lowercase).',
     checking: 'Checking…',
     submit: 'Confirm access',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",

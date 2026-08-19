@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { verifyAccessCode, storeAccessCode, getStoredAccessCode, requestAutoAccess } from '../lib/aiClient'
 import { applyDocumentMeta, detectInitialLang, getCopy, hasEnPrefix } from '../lib/i18n'
 
@@ -30,6 +30,7 @@ export function AccessGate({ children }: Props) {
   const [autoErrorMessage, setAutoErrorMessage] = useState('')
   const [email, setEmail] = useState('')
   const [sentToEmail, setSentToEmail] = useState('')
+  const codeInputRef = useRef<HTMLInputElement>(null)
   // AccessGate rendert in main.tsx VOR App.tsx (siehe dort) — hat also
   // keinen Zugriff auf Apps view/lang-State. Ermittelt die Sprache deshalb
   // selbst, einmalig beim ersten Rendern (gleiche Logik wie App.tsx, siehe
@@ -57,11 +58,15 @@ export function AccessGate({ children }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (code.trim().length === 0) return
+    const normalizedCode = code.trim().toLowerCase()
+    if (normalizedCode.length === 0) return
     setStatus('checking')
-    const valid = await verifyAccessCode(code.trim())
+    const valid = await verifyAccessCode(
+      normalizedCode,
+      sentToEmail.trim().length > 0 ? sentToEmail.trim() : undefined,
+    )
     if (valid) {
-      storeAccessCode(code.trim())
+      storeAccessCode(normalizedCode)
       setUnlocked(true)
     } else {
       setStatus('invalid')
@@ -84,6 +89,8 @@ export function AccessGate({ children }: Props) {
     if (result.status === 'ok') {
       setSentToEmail(trimmed)
       setAutoStatus('sent')
+      setStatus('idle')
+      window.setTimeout(() => codeInputRef.current?.focus(), 0)
     } else {
       setAutoErrorMessage(result.message)
       setAutoStatus('error')
@@ -155,6 +162,7 @@ export function AccessGate({ children }: Props) {
         <form onSubmit={handleSubmit} className="mt-6">
           <div className="relative">
             <input
+              ref={codeInputRef}
               type={showCode ? 'text' : 'password'}
               value={code}
               onChange={(e) => {
@@ -163,6 +171,9 @@ export function AccessGate({ children }: Props) {
               }}
               placeholder={copy.gate.inputPlaceholder}
               autoComplete="off"
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
               className="w-full border border-line bg-ink-800/60 px-4 py-3 pr-14 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
             />
             <button

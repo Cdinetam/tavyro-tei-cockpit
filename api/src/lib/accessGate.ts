@@ -1,6 +1,6 @@
 import type { HttpRequest, HttpResponseInit } from '@azure/functions'
-import { resolveAccessCode, isAccessControlEnabled } from './accessCodes.js'
-import { resolveIssuedCode } from './issuedCodesStore.js'
+import { normalizeAccessCode, resolveAccessCode, isAccessControlEnabled } from './accessCodes.js'
+import { resolveIssuedCode, verifyIssuedCodeForEmail } from './issuedCodesStore.js'
 
 export interface AccessCheckResult {
   denied: HttpResponseInit | null
@@ -25,15 +25,33 @@ export interface AccessCheckResult {
  * Ist PILOT_ACCESS_CODES nicht gesetzt, ist die gesamte Prüfung deaktiviert
  * — so bleibt lokale Entwicklung ohne Zusatzschritt möglich.
  */
-export async function checkAccessCode(req: HttpRequest): Promise<AccessCheckResult> {
-  const providedCode = req.headers.get('x-tei-access-code') ?? ''
+export async function checkAccessCode(
+  req: HttpRequest,
+  options?: { email?: string },
+): Promise<AccessCheckResult> {
+  const providedCode = normalizeAccessCode(req.headers.get('x-tei-access-code') ?? '')
+  const email = (options?.email ?? '').trim()
 
   if (!isAccessControlEnabled()) {
     return { denied: null, ownerName: null, code: providedCode }
   }
 
+  if (!providedCode) {
+    return {
+      denied: {
+        status: 401,
+        jsonBody: { status: 'error', message: 'Zugangscode fehlt oder ist ungültig.' },
+      },
+      ownerName: null,
+      code: providedCode,
+    }
+  }
+
   const staticOwnerName = resolveAccessCode(providedCode)
-  const ownerName = staticOwnerName ?? (providedCode ? await resolveIssuedCode(providedCode) : null)
+  let ownerName =
+    staticOwnerName ??
+    (await resolveIssuedCode(providedCode)) ??
+    (email ? await verifyIssuedCodeForEmail(email, providedCode) : null)
 
   if (!ownerName) {
     return {

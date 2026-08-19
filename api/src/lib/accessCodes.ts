@@ -42,6 +42,11 @@ export function isAccessControlEnabled(): boolean {
   return loadCodes().length > 0
 }
 
+/** Einheitliche Normalisierung für Code-Vergleiche (Trim + Kleinbuchstaben). */
+export function normalizeAccessCode(code: string): string {
+  return code.trim().toLowerCase()
+}
+
 /** Alle statisch konfigurierten Pilot-Codes (PILOT_ACCESS_CODES) — für
  * Diagnose-Reports, siehe autoAccessDebug.ts. */
 export function listPilotAccessCodes(): AccessCodeEntry[] {
@@ -50,7 +55,8 @@ export function listPilotAccessCodes(): AccessCodeEntry[] {
 
 /** Gibt den Namen der Person zurück, falls der Code gültig ist, sonst null. */
 export function resolveAccessCode(code: string): string | null {
-  if (!code) return null
-  const entry = loadCodes().find((c) => c.code === code)
+  const normalized = normalizeAccessCode(code)
+  if (!normalized) return null
+  const entry = loadCodes().find((c) => normalizeAccessCode(c.code) === normalized)
   return entry ? entry.name : null
 }

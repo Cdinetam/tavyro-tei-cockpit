@@ -1,4 +1,5 @@
 import { TableClient } from '@azure/data-tables'
+import { normalizeAccessCode } from './accessCodes.js'
 
 /**
  * Automatische Zugangscode-Vergabe für Besucher ohne persönlichen Code von
@@ -97,6 +98,19 @@ function normalizeEmailKey(email: string): string {
   return email.trim().toLowerCase().replace(/\//g, '_')
 }
 
+async function ensureCodeIndexEntry(
+  client: TableClient,
+  code: string,
+  name: string,
+  emailKey: string,
+): Promise<void> {
+  const normalizedCode = normalizeAccessCode(code)
+  await client.upsertEntity(
+    { partitionKey: CODE_PARTITION, rowKey: normalizedCode, name, email: emailKey },
+    'Replace',
+  )
+}
+
 /**
  * Liefert den bestehenden Auto-Code für diese E-Mail-Adresse zurück, oder
  * erzeugt einen neuen mit der nächsten fortlaufenden Nummer. isNew ist nur
@@ -130,6 +144,8 @@ export async function getOrIssueCodeForEmail(
 
   try {
     const existing = await client.getEntity<Record<string, unknown>>(EMAIL_PARTITION, key)
+    const code = normalizeAccessCode(String(existing.code))
+    const name = String(existing.name)
     const lastSentAt = Number(existing.lastSentAt ?? 0)
     const canSend = now - lastSentAt >= RESEND_COOLDOWN_MS
     if (canSend) {
@@ -138,7 +154,10 @@ export async function getOrIssueCodeForEmail(
         'Merge',
       )
     }
-    return { code: String(existing.code), name: String(existing.name), isNew: false, canSend }
+    // Reparatur/Legacy: by-code-Index kann fehlen, obwohl by-email existiert —
+    // ohne diesen Eintrag schlägt resolveIssuedCode() fehl (live beobachtet).
+    await ensureCodeIndexEntry(client, code, name, key)
+    return { code, name, isNew: false, canSend }
   } catch {
     // noch kein Eintrag für diese Adresse — neuen Code vergeben, siehe unten
   }
@@ -162,9 +181,38 @@ export async function getOrIssueCodeForEmail(
     { partitionKey: EMAIL_PARTITION, rowKey: key, code, name, lastSentAt: now },
     'Replace',
   )
-  await client.upsertEntity({ partitionKey: CODE_PARTITION, rowKey: code, name, email: key }, 'Replace')
+  await ensureCodeIndexEntry(client, code, name, key)
 
   return { code, name, isNew: true, canSend: true }
+}
+
+/** Fallback-Prüfung für verify-access: Code muss exakt zum by-email-Eintrag
+ * passen — repariert dabei bei Bedarf den by-code-Index. */
+export async function verifyIssuedCodeForEmail(email: string, code: string): Promise<string | null> {
+  const key = normalizeEmailKey(email)
+  const normalizedCode = normalizeAccessCode(code)
+  if (!normalizedCode) return null
+
+  const client = await getTableClient()
+
+  if (!client) {
+    const existing = memoryByEmail.get(key)
+    if (existing && normalizeAccessCode(existing.code) === normalizedCode) {
+      return existing.name
+    }
+    return null
+  }
+
+  try {
+    const entity = await client.getEntity<Record<string, unknown>>(EMAIL_PARTITION, key)
+    const storedCode = normalizeAccessCode(String(entity.code))
+    if (storedCode !== normalizedCode) return null
+    const name = String(entity.name)
+    await ensureCodeIndexEntry(client, storedCode, name, key)
+    return name
+  } catch {
+    return null
+  }
 }
 
 /** Alle bisher automatisch vergebenen Codes (Partition by-code) — für
@@ -212,14 +260,17 @@ export async function getIssuedCodeCount(): Promise<number> {
  * accessGate.ts, damit checkAccessCode() auch automatisch vergebene Codes
  * als gültig erkennt, nicht nur die statische PILOT_ACCESS_CODES-Liste. */
 export async function resolveIssuedCode(code: string): Promise<string | null> {
+  const normalizedCode = normalizeAccessCode(code)
+  if (!normalizedCode) return null
+
   const client = await getTableClient()
 
   if (!client) {
-    return memoryByCode.get(code) ?? null
+    return memoryByCode.get(normalizedCode) ?? null
   }
 
   try {
-    const entity = await client.getEntity<Record<string, unknown>>(CODE_PARTITION, code)
+    const entity = await client.getEntity<Record<string, unknown>>(CODE_PARTITION, normalizedCode)
     return String(entity.name)
   } catch {
     return null
