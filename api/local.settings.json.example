@@ -12,7 +12,7 @@
     "DEMO_EXPIRES_AT": "2026-09-30T23:59:59Z",
 
     "PILOT_ACCESS_CODES": "[{\"name\":\"Beispiel CEO\",\"code\":\"tavyro-beispiel-482\"}]",
-    "PILOT_WEEKLY_LIMIT": "5",
+    "PILOT_WEEKLY_LIMIT": "7",
 
     "NOTIFY_WEBHOOK_URL": "",
 

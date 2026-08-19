@@ -8,6 +8,8 @@ interface CodeUsageRow {
   code: string
   name: string
   source: 'auto' | 'pilot'
+  totalConversations: number
+  /** @deprecated Alias — früher conversationsLast7Days (gleitendes Fenster). */
   conversationsLast7Days: number
 }
 
@@ -16,12 +18,16 @@ async function buildCodeUsageRows(
   source: 'auto' | 'pilot',
 ): Promise<CodeUsageRow[]> {
   return Promise.all(
-    entries.map(async (entry) => ({
-      code: entry.code,
-      name: entry.name,
-      source,
-      conversationsLast7Days: await getUsageCount(entry.code),
-    })),
+    entries.map(async (entry) => {
+      const totalConversations = await getUsageCount(entry.code)
+      return {
+        code: entry.code,
+        name: entry.name,
+        source,
+        totalConversations,
+        conversationsLast7Days: totalConversations,
+      }
+    }),
   )
 }
 
@@ -31,8 +37,8 @@ async function buildCodeUsageRows(
  * (auto-001, auto-002, ...) insgesamt bisher ausgegeben wurden — also wie
  * viele Personen den "Code per E-Mail anfordern"-Weg (AccessGate.tsx)
  * genutzt haben, plus einen vollständigen Report über alle Auto- und
- * Pilot-Codes inkl. begonnener Gespräche im gleitenden 7-Tage-Fenster
- * (siehe quotaStore.ts / chat.ts recordUsage).
+ * Pilot-Codes inkl. begonnener Gespräche insgesamt pro Code (Lifetime,
+ * siehe quotaStore.ts / chat.ts recordUsage).
  *
  * Auth: akzeptiert den Zugangscode entweder wie gewohnt per Header
  * (x-tei-access-code, siehe checkAccessCode) ODER — nur für DIESEN
@@ -78,8 +84,8 @@ export async function autoAccessDebug(req: HttpRequest): Promise<HttpResponseIni
   ])
 
   const allRows = [...autoRows, ...pilotRows]
-  const totalConversationsLast7Days = allRows.reduce((sum, row) => sum + row.conversationsLast7Days, 0)
-  const codesWithUsageLast7Days = allRows.filter((row) => row.conversationsLast7Days > 0).length
+  const totalConversationsAllCodes = allRows.reduce((sum, row) => sum + row.totalConversations, 0)
+  const codesWithUsage = allRows.filter((row) => row.totalConversations > 0).length
 
   return {
     status: 200,
@@ -87,10 +93,13 @@ export async function autoAccessDebug(req: HttpRequest): Promise<HttpResponseIni
       issuedCodeCount,
       latestCode: issuedCodeCount > 0 ? formatCode(issuedCodeCount) : null,
       ownerName,
+      conversationLimit: getWeeklyLimit(),
       weeklyLimit: getWeeklyLimit(),
       report: {
-        totalConversationsLast7Days,
-        codesWithUsageLast7Days,
+        totalConversationsAllCodes,
+        totalConversationsLast7Days: totalConversationsAllCodes,
+        codesWithUsage,
+        codesWithUsageLast7Days: codesWithUsage,
         autoAccessCodes: autoRows,
         pilotCodes: pilotRows,
       },

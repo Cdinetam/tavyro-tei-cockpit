@@ -277,7 +277,7 @@ interface Props {
   savedConversations: SavedConversation[]
   initialDraft?: string
   /**
-   * Die tatsächlich konfigurierte Wochengrenze (PILOT_WEEKLY_LIMIT), erst
+   * Die tatsächlich konfigurierte Gesamt-Grenze pro Code (PILOT_WEEKLY_LIMIT), erst
    * bekannt nachdem das Backend einmal "limit_reached" gemeldet hat. Bis
    * dahin null — die UI zeigt dann nur allgemein "Demo-Version" ohne Zahl.
    */

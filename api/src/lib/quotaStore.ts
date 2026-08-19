@@ -1,9 +1,10 @@
 import { TableClient } from '@azure/data-tables'
 
 /**
- * Zählt Nutzung pro Zugangscode (= pro Person) über ein gleitendes
- * 7-Tage-Fenster hinweg — nicht pro Browser-Sitzung, denn ein neuer
- * Inkognito-Tab darf das Limit nicht zurücksetzen können.
+ * Zählt begonnene Gespräche pro Zugangscode (= pro Person) insgesamt
+ * (Lifetime) — nicht pro Browser-Sitzung, denn ein neuer Inkognito-Tab darf
+ * das Limit nicht zurücksetzen, und nach Ablauf eines Zeitfensters darf derselbe
+ * Code nicht erneut unbegrenzt neue Gespräche starten.
  *
  * Produktion: Azure Table Storage, über die Umgebungsvariable
  * QUOTA_STORAGE_CONNECTION_STRING (eigener Storage-Account, z.B.
@@ -22,7 +23,6 @@ import { TableClient } from '@azure/data-tables'
  * QUOTA_STORAGE_CONNECTION_STRING gesetzt ist.
  */
 
-const WINDOW_MS = 7 * 24 * 60 * 60 * 1000 // 7 Tage, gleitendes Fenster
 const TABLE_NAME = 'TeiAccessQuota'
 
 let tableClientPromise: Promise<TableClient | null> | null = null
@@ -61,28 +61,26 @@ async function getTableClient(): Promise<TableClient | null> {
   return tableClientPromise
 }
 
-function pruneToWindow(timestamps: number[]): number[] {
-  const cutoff = Date.now() - WINDOW_MS
-  return timestamps.filter((t) => t > cutoff)
+/** Gesamt-Limit begonnener Gespräche pro Code (env-Name historisch "WEEKLY"). */
+export function getWeeklyLimit(): number {
+  return Number(process.env.PILOT_WEEKLY_LIMIT ?? '7')
 }
 
-export function getWeeklyLimit(): number {
-  return Number(process.env.PILOT_WEEKLY_LIMIT ?? '5')
+function parseTimestamps(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter((t): t is number => typeof t === 'number' && Number.isFinite(t))
 }
 
 export async function getUsageCount(accessCode: string): Promise<number> {
   const client = await getTableClient()
 
   if (!client) {
-    const timestamps = pruneToWindow(memoryStore.get(accessCode) ?? [])
-    memoryStore.set(accessCode, timestamps)
-    return timestamps.length
+    return (memoryStore.get(accessCode) ?? []).length
   }
 
   try {
     const entity = await client.getEntity<Record<string, unknown>>('quota', accessCode)
-    const timestamps = pruneToWindow(JSON.parse(String(entity.timestampsJson ?? '[]')) as number[])
-    return timestamps.length
+    return parseTimestamps(JSON.parse(String(entity.timestampsJson ?? '[]'))).length
   } catch {
     return 0 // noch kein Eintrag für diesen Code
   }
@@ -93,7 +91,7 @@ export async function recordUsage(accessCode: string): Promise<number> {
   const now = Date.now()
 
   if (!client) {
-    const timestamps = pruneToWindow(memoryStore.get(accessCode) ?? [])
+    const timestamps = memoryStore.get(accessCode) ?? []
     timestamps.push(now)
     memoryStore.set(accessCode, timestamps)
     return timestamps.length
@@ -102,7 +100,7 @@ export async function recordUsage(accessCode: string): Promise<number> {
   let timestamps: number[] = []
   try {
     const entity = await client.getEntity<Record<string, unknown>>('quota', accessCode)
-    timestamps = pruneToWindow(JSON.parse(String(entity.timestampsJson ?? '[]')) as number[])
+    timestamps = parseTimestamps(JSON.parse(String(entity.timestampsJson ?? '[]')))
   } catch {
     timestamps = []
   }

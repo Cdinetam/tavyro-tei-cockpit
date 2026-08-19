@@ -121,12 +121,13 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
       ? (body.topicTurnHint as number)
       : 1
 
-  // Das Wochenlimit gilt pro begonnenem Gespräch, nicht pro einzelner
-  // Nachricht — ein echtes Gespräch besteht naturgemäss aus mehreren
-  // Hin-und-her-Nachrichten, die nicht einzeln gegen das Kontingent zählen
-  // dürfen. Geprüft und gezählt wird das Limit daher nur beim ersten Turn;
-  // ein bereits laufendes Gespräch darf zu Ende geführt werden, selbst wenn
-  // das Kontingent zwischenzeitlich durch andere Anfragen erreicht wird.
+  // Das Gesprächskontingent gilt pro begonnenem Gespräch insgesamt (Lifetime
+  // pro Zugangscode), nicht pro einzelner Nachricht — ein echtes Gespräch
+  // besteht naturgemäss aus mehreren Hin-und-her-Nachrichten, die nicht
+  // einzeln gegen das Kontingent zählen dürfen. Geprüft und gezählt wird das
+  // Limit daher nur beim ersten Turn; ein bereits laufendes Gespräch darf zu
+  // Ende geführt werden, selbst wenn das Kontingent zwischenzeitlich durch
+  // andere Anfragen erreicht wird.
   //
   // Schlüssel für die Zählung ist der Zugangscode selbst (access.code), NICHT
   // mehr die IP-Adresse — live festgestellt, dass eine reine IP-Bindung

@@ -388,8 +388,8 @@ const de: Copy = {
     limitReached: {
       kicker: 'Demo-Version · Kontingent erreicht',
       headingWithLimit: (limit) =>
-        `Die Demo-Version ist auf ${limit} Gespräche pro Woche begrenzt — Ihr Kontingent ist erreicht.`,
-      headingWithoutLimit: 'Ihr Kontingent in der Demo-Version ist für diese Woche erreicht.',
+        `Die Demo-Version ist auf ${limit} Gespräche insgesamt begrenzt — Ihr Kontingent ist erreicht.`,
+      headingWithoutLimit: 'Ihr Kontingent in der Demo-Version ist erreicht.',
       body:
         'Das ist bewusst so begrenzt: ein erstes Gespräch, alles Weitere gehört in einen echten ' +
         'Austausch — nicht in eine endlose Demo-Schleife.',
@@ -416,7 +416,7 @@ const de: Copy = {
       body:
         'Anders als die kurze Analyse: hier entsteht ein echtes, mehrteiliges Gespräch — TEI® hört ' +
         'zu, ordnet ein und bleibt mit Ihnen im Austausch.',
-      demoNote: 'Demo-Version · kostenlose Testphase, begrenzt auf wenige Gespräche pro Woche',
+      demoNote: 'Demo-Version · kostenlose Testphase, begrenzt auf wenige Gespräche insgesamt',
       placeholder: 'Beschreiben Sie in ein paar Sätzen, was Sie beschäftigt…',
       startButton: 'Dialog starten →',
       savedKicker: 'Lokal gespeicherte Gespräche auf diesem Gerät',
@@ -639,8 +639,8 @@ const en: Copy = {
     limitReached: {
       kicker: 'Demo version · quota reached',
       headingWithLimit: (limit) =>
-        `The demo version is limited to ${limit} conversations per week — your quota is reached.`,
-      headingWithoutLimit: 'Your quota for the demo version is reached for this week.',
+        `The demo version is limited to ${limit} conversations in total — your quota is reached.`,
+      headingWithoutLimit: 'Your quota for the demo version is reached.',
       body:
         "That's a deliberate limit: a first conversation — everything beyond that belongs in a real " +
         'exchange, not an endless demo loop.',
@@ -667,7 +667,7 @@ const en: Copy = {
       body:
         'Unlike the short analysis, this is a real, multi-turn conversation — TEI® listens, reflects, ' +
         'and stays in dialogue with you.',
-      demoNote: 'Demo version · free trial phase, limited to a few conversations per week',
+      demoNote: 'Demo version · free trial phase, limited to a few conversations in total',
       placeholder: "Describe in a few sentences what's on your mind…",
       startButton: 'Start dialogue →',
       savedKicker: 'Conversations saved locally on this device',

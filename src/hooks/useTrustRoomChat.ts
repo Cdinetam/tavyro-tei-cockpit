@@ -75,7 +75,7 @@ export function useTrustRoomChat(lang: Lang = 'de') {
   // wurde (neues Kapitel beginnt) oder ein neues Gespräch startet.
   const [topicStreak, setTopicStreak] = useState(0)
   // Erst bekannt, sobald das Backend einmal "limit_reached" zurückgibt (mit
-  // der tatsächlich konfigurierten Wochengrenze, siehe PILOT_WEEKLY_LIMIT) —
+  // der tatsächlich konfigurierten Gesamt-Grenze pro Code, siehe PILOT_WEEKLY_LIMIT) —
   // vorher zeigt die UI nur allgemein "Demo-Version", ohne konkrete Zahl.
   const [weeklyLimit, setWeeklyLimit] = useState<number | null>(null)
 
