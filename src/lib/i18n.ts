@@ -91,6 +91,7 @@ interface Copy {
     noCode: string
     inputPlaceholder: string
     invalidCode: string
+    networkError: string
     checking: string
     submit: string
     footer: string
@@ -317,6 +318,8 @@ const de: Copy = {
     inputPlaceholder: 'Zugangscode',
     invalidCode:
       'Dieser Code ist nicht gültig. Bitte exakt den Code aus der E-Mail übernehmen (Format auto-XXX, alles klein).',
+    networkError:
+      'Verbindung zum Server fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.',
     checking: 'Wird geprüft…',
     submit: 'Zugang bestätigen',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
@@ -570,6 +573,7 @@ const en: Copy = {
     inputPlaceholder: 'Access code',
     invalidCode:
       'This code is not valid. Please copy the code from your email exactly (format auto-XXX, all lowercase).',
+    networkError: 'Connection to the server failed. Please check your internet connection and try again.',
     checking: 'Checking…',
     submit: 'Confirm access',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",

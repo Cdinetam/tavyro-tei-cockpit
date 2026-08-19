@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { verifyAccessCode, storeAccessCode, getStoredAccessCode, requestAutoAccess } from '../lib/aiClient'
+import { verifyAccessCode, storeAccessCode, getStoredAccessCode, requestAutoAccess, storePendingAccessEmail, getPendingAccessEmail } from '../lib/aiClient'
 import { applyDocumentMeta, detectInitialLang, getCopy, hasEnPrefix } from '../lib/i18n'
 
 /** /live-Pfade (Live-Version, siehe App.tsx/LiveAuth.tsx) haben ein
@@ -20,16 +20,18 @@ export function AccessGate({ children }: Props) {
   const [unlocked, setUnlocked] = useState(() => getStoredAccessCode().length > 0)
   const [code, setCode] = useState('')
   const [showCode, setShowCode] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'checking' | 'invalid'>('idle')
+  const [status, setStatus] = useState<'idle' | 'checking' | 'invalid' | 'network'>('idle')
   // Eigener Status für den E-Mail-Gate-Weg (siehe autoAccess.ts) — getrennt
   // von `status` oben, da beide Wege unabhängig voneinander fehlschlagen/
   // laufen können. 'sent' bedeutet: Code wurde per E-Mail verschickt, die
   // Person muss ihn jetzt oben im normalen Zugangscode-Feld eingeben — es
   // gibt bewusst KEINE Sofort-Freischaltung mehr, siehe issuedCodesStore.ts.
-  const [autoStatus, setAutoStatus] = useState<'idle' | 'checking' | 'sent' | 'error'>('idle')
+  const [autoStatus, setAutoStatus] = useState<'idle' | 'checking' | 'sent' | 'error'>(() =>
+    getPendingAccessEmail().length > 0 ? 'sent' : 'idle',
+  )
   const [autoErrorMessage, setAutoErrorMessage] = useState('')
   const [email, setEmail] = useState('')
-  const [sentToEmail, setSentToEmail] = useState('')
+  const [sentToEmail, setSentToEmail] = useState(() => getPendingAccessEmail())
   const codeInputRef = useRef<HTMLInputElement>(null)
   // AccessGate rendert in main.tsx VOR App.tsx (siehe dort) — hat also
   // keinen Zugriff auf Apps view/lang-State. Ermittelt die Sprache deshalb
@@ -61,15 +63,20 @@ export function AccessGate({ children }: Props) {
     const normalizedCode = code.trim().toLowerCase()
     if (normalizedCode.length === 0) return
     setStatus('checking')
-    const valid = await verifyAccessCode(
-      normalizedCode,
-      sentToEmail.trim().length > 0 ? sentToEmail.trim() : undefined,
-    )
-    if (valid) {
-      storeAccessCode(normalizedCode)
-      setUnlocked(true)
-    } else {
-      setStatus('invalid')
+    const emailHint = sentToEmail.trim() || getPendingAccessEmail()
+    try {
+      const result = await verifyAccessCode(normalizedCode, emailHint || undefined)
+      if (result === 'ok') {
+        storeAccessCode(normalizedCode)
+        storePendingAccessEmail('')
+        setUnlocked(true)
+        const prefix = hasEnPrefix(window.location.pathname) ? '/en' : ''
+        window.location.assign(`${prefix}/gespraech`)
+        return
+      }
+      setStatus(result === 'network' ? 'network' : 'invalid')
+    } catch {
+      setStatus('network')
     }
   }
 
@@ -88,6 +95,7 @@ export function AccessGate({ children }: Props) {
     const result = await requestAutoAccess(trimmed, lang)
     if (result.status === 'ok') {
       setSentToEmail(trimmed)
+      storePendingAccessEmail(trimmed)
       setAutoStatus('sent')
       setStatus('idle')
       window.setTimeout(() => codeInputRef.current?.focus(), 0)
@@ -188,6 +196,9 @@ export function AccessGate({ children }: Props) {
           </div>
           {status === 'invalid' && (
             <p className="mt-2 font-sans text-[13px] text-paper-dim">{copy.gate.invalidCode}</p>
+          )}
+          {status === 'network' && (
+            <p className="mt-2 font-sans text-[13px] text-paper-dim">{copy.gate.networkError}</p>
           )}
           <button
             type="submit"

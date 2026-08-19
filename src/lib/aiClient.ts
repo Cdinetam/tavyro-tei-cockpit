@@ -9,22 +9,65 @@ export const isMockMode = !API_BASE_URL
 
 const SESSION_STORAGE_KEY = 'tei-session-id'
 const ACCESS_CODE_STORAGE_KEY = 'tei-access-code'
+const PENDING_EMAIL_STORAGE_KEY = 'tei-pending-email'
+
+/** Fallback, falls sessionStorage auf dem Gerät blockiert ist (z.B. iOS
+ * Privatmodus) — gilt nur für die laufende Browser-Sitzung. */
+let memoryAccessCode = ''
+let memoryPendingEmail = ''
+
+function readSessionItem(key: string): string {
+  try {
+    return sessionStorage.getItem(key) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function writeSessionItem(key: string, value: string): boolean {
+  try {
+    sessionStorage.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
 
 export function getSessionId(): string {
-  let id = sessionStorage.getItem(SESSION_STORAGE_KEY)
+  let id = readSessionItem(SESSION_STORAGE_KEY)
   if (!id) {
     id = crypto.randomUUID()
-    sessionStorage.setItem(SESSION_STORAGE_KEY, id)
+    writeSessionItem(SESSION_STORAGE_KEY, id)
   }
   return id
 }
 
 export function getStoredAccessCode(): string {
-  return sessionStorage.getItem(ACCESS_CODE_STORAGE_KEY) ?? ''
+  return readSessionItem(ACCESS_CODE_STORAGE_KEY) || memoryAccessCode
 }
 
 export function storeAccessCode(code: string): void {
-  sessionStorage.setItem(ACCESS_CODE_STORAGE_KEY, code)
+  memoryAccessCode = code
+  writeSessionItem(ACCESS_CODE_STORAGE_KEY, code)
+}
+
+export function getPendingAccessEmail(): string {
+  return readSessionItem(PENDING_EMAIL_STORAGE_KEY) || memoryPendingEmail
+}
+
+export function storePendingAccessEmail(email: string): void {
+  const trimmed = email.trim()
+  memoryPendingEmail = trimmed
+  if (trimmed.length > 0) {
+    writeSessionItem(PENDING_EMAIL_STORAGE_KEY, trimmed)
+  } else {
+    try {
+      sessionStorage.removeItem(PENDING_EMAIL_STORAGE_KEY)
+    } catch {
+      // In-Memory-Fallback reicht.
+    }
+    memoryPendingEmail = ''
+  }
 }
 
 function accessHeaders(): Record<string, string> {
@@ -37,14 +80,17 @@ function accessHeaders(): Record<string, string> {
  * wird. Ohne Backend (Mock-Modus) wird jeder nicht-leere Code akzeptiert,
  * damit sich der Flow lokal testen lässt.
  */
-export async function verifyAccessCode(code: string, email?: string): Promise<boolean> {
+export async function verifyAccessCode(code: string, email?: string): Promise<'ok' | 'invalid' | 'network'> {
   const normalizedCode = code.trim().toLowerCase()
   if (!API_BASE_URL) {
-    return normalizedCode.length > 0
+    return normalizedCode.length > 0 ? 'ok' : 'invalid'
   }
 
+  const trimmedEmail = email?.trim() || getPendingAccessEmail()
+
   try {
-    const trimmedEmail = email?.trim()
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000)
     const response = await fetch(`${API_BASE_URL}/verify-access`, {
       method: 'POST',
       headers: {
@@ -52,10 +98,12 @@ export async function verifyAccessCode(code: string, email?: string): Promise<bo
         'x-tei-access-code': normalizedCode,
       },
       body: JSON.stringify(trimmedEmail ? { email: trimmedEmail } : {}),
+      signal: controller.signal,
     })
-    return response.ok
+    window.clearTimeout(timeoutId)
+    return response.ok ? 'ok' : 'invalid'
   } catch {
-    return false
+    return 'network'
   }
 }
 
