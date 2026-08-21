@@ -12,24 +12,53 @@ export interface AccessCheckResult {
   code: string
 }
 
+const ACCESS_COOKIE_NAME = 'tei-access-code'
+
+function readCookie(req: HttpRequest, name: string): string {
+  const raw = req.headers.get('cookie') ?? ''
+  for (const part of raw.split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === name) return decodeURIComponent(rest.join('=') || '')
+  }
+  return ''
+}
+
+/** Set-Cookie für erfolgreiche verify-access-Antworten — damit Folge-Requests
+ * (Chat etc.) auch ohne Custom-Header funktionieren (manche Mobile-WebViews
+ * strippen x-tei-access-code). */
+export function accessCodeCookieHeader(code: string): string {
+  const normalized = normalizeAccessCode(code)
+  // 7 Tage — Demo-Sitzung, Secure+SameSite=Lax+HttpOnly: First-Party auf
+  // tei.tavyro.ch, vom Frontend nicht per JS lesbar (Zugangscode liegt
+  // parallel in sessionStorage für den Header-Fallback).
+  return `${ACCESS_COOKIE_NAME}=${encodeURIComponent(normalized)}; Path=/; Max-Age=${7 * 24 * 60 * 60}; Secure; HttpOnly; SameSite=Lax`
+}
+
 /**
  * Leichte, aber echte Zugangskontrolle für eine kontrollierte Pilotphase.
  * Kein vollwertiges Login, sondern entweder ein persönlicher Code pro
  * eingeladener Person (siehe accessCodes.ts, PILOT_ACCESS_CODES) ODER ein
- * automatisch vergebener Code pro IP-Adresse (siehe issuedCodesStore.ts,
- * AccessGate.tsx → "Direkt freischalten") für Besucher ohne persönlichen
- * Code — ersetzt den früheren manuellen "E-Mail an hello@tavyro.ch"-Umweg.
- * Statische Codes haben Vorrang, falls ein Code zufällig in beiden Listen
- * vorkäme.
+ * automatisch vergebener Code (siehe issuedCodesStore.ts) für Besucher ohne
+ * persönlichen Code.
+ *
+ * Code-Quellen (in dieser Reihenfolge): explizite options.code (Body/Query),
+ * Header x-tei-access-code, Cookie tei-access-code. Cookie/Body sind nötig,
+ * weil manche Browser/WebViews Custom-Header blockieren und dann fälschlich
+ * "Netzwerkfehler" melden (live beobachtet).
  *
  * Ist PILOT_ACCESS_CODES nicht gesetzt, ist die gesamte Prüfung deaktiviert
  * — so bleibt lokale Entwicklung ohne Zusatzschritt möglich.
  */
 export async function checkAccessCode(
   req: HttpRequest,
-  options?: { email?: string },
+  options?: { email?: string; code?: string },
 ): Promise<AccessCheckResult> {
-  const providedCode = normalizeAccessCode(req.headers.get('x-tei-access-code') ?? '')
+  const providedCode = normalizeAccessCode(
+    options?.code ||
+      req.headers.get('x-tei-access-code') ||
+      readCookie(req, ACCESS_COOKIE_NAME) ||
+      '',
+  )
   const email = (options?.email ?? '').trim()
 
   if (!isAccessControlEnabled()) {
@@ -48,7 +77,7 @@ export async function checkAccessCode(
   }
 
   const staticOwnerName = resolveAccessCode(providedCode)
-  let ownerName =
+  const ownerName =
     staticOwnerName ??
     (await resolveIssuedCode(providedCode)) ??
     (email ? await verifyIssuedCodeForEmail(email, providedCode) : null)

@@ -79,6 +79,13 @@ function accessHeaders(): Record<string, string> {
  * Prüft einen Zugangscode gegen das Backend, bevor er lokal gespeichert
  * wird. Ohne Backend (Mock-Modus) wird jeder nicht-leere Code akzeptiert,
  * damit sich der Flow lokal testen lässt.
+ *
+ * Strategie (live beobachtet: Custom-Header + strikter Abort führen auf
+ * manchen Tablets/In-App-Browsern zu fälschlichem "Netzwerkfehler"):
+ * 1) GET mit Query-Parametern — keine Custom-Header, keine Preflight
+ * 2) bei Netzwerkfehler: POST mit Code im Body (ohne Custom-Header)
+ * Cookies werden mitgeschickt (credentials: 'same-origin'), das Backend
+ * setzt bei Erfolg zusätzlich tei-access-code.
  */
 export async function verifyAccessCode(code: string, email?: string): Promise<'ok' | 'invalid' | 'network'> {
   const normalizedCode = code.trim().toLowerCase()
@@ -86,25 +93,42 @@ export async function verifyAccessCode(code: string, email?: string): Promise<'o
     return normalizedCode.length > 0 ? 'ok' : 'invalid'
   }
 
-  const trimmedEmail = email?.trim() || getPendingAccessEmail()
+  const trimmedEmail = (email?.trim() || getPendingAccessEmail()).trim()
+  const params = new URLSearchParams({ code: normalizedCode })
+  if (trimmedEmail) params.set('email', trimmedEmail)
 
-  try {
-    const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), 15000)
-    const response = await fetch(`${API_BASE_URL}/verify-access`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-tei-access-code': normalizedCode,
-      },
-      body: JSON.stringify(trimmedEmail ? { email: trimmedEmail } : {}),
-      signal: controller.signal,
-    })
-    window.clearTimeout(timeoutId)
-    return response.ok ? 'ok' : 'invalid'
-  } catch {
-    return 'network'
+  async function tryGet(): Promise<'ok' | 'invalid' | 'network'> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify-access?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+      })
+      return response.ok ? 'ok' : 'invalid'
+    } catch {
+      return 'network'
+    }
   }
+
+  async function tryPost(): Promise<'ok' | 'invalid' | 'network'> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify-access`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: normalizedCode,
+          ...(trimmedEmail ? { email: trimmedEmail } : {}),
+        }),
+      })
+      return response.ok ? 'ok' : 'invalid'
+    } catch {
+      return 'network'
+    }
+  }
+
+  const first = await tryGet()
+  if (first !== 'network') return first
+  return tryPost()
 }
 
 /**
@@ -153,6 +177,7 @@ export async function analyzeQuestion(question: string, lang: Lang = 'de'): Prom
 
   const response = await fetch(`${API_BASE_URL}/analyze`, {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', ...accessHeaders() },
     body: JSON.stringify({ question, sessionId: getSessionId() }),
   })
@@ -199,6 +224,7 @@ export async function sendChatMessage(
 
   const response = await fetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', ...accessHeaders() },
     body: JSON.stringify({ sessionId: getSessionId(), messages, topicTurnHint, lang }),
   })
@@ -245,6 +271,7 @@ export async function extractDocument(filename: string, contentBase64: string, l
   try {
     const response = await fetch(`${API_BASE_URL}/extract-document`, {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', ...accessHeaders() },
       body: JSON.stringify({ filename, contentBase64, lang }),
     })
@@ -271,6 +298,7 @@ export async function submitLead(
 
   const response = await fetch(`${API_BASE_URL}/lead`, {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', ...accessHeaders() },
     body: JSON.stringify({ ...payload, sessionId: getSessionId() }),
   })
