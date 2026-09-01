@@ -90,6 +90,43 @@ async function callChatCompletions(
   return content
 }
 
+/** Kurzer JSON-Aufruf für Nebenaufgaben (Live-Erinnerung). Eigener Timeout,
+ * damit ein langsamer Merge den Chat nicht mitreisst. */
+export async function requestJsonCompletion(
+  system: string,
+  user: string,
+  maxTokens: number,
+  timeoutMs: number,
+): Promise<string> {
+  const config = readConfig()
+  const url = `${config.endpoint}/openai/deployments/${config.deployment}/chat/completions?api-version=${config.apiVersion}`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': config.apiKey,
+    },
+    body: JSON.stringify({
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      temperature: 0.2,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' },
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Azure OpenAI JSON-Aufruf fehlgeschlagen (${response.status}): ${errorText}`)
+  }
+  const data = (await response.json()) as { choices: { message: { content: string } }[] }
+  const jsonContent = data.choices?.[0]?.message?.content
+  if (!jsonContent) throw new Error('Azure OpenAI hat kein JSON geliefert.')
+  return jsonContent
+}
+
 /**
  * Ruft Azure OpenAI auf und liefert das rohe, noch ungeklammerte
  * AiAnalysisResult zurück. Die serverseitige Konfidenz-/Baumtiefen-Klemmung
@@ -131,6 +168,7 @@ async function callChatReplyCompletion(
   lang: GuardLang,
   reinforcement?: string,
   temperature = 0.5,
+  memoryContext = '',
 ): Promise<string> {
   const url = `${config.endpoint}/openai/deployments/${config.deployment}/chat/completions?api-version=${config.apiVersion}`
 
@@ -146,7 +184,7 @@ async function callChatReplyCompletion(
     lang === 'en'
       ? '\n\nMANDATORY LANGUAGE (overrides interface language): Write the reply field exclusively in English.'
       : '\n\nVERBINDLICHE SPRACHE (hat Vorrang vor der Oberflächensprache): Schreibe das reply-Feld ausschliesslich auf Deutsch.'
-  let systemContent = `${getChatSystemPrompt(lang)}${turnHintText}${languageLockText}`
+  let systemContent = `${getChatSystemPrompt(lang)}${turnHintText}${languageLockText}${memoryContext}`
   // Nur beim automatischen Nachforderungs-Versuch gesetzt (siehe
   // requestChatReply/adviceGuard.ts) — verschärft die RATSCHLÄGE-Regel
   // gezielt für diesen einen Retry, statt den Haupt-Prompt dauerhaft zu
@@ -240,17 +278,18 @@ export async function requestChatReply(
   topicTurnHint: number,
   lang: GuardLang = 'de',
   log?: (message: string) => void,
+  memoryContext = '',
 ): Promise<ChatReplyResult> {
   const config = readConfig()
 
   async function callOnce(reinforcement?: string, temperature?: number): Promise<ChatReplyResult> {
     let raw: string
     try {
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, lang, reinforcement, temperature)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, lang, reinforcement, temperature, memoryContext)
     } catch {
       // Fällt zurück auf json_object, falls das Deployment strict structured
       // outputs (json_schema) nicht unterstützt.
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, lang, reinforcement, temperature)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, lang, reinforcement, temperature, memoryContext)
     }
 
     let parsed: Partial<ChatReplyResult>
@@ -267,7 +306,7 @@ export async function requestChatReply(
   }
 
   // Die aktuelle Antwortlogik (siehe CHAT_SYSTEM_PROMPT) verlangt bei JEDER
-  // Antwort eine vorläufige Position ("Meine vorläufige Empfehlung ist..."),
+  // Antwort eine vorläufige Richtung (Sparring, nicht abschliessendes Urteil),
   // nicht mehr nur bei ausdrücklicher Nachfrage wie in einer früheren
   // Fassung des Prompts — die Prüfung läuft deshalb auf jede Antwort,
   // unabhängig davon, ob isExplicitAdviceRequest zusätzlich zutrifft (bleibt

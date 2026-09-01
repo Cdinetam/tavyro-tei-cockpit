@@ -203,3 +203,28 @@ export async function deleteLiveConversation(id: string): Promise<void> {
     // nicht blockieren, die Liste wird beim nächsten Laden wieder korrekt.
   }
 }
+
+export async function hasLiveMemory(): Promise<boolean> {
+  if (!API_BASE_URL) return false
+  try {
+    const response = await fetch(`${API_BASE_URL}/live/memory`, { headers: liveHeaders() })
+    if (!response.ok) return false
+    const data = (await response.json()) as { hasMemory?: boolean }
+    return Boolean(data.hasMemory)
+  } catch {
+    return false
+  }
+}
+
+export async function clearLiveMemory(): Promise<boolean> {
+  if (!API_BASE_URL) return false
+  try {
+    const response = await fetch(`${API_BASE_URL}/live/memory`, {
+      method: 'DELETE',
+      headers: liveHeaders(),
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}

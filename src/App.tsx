@@ -270,7 +270,7 @@ export default function App() {
   // doppelt und fehl am Platz wirken, deshalb komplett übersprungen.
   if (isLiveView) {
     return (
-      <div className="grain min-h-screen bg-ink-900">
+      <div className="grain min-h-dvh-safe overflow-x-hidden bg-ink-900">
         {view === 'liveLogin' && (
           <LiveLoginScreen
             lang={lang}
@@ -326,9 +326,9 @@ export default function App() {
   }
 
   return (
-    <div className="grain min-h-screen bg-ink-900">
+    <div className="grain min-h-dvh-safe overflow-x-hidden bg-ink-900">
       <Header stage={headerStage} lang={lang} onToggleLang={toggleLang} onReset={resetAll} />
-      <div className="pt-14">
+      <div className="pt-header">
         {view === 'landing' && (
           <Landing lang={lang} onStart={(text) => goToRoom(text)} onNavigateLive={() => goToLiveView('liveLogin')} />
         )}

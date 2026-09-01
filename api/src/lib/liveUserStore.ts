@@ -74,6 +74,9 @@ export interface LiveUserRecord {
   activationCode: string | null
   activationCodeExpiresAt: number | null
   createdAt: number
+  /** JSON-Profil über Gespräche hinweg (siehe liveMemory.ts). Leer = keine Erinnerung. */
+  memoryJson: string
+  memoryUpdatedAt: number
 }
 
 let tableClientPromise: Promise<TableClient | null> | null = null
@@ -142,6 +145,8 @@ function entityToRecord(entity: Record<string, unknown>): LiveUserRecord {
     activationCode: entity.activationCode ? String(entity.activationCode) : null,
     activationCodeExpiresAt: entity.activationCodeExpiresAt ? Number(entity.activationCodeExpiresAt) : null,
     createdAt: Number(entity.createdAt ?? Date.now()),
+    memoryJson: String(entity.memoryJson ?? ''),
+    memoryUpdatedAt: Number(entity.memoryUpdatedAt ?? 0),
   }
 }
 
@@ -189,6 +194,8 @@ async function saveUser(record: LiveUserRecord): Promise<void> {
       activationCode: record.activationCode ?? '',
       activationCodeExpiresAt: record.activationCodeExpiresAt ?? 0,
       createdAt: record.createdAt,
+      memoryJson: record.memoryJson ?? '',
+      memoryUpdatedAt: record.memoryUpdatedAt ?? 0,
     },
     'Replace',
   )
@@ -273,6 +280,8 @@ export async function createOrRefreshUnverifiedUser(
     activationCode: existing?.activationCode ?? null,
     activationCodeExpiresAt: existing?.activationCodeExpiresAt ?? null,
     createdAt: existing?.createdAt ?? now,
+    memoryJson: existing?.memoryJson ?? '',
+    memoryUpdatedAt: existing?.memoryUpdatedAt ?? 0,
   }
 
   await saveUser(record)
@@ -391,4 +400,14 @@ export async function activateWithCode(email: string, code: string): Promise<boo
   user.activationCodeExpiresAt = null
   await saveUser(user)
   return true
+}
+
+/** Schreibt die Live-Erinnerung (JSON-String) auf das Konto. Leerer String
+ * löscht die Erinnerung. Bestehende Konten ohne Feld bleiben leer. */
+export async function saveLiveMemoryJson(email: string, memoryJson: string): Promise<void> {
+  const user = await getUserByEmail(email)
+  if (!user) return
+  user.memoryJson = memoryJson
+  user.memoryUpdatedAt = memoryJson ? Date.now() : 0
+  await saveUser(user)
 }

@@ -62,7 +62,11 @@ export function isExplicitAdviceRequest(text: string, lang: GuardLang = 'de'): b
 }
 
 const COMMITMENT_PATTERNS_DE: RegExp[] = [
-  /ich\s+w[üu]rde\s+(eher|zu|an\s+ihrer\s+stelle|dazu\s+tendieren|empfehlen|dazu\s+raten|davon\s+abraten|noch\s+keine)/i,
+  /ich\s+w[üu]rde\s+(uns\s+)?(eher|zu|an\s+(ihrer|eurer)\s+stelle|dazu\s+tendieren|empfehlen|dazu\s+raten|davon\s+abraten|noch\s+keine|zun[äa]chst|zuerst)/i,
+  /wir\s+k[öo]nnten/i,
+  /wir\s+sollten\s+(zun[äa]chst|zuerst|eher|uns)/i,
+  /ein\s+(m[öo]glicher|praktikabler|erster|n[äa]chster)\s+weg\s+w[äa]re/i,
+  /an\s+eurer\s+stelle\s+w[üu]rde/i,
   /mein\s+erster\s+gedanke/i,
   /meine\s+(vorl[äa]ufige\s+)?einsch[äa]tzung/i,
   /meine\s+vorl[äa]ufige\s+empfehlung/i,
@@ -78,6 +82,9 @@ const COMMITMENT_PATTERNS_DE: RegExp[] = [
 
 const COMMITMENT_PATTERNS_EN: RegExp[] = [
   /i\s+would\s+(lean|recommend|advise|not\s+yet)/i,
+  /we\s+(could|should|might)\s+/i,
+  /one\s+(possible|practical|first)\s+(path|way|option)\s+would\s+be/i,
+  /if\s+i\s+were\s+in\s+your\s+place/i,
   /my\s+first\s+instinct/i,
   /my\s+(preliminary\s+)?assessment/i,
   /my\s+preliminary\s+recommendation/i,
@@ -180,6 +187,8 @@ const VAGUE_ACTION_PATTERNS_DE: RegExp[] = [
   /langfristige\s+ziele\s+(zu\s+)?ber[üu]cksichtigen/i,
   /vor-?\s*und\s+nachteile\s+(ab)?w[äa]gen/i,
   /externe[nr]?\s+(berater(in)?|beratung|expert(en|innen|ise)?|unterst[üu]tzung|hilfe)/i,
+  /(einen?\s+)?(experten|berater(in)?|spezialisten|coach|mediator(in)?)\s+(hinzu)?(zuziehen|beiziehen|einschalten|engagieren|holen)/i,
+  /ziehen\s+sie\s+(einen?\s+)?(experten|berater|spezialisten|coach)/i,
 ]
 
 const VAGUE_ACTION_PATTERNS_EN: RegExp[] = [
@@ -189,6 +198,8 @@ const VAGUE_ACTION_PATTERNS_EN: RegExp[] = [
   /take\s+long-?term\s+goals\s+into\s+account/i,
   /weigh(ing)?\s+(the\s+)?pros\s+and\s+cons/i,
   /external\s+(consultant|advisor|expert|support|help)/i,
+  /bring(ing)?\s+in\s+(an?\s+)?(external\s+)?(consultant|advisor|expert|coach|specialist)/i,
+  /engage\s+(an?\s+)?(external\s+)?(consultant|advisor|expert|specialist)/i,
 ]
 
 /** Erkennt, ob eine Antwort eine der nicht-konkretisierten Pauschal-
@@ -297,15 +308,13 @@ einer ausdrücklich verbotenen Formulierung begonnen (siehe Steuerungsblock
 Punkt 1 — z.B. "Es klingt, als ob", "Sie befinden sich in einer komplexen
 Situation") oder enthielt keine erkennbare vorläufige Position (Punkt 7) —
 nur Beobachtung, Differenzierung und/oder eine Rückfrage, aber keine eigene
-Empfehlung. Beginne diese neue Antwort zwingend mit einer klaren Kernthese
-(Punkt 1) und ergänze eine vorläufige Position mit der vorgeschriebenen
-Formulierung "Meine vorläufige Empfehlung ist ..." (alternativ "Unter
-diesen Annahmen würde ich ..." oder "Ich würde noch keine langfristige
-Verpflichtung eingehen ..."), gefolgt von einer kurzen, konkreten
-Begründung, die sich auf das bezieht, was die Person tatsächlich
-geschildert hat. Formuliere danach ggf. weiterhin die Reihenfolge der
-nächsten Schritte, eine Entscheidungsregel und höchstens eine
-Reflexionsfrage, wie in Punkt 11 der festen Antwortstruktur vorgesehen.
+Richtung. Beginne diese neue Antwort mit einer klaren Kernthese und nimm
+eine vorläufige Richtung ein — als Sparringpartner, nicht als
+abschliessendes Urteil. Erlaubt: "Ich würde uns eher …", "Wir könnten
+zunächst …", "Ein möglicher Weg wäre …, den ich uns bevorzugen würde,
+weil …", "Unter diesen Annahmen würde ich …". Verboten: nur Beobachtung
+ohne Richtung; "holen Sie einen Experten" als Kernaussage. Danach ein bis
+drei konkrete nächste Schritte als Fliesstext.
 Schreibe die Reihenfolge der nächsten Schritte als Fliesstext in Sätzen
 ("Zunächst ..., danach ..., abschliessend ...") — NICHT als sichtbare
 nummerierte Liste ("1. ... 2. ... 3. ...") oder Aufzählung mit Bindestrichen
@@ -318,14 +327,13 @@ person): Your previous reply either began with an explicitly forbidden
 phrase (see steering block point 1 — e.g. "It sounds like", "You're facing
 a complex situation") or contained no recognisable preliminary position
 (point 7) — only observation, differentiation and/or a follow-up question,
-but no recommendation of your own. This new reply must begin with a clear
-core thesis (point 1) and add a preliminary position using the required
-phrasing "My preliminary recommendation is ..." (alternatively "Under these
-assumptions, I would ..." or "I would not yet make a long-term commitment
-..."), followed by a short, concrete justification tied to what the person
-actually described. After that, continue as needed with the sequence of
-next steps, a decision rule, and at most one reflection question, as set
-out in point 11 of the fixed response structure.
+but no direction of your own. This new reply must begin with a clear core
+thesis and take a provisional direction — as a sparring partner, not as a
+final verdict. Allowed: "I would lean us toward …", "We could start with …",
+"One possible path would be …, which I would prefer for us because …",
+"Under these assumptions, I would …". Forbidden: observation only, with no
+direction; "bring in an expert" as the core answer. Then one to three
+concrete next steps as flowing prose.
 Write the sequence of next steps as flowing prose in sentences ("First, ...
 Next, ... Finally, ...") — NOT as a visible numbered list ("1. ... 2. ...
 3. ...") or a bullet list with dashes or asterisks.`

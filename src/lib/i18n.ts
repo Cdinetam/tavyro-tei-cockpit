@@ -110,6 +110,7 @@ interface Copy {
     ariaHome: string
     confidential: string
     booking: string
+    bookingShort: string
     langToggleAria: string
   }
   /** Dokument-/Bild-Anhang im Chat (siehe attachments.ts/
@@ -290,6 +291,9 @@ interface Copy {
       historyCloseAria: string
       menuOpenAria: string
       menuCloseAria: string
+      memoryNote: string
+      clearMemory: string
+      clearMemoryConfirm: string
       empty: {
         heading: string
         body: string
@@ -339,6 +343,7 @@ const de: Copy = {
     ariaHome: 'Zur Startseite',
     confidential: 'Vertraulich',
     booking: 'Erstgespräch buchen →',
+    bookingShort: 'Buchen →',
     langToggleAria: 'Sprache wechseln',
   },
   attachment: {
@@ -544,6 +549,10 @@ const de: Copy = {
       historyCloseAria: 'Verlauf schliessen',
       menuOpenAria: 'Menü öffnen',
       menuCloseAria: 'Menü schliessen',
+      memoryNote:
+        'TEI merkt sich den Faden über Ihre Live-Gespräche hinweg — als Sparring, nicht als Akte. Sie können das jederzeit löschen.',
+      clearMemory: 'Erinnerung löschen',
+      clearMemoryConfirm: 'Die Erinnerung über frühere Gespräche wirklich löschen?',
       empty: {
         heading: 'Worüber möchten Sie nachdenken?',
         body: 'Ihr Gespräch wird automatisch gespeichert und ist bei jedem Login wieder abrufbar.',
@@ -594,6 +603,7 @@ const en: Copy = {
     ariaHome: 'Back to homepage',
     confidential: 'Confidential',
     booking: 'Book an intro call →',
+    bookingShort: 'Book →',
     langToggleAria: 'Switch language',
   },
   attachment: {
@@ -797,6 +807,10 @@ const en: Copy = {
       historyCloseAria: 'Close history',
       menuOpenAria: 'Open menu',
       menuCloseAria: 'Close menu',
+      memoryNote:
+        'TEI remembers the thread across your Live conversations — as sparring, not a file. You can delete it at any time.',
+      clearMemory: 'Clear memory',
+      clearMemoryConfirm: 'Really delete the memory of earlier conversations?',
       empty: {
         heading: "What's on your mind?",
         body: 'Your conversation is saved automatically and available again every time you log in.',

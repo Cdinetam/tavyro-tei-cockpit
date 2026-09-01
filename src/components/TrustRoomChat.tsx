@@ -65,11 +65,11 @@ function Bubble({ message, lang }: { message: ChatMessage; lang: Lang }) {
     const text = parsed ? parsed.userText : chatMessageText(message.content)
     return (
       <div className="flex justify-end">
-        <div className="max-w-[75%] border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper">
+        <div className="min-w-0 max-w-[75%] break-words border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper">
           {imageUrls.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {imageUrls.map((url, i) => (
-                <img key={i} src={url} alt={copy.imageAlt} className="max-h-56 w-auto rounded border border-line-soft" />
+                <img key={i} src={url} alt={copy.imageAlt} className="max-h-56 max-w-full w-auto rounded border border-line-soft" />
               ))}
             </div>
           )}
@@ -104,8 +104,8 @@ function Bubble({ message, lang }: { message: ChatMessage; lang: Lang }) {
       <div
         className={
           isUser
-            ? 'max-w-[75%] border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper'
-            : 'max-w-[85%] whitespace-pre-line border border-line-soft bg-ink-800/60 px-5 py-3.5 font-display text-[16px] leading-relaxed text-paper-dim'
+            ? 'min-w-0 max-w-[75%] break-words border border-brass-dim/50 bg-brass/[0.08] px-5 py-3.5 font-sans text-[15px] leading-relaxed text-paper'
+            : 'min-w-0 max-w-[85%] break-words whitespace-pre-line border border-line-soft bg-ink-800/60 px-5 py-3.5 font-display text-[16px] leading-relaxed text-paper-dim'
         }
       >
         {chatMessageText(message.content)}
@@ -132,7 +132,7 @@ function AttachButton({ attachment, lang }: { attachment: ReturnType<typeof useD
         aria-label={copy.buttonAria}
         title={copy.buttonAria}
         disabled={attachment.status === 'uploading' || attachment.attachments.length >= MAX_ATTACHMENTS_COUNT}
-        className="shrink-0 border border-line-strong px-3.5 py-3 text-paper-dim transition-colors hover:border-brass-dim hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex h-9 w-9 shrink-0 items-center justify-center border border-line-strong text-[15px] text-paper-dim transition-colors hover:border-brass-dim hover:text-paper disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10"
       >
         📎
       </button>
@@ -151,9 +151,9 @@ function AttachmentBar({ attachment, lang }: { attachment: ReturnType<typeof use
           {attachment.attachments.map((item, i) => (
             <span
               key={i}
-              className="flex items-center gap-2 border border-line-soft bg-ink-800/40 px-2.5 py-1 text-brass-light"
+              className="flex max-w-full min-w-0 items-center gap-2 border border-line-soft bg-ink-800/40 px-2.5 py-1 text-brass-light"
             >
-              {item.kind === 'image' ? '🖼️' : '📎'} {item.filename}
+              <span className="min-w-0 truncate">{item.kind === 'image' ? '🖼️' : '📎'} {item.filename}</span>
               {item.kind === 'document' && item.truncated && (
                 <span className="normal-case text-paper-faint">{copy.truncatedNote}</span>
               )}
@@ -183,7 +183,7 @@ function CliffhangerCta({ lang }: { lang: Lang }) {
   const copy = getCopy(lang)
   return (
     <div className="flex justify-start">
-      <div className="ml-1 flex max-w-[75%] items-center gap-3 border-l-2 border-brass-dim bg-brass/[0.05] py-2 pl-4">
+      <div className="ml-1 flex min-w-0 max-w-full flex-col gap-1 border-l-2 border-brass-dim bg-brass/[0.05] py-2 pl-4 sm:max-w-[75%] sm:flex-row sm:items-center sm:gap-3">
         <span className="font-mono text-[10.5px] uppercase tracking-widest2 text-brass-light">
           {copy.chat.cliffhangerLabel}
         </span>
@@ -191,7 +191,7 @@ function CliffhangerCta({ lang }: { lang: Lang }) {
           href={BOOKING_URL[lang]}
           target="_blank"
           rel="noreferrer"
-          className="shrink-0 font-mono text-[11px] uppercase tracking-widest2 text-paper-dim transition-colors hover:text-paper"
+          className="font-mono text-[11px] uppercase tracking-widest2 text-paper-dim transition-colors hover:text-paper"
         >
           {copy.chat.cliffhangerBooking}
         </a>
@@ -238,7 +238,7 @@ export function ExitConfirmDialog({
 }) {
   const copy = getCopy(lang)
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/80 px-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/80 safe-inset backdrop-blur-sm">
       <div className="w-full max-w-sm border border-line-strong bg-ink-800 p-7 shadow-panel">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
           {copy.chat.exitDialog.title}
@@ -326,7 +326,7 @@ export function TrustRoomChat({
 
   if (status === 'limit_reached') {
     return (
-      <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-xl flex-col justify-center px-6">
+      <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
           {copy.chat.limitReached.kicker}
         </p>
@@ -358,7 +358,7 @@ export function TrustRoomChat({
 
   if (status === 'conversation_limit_reached') {
     return (
-      <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-xl flex-col justify-center px-6">
+      <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
           {copy.chat.conversationLimitReached.kicker}
         </p>
@@ -390,7 +390,7 @@ export function TrustRoomChat({
 
   if (status === 'demo_expired') {
     return (
-      <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-xl flex-col justify-center px-6">
+      <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint">
           {copy.chat.demoExpired.kicker}
         </p>
@@ -409,7 +409,7 @@ export function TrustRoomChat({
 
   if (messages.length === 0) {
     return (
-      <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-2xl flex-col justify-center px-6 py-16">
+      <section className="mx-auto flex min-h-screen-header max-w-2xl flex-col justify-center overflow-x-hidden safe-px py-16">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.chat.empty.kicker}</p>
         <h1 className="mt-4 font-display text-[1.75rem] font-medium leading-snug text-paper">
           {copy.chat.empty.heading}
@@ -420,22 +420,22 @@ export function TrustRoomChat({
         </p>
         <form onSubmit={handleSubmit} className="mt-8">
           <AttachmentBar attachment={attachment} lang={lang} />
-          <div className="flex items-end gap-3">
-            <AttachButton attachment={attachment} lang={lang} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
             <textarea
               autoFocus
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder={copy.chat.empty.placeholder}
               rows={4}
-              className="w-full resize-none border border-line bg-ink-800/40 px-4 py-3.5 font-sans text-[15px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim"
+              className="min-h-[88px] w-full min-w-0 flex-1 resize-none border border-line bg-ink-800/40 px-4 py-3.5 font-sans text-[16px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim sm:min-h-[72px] sm:text-[15px]"
             />
+            <AttachButton attachment={attachment} lang={lang} />
           </div>
           <CharCounter length={draft.length} lang={lang} />
           <button
             type="submit"
             disabled={!canSubmit}
-            className="mt-4 inline-flex items-center gap-2 border border-brass-dim bg-gradient-to-b from-brass/[0.14] to-brass/[0.06] px-6 py-3 font-sans text-[14px] font-medium text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:from-brass/[0.2] hover:to-brass/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 border border-brass-dim bg-gradient-to-b from-brass/[0.14] to-brass/[0.06] px-6 py-3.5 font-sans text-[15px] font-medium text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:from-brass/[0.2] hover:to-brass/[0.1] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:text-[14px]"
           >
             {copy.chat.empty.startButton}
           </button>
@@ -480,26 +480,26 @@ export function TrustRoomChat({
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-56px)] max-w-3xl flex-col px-6">
-      <div className="flex items-center justify-between gap-3 border-b border-line-soft py-4">
-        <div className="flex items-center gap-2.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-brass" />
-          <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">
+    <div className="mx-auto flex h-screen-header max-w-3xl flex-col overflow-x-hidden safe-px">
+      <div className="flex min-w-0 items-center justify-between gap-3 border-b border-line-soft py-3 sm:py-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
+          <span className="hidden truncate font-mono text-[10px] uppercase tracking-widest2 text-paper-faint sm:inline">
             {isMockMode ? copy.chat.active.statusMock : copy.chat.active.statusLive}
           </span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <a
             href={BOOKING_URL[lang]}
             target="_blank"
             rel="noreferrer"
-            className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper"
+            className="hidden font-mono text-[11px] uppercase tracking-widest2 text-brass-light transition-colors hover:text-paper sm:inline"
           >
             {copy.chat.active.booking}
           </a>
           <button
             onClick={onRequestNewChat}
-            className="border border-line-strong px-3.5 py-1.5 font-sans text-[12.5px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper"
+            className="border border-line-strong px-2.5 py-1.5 font-sans text-[12px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper sm:px-3.5 sm:text-[12.5px]"
           >
             {copy.chat.active.newDialog}
           </button>
@@ -533,10 +533,9 @@ export function TrustRoomChat({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="border-t border-line-soft py-4">
+      <form onSubmit={handleSubmit} className="border-t border-line-soft pt-4 safe-pb-form">
         <AttachmentBar attachment={attachment} lang={lang} />
-        <div className="flex items-end gap-3">
-          <AttachButton attachment={attachment} lang={lang} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
           <textarea
             autoFocus
             value={draft}
@@ -549,15 +548,18 @@ export function TrustRoomChat({
             }}
             placeholder={copy.chat.active.placeholder}
             rows={2}
-            className="w-full resize-none border border-line bg-ink-800/40 px-4 py-3 font-sans text-[14.5px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim"
+            className="min-h-[88px] w-full min-w-0 flex-1 resize-none border border-line bg-ink-800/40 px-4 py-3 font-sans text-[16px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim sm:min-h-[72px] sm:text-[14.5px]"
           />
-          <button
-            type="submit"
-            disabled={!canSubmit || status === 'sending'}
-            className="shrink-0 border border-brass-dim bg-brass/[0.08] px-5 py-3 font-sans text-[13px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {copy.chat.active.send}
-          </button>
+          <div className="flex items-center gap-2 sm:shrink-0">
+            <AttachButton attachment={attachment} lang={lang} />
+            <button
+              type="submit"
+              disabled={!canSubmit || status === 'sending'}
+              className="h-9 flex-1 border border-brass-dim bg-brass/[0.08] px-4 font-sans text-[14px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:flex-none sm:px-5 sm:text-[13px]"
+            >
+              {copy.chat.active.send}
+            </button>
+          </div>
         </div>
         <CharCounter length={draft.length} lang={lang} />
       </form>

@@ -47,12 +47,12 @@ function Shell({
 }) {
   const copy = getCopy(lang).live
   return (
-    <div className="grain flex min-h-screen items-center justify-center bg-ink-900 px-6 py-12">
+    <div className="grain flex min-h-dvh-safe items-center justify-center overflow-x-hidden bg-ink-900 safe-inset">
       <div className={`w-full ${wide ? 'max-w-md' : 'max-w-sm'} fade-in`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <img src="/tavyro-logo.png" alt="TaVyro" className="h-10 w-auto" />
-            <span className="font-sans text-[12px] text-paper-faint">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <img src="/tavyro-logo.png" alt="TaVyro" className="h-10 w-auto shrink-0" />
+            <span className="hidden min-w-0 font-sans text-[12px] leading-snug text-paper-faint sm:inline">
               TaVyro Executive Intelligence<sup className="text-[8px]">®</sup> (TEI) – Trust Room
             </span>
           </div>
@@ -144,7 +144,7 @@ export function LiveLoginScreen({
             if (status === 'error') setStatus('idle')
           }}
           placeholder={copy.login.emailPlaceholder}
-          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
         />
         <input
           type="password"
@@ -155,7 +155,7 @@ export function LiveLoginScreen({
             if (status === 'error') setStatus('idle')
           }}
           placeholder={copy.login.passwordPlaceholder}
-          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
         />
         {status === 'error' && <p className="font-sans text-[13px] text-paper-dim">{errorMessage}</p>}
         <button
@@ -256,7 +256,7 @@ export function LiveRegisterScreen({
             if (status === 'error') setStatus('idle')
           }}
           placeholder={copy.register.emailPlaceholder}
-          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
         />
         <div>
           <input
@@ -269,7 +269,7 @@ export function LiveRegisterScreen({
               if (status === 'error') setStatus('idle')
             }}
             placeholder={copy.register.passwordPlaceholder}
-            className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+            className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
           />
           <p className="mt-1.5 font-mono text-[10px] uppercase tracking-widest2 text-paper-faint/70">
             {copy.register.passwordHint}
@@ -414,7 +414,7 @@ export function LiveForgotPasswordScreen({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={copy.emailPlaceholder}
-          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
         />
         <button
           type="submit"
@@ -493,7 +493,7 @@ export function LiveActivateScreen({
             if (status === 'error') setStatus('idle')
           }}
           placeholder={copy.emailPlaceholder}
-          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
         />
         <input
           type="text"
@@ -504,7 +504,7 @@ export function LiveActivateScreen({
             if (status === 'error') setStatus('idle')
           }}
           placeholder={copy.codePlaceholder}
-          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] uppercase tracking-widest text-paper placeholder:text-paper-faint/70 placeholder:normal-case placeholder:tracking-normal transition-colors focus:border-brass-dim"
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] uppercase tracking-widest text-paper placeholder:text-paper-faint/70 placeholder:normal-case placeholder:tracking-normal transition-colors focus:border-brass-dim sm:text-[15px]"
         />
         {status === 'error' && <p className="font-sans text-[13px] text-paper-dim">{errorMessage || copy.errorHeading}</p>}
         <button
@@ -602,7 +602,7 @@ export function LiveResetPasswordScreen({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder={copy.passwordPlaceholder}
-          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[15px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim"
+          className="w-full border border-line bg-ink-800/60 px-4 py-3 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
         />
         <button
           type="submit"

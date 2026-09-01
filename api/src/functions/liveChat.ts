@@ -4,6 +4,7 @@ import { chatMessageHasContent, chatMessageText, type ChatMessage } from '../lib
 import { checkLiveSession } from '../lib/liveAuth.js'
 import { saveConversation } from '../lib/liveConversationStore.js'
 import { detectReplyLang } from '../lib/replyLang.js'
+import { formatMemoryForPrompt, loadLiveMemory, refreshLiveMemory } from '../lib/liveMemory.js'
 
 // Siehe chat.ts für die Begründung der Anhebung von ursprünglich 2000 —
 // muss Platz für einen eingebetteten Dokumentanhang bieten (siehe
@@ -73,10 +74,15 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
 
   const replyLang = detectReplyLang(messages, lang)
 
+  const startedAt = Date.now()
+
   try {
+    const memory = await loadLiveMemory(auth.email)
+    const memoryContext = formatMemoryForPrompt(memory, replyLang)
+
     // topicTurnHint bewusst konstant 1 — siehe Kommentar oben, verhindert
     // jede Cliffhanger-/Abschluss-Tendenz im Modell für Live-Nutzer.
-    const result = await requestChatReply(messages, 1, replyLang, (msg) => context.log(msg))
+    const result = await requestChatReply(messages, 1, replyLang, (msg) => context.log(msg), memoryContext)
 
     const fullHistory: ChatMessage[] = [...messages, { role: 'assistant', content: result.reply, cliffhanger: false }]
 
@@ -90,6 +96,14 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
       // gespeicherte ID bleibt das Gespräch für diese eine Antwort einfach
       // clientseitig, ein erneuter Versuch beim nächsten Turn legt es dann
       // nach.
+    }
+
+    if (Date.now() - startedAt < 18000) {
+      try {
+        await refreshLiveMemory(auth.email, fullHistory)
+      } catch (err) {
+        context.error('TEI live chat: Erinnerung konnte nicht aktualisiert werden', err)
+      }
     }
 
     return {

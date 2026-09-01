@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { chatMessageImageUrls, chatMessageText, type ChatMessage } from '../types'
 import type { LiveChatStatus } from '../hooks/useLiveChat'
-import { extractDocument, type LiveConversationSummary } from '../lib/liveClient'
+import { extractDocument, hasLiveMemory, clearLiveMemory, type LiveConversationSummary } from '../lib/liveClient'
 import { getCopy, type Lang } from '../lib/i18n'
 import { useDocumentAttachment } from '../hooks/useDocumentAttachment'
 import {
@@ -305,7 +305,7 @@ function ChatInputForm({
   const isEmpty = variant === 'empty'
 
   return (
-    <form onSubmit={onSubmit} className={isEmpty ? 'mt-8' : 'border-t border-line-soft py-3 sm:py-4'}>
+    <form onSubmit={onSubmit} className={isEmpty ? 'mt-8' : 'border-t border-line-soft pt-3 sm:pt-4 safe-pb-form'}>
       <AttachmentBar attachment={attachment} lang={lang} />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
         <textarea
@@ -391,7 +391,7 @@ function HistoryPanel({
   const liveCopy = copy.live.room
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/80 px-6 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/80 safe-inset backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -487,12 +487,23 @@ export function LiveChat({
   const liveCopy = copy.live.room
   const [draft, setDraft] = useState('')
   const [showHistory, setShowHistory] = useState(false)
+  const [hasMemory, setHasMemory] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const attachment = useDocumentAttachment(extractDocument, lang)
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, status])
+
+  useEffect(() => {
+    void hasLiveMemory().then(setHasMemory)
+  }, [messages.length])
+
+  async function handleClearMemory() {
+    if (!window.confirm(liveCopy.clearMemoryConfirm)) return
+    const ok = await clearLiveMemory()
+    if (ok) setHasMemory(false)
+  }
 
   const overLimit = draft.length > MAX_MESSAGE_LENGTH
   const canSubmit =
@@ -510,10 +521,13 @@ export function LiveChat({
   }
 
   if (messages.length === 0) {
-    const emptyMenuActions: LiveMenuAction[] = [{ label: liveCopy.logout, onClick: onLogout }]
+    const emptyMenuActions: LiveMenuAction[] = [
+      ...(hasMemory ? [{ label: liveCopy.clearMemory, onClick: () => void handleClearMemory() }] : []),
+      { label: liveCopy.logout, onClick: onLogout },
+    ]
 
     return (
-      <section className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center overflow-x-hidden px-4 py-10 sm:px-6 sm:py-16">
+      <section className="mx-auto flex min-h-dvh-safe max-w-2xl flex-col justify-center overflow-x-hidden safe-px-sm safe-pt safe-pb py-10 sm:safe-px sm:py-16">
         <LiveTopBar
           lang={lang}
           liveCopy={liveCopy}
@@ -524,6 +538,7 @@ export function LiveChat({
           {liveCopy.empty.heading}
         </h1>
         <p className="mt-3 max-w-lg font-sans text-[15px] leading-relaxed text-paper-dim">{liveCopy.empty.body}</p>
+        <p className="mt-3 max-w-lg font-sans text-[13px] leading-relaxed text-paper-faint">{liveCopy.memoryNote}</p>
         <ChatInputForm
           lang={lang}
           liveCopy={liveCopy}
@@ -574,11 +589,12 @@ export function LiveChat({
   const activeMenuActions: LiveMenuAction[] = [
     { label: liveCopy.historyButton, onClick: () => setShowHistory(true) },
     { label: liveCopy.newDialog, onClick: reset },
+    ...(hasMemory ? [{ label: liveCopy.clearMemory, onClick: () => void handleClearMemory() }] : []),
     { label: liveCopy.logout, onClick: onLogout },
   ]
 
   return (
-    <div className="mx-auto flex h-[100dvh] max-w-3xl flex-col overflow-x-hidden px-4 sm:px-6">
+    <div className="mx-auto flex h-dvh-safe max-w-3xl flex-col overflow-x-hidden safe-px-sm safe-pt sm:safe-px">
       <LiveTopBar
         lang={lang}
         liveCopy={liveCopy}

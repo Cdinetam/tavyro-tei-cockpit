@@ -11,14 +11,18 @@ export function Header({ lang, onToggleLang, onReset }: HeaderProps) {
   const copy = getCopy(lang)
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 border-b border-line-soft bg-ink-900/90 backdrop-blur-sm">
-      <div className="relative mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-4 px-6 lg:px-10">
+    <header className="fixed top-0 left-0 right-0 z-40 border-b border-line-soft bg-ink-900/90 backdrop-blur-sm safe-pt">
+      <div className="relative mx-auto flex h-14 min-w-0 max-w-[1400px] items-center justify-between gap-3 overflow-x-hidden safe-px sm:gap-4 lg:safe-px-lg">
         <button
           onClick={onReset}
-          className="group flex shrink-0 items-center text-left"
+          className="group flex min-w-0 shrink items-center text-left"
           aria-label={copy.header.ariaHome}
         >
-          <img src="/tavyro-logo.png" alt="TaVyro" className="h-9 w-auto shrink-0" />
+          <img
+            src="/tavyro-logo.png"
+            alt="TaVyro"
+            className="h-8 w-auto max-w-[7.5rem] shrink-0 object-contain object-left sm:h-9 sm:max-w-none"
+          />
         </button>
 
         {/* Titel unabhängig von Logo-/rechter Breite über die ganze Bar
@@ -31,7 +35,7 @@ export function Header({ lang, onToggleLang, onReset }: HeaderProps) {
           TaVyro Executive Intelligence<sup className="text-[9px]">®</sup> (TEI) – Trust Room
         </button>
 
-        <div className="flex items-center gap-6">
+        <div className="flex shrink-0 items-center gap-2.5 sm:gap-6">
           <div className="hidden items-center gap-2 sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-brass" />
             <span className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">
@@ -51,9 +55,10 @@ export function Header({ lang, onToggleLang, onReset }: HeaderProps) {
             href={BOOKING_URL[lang]}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex shrink-0 items-center gap-2 border border-brass-dim bg-brass/[0.12] px-4 py-2 font-sans text-[13px] font-medium text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.2]"
+            className="inline-flex shrink-0 items-center gap-2 border border-brass-dim bg-brass/[0.12] px-2.5 py-1.5 font-sans text-[12px] font-medium text-paper shadow-panel transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.2] sm:px-4 sm:py-2 sm:text-[13px]"
           >
-            {copy.header.booking}
+            <span className="sm:hidden">{copy.header.bookingShort}</span>
+            <span className="hidden sm:inline">{copy.header.booking}</span>
           </a>
         </div>
       </div>

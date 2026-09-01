@@ -10,7 +10,7 @@ export function Landing({ lang, onStart, onNavigateLive }: LandingProps) {
   const copy = getCopy(lang)
 
   return (
-    <section className="relative mx-auto flex min-h-[calc(100vh-56px)] max-w-[1400px] flex-col justify-center px-6 lg:px-10">
+    <section className="relative mx-auto flex min-h-screen-header max-w-[1400px] flex-col justify-center overflow-x-hidden safe-px py-8 lg:safe-px-lg">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute left-1/2 top-1/2 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brass/[0.06] blur-[130px]" />
         <div className="absolute right-[8%] top-[18%] h-[280px] w-[280px] rounded-full bg-brass-light/[0.05] blur-[100px]" />
@@ -65,9 +65,9 @@ export function Landing({ lang, onStart, onNavigateLive }: LandingProps) {
             <button
               key={question}
               onClick={() => onStart(question)}
-              className="group flex items-center justify-between gap-4 border border-line-soft bg-ink-800/30 px-5 py-3.5 text-left font-sans text-[14.5px] leading-snug text-paper-dim transition-all duration-200 ease-editorial hover:border-brass-dim hover:bg-brass/[0.05] hover:text-paper"
+              className="group flex items-center justify-between gap-4 border border-line-soft bg-ink-800/30 px-4 py-3.5 text-left font-sans text-[14.5px] leading-snug text-paper-dim transition-all duration-200 ease-editorial hover:border-brass-dim hover:bg-brass/[0.05] hover:text-paper sm:px-5"
             >
-              <span>{question}</span>
+              <span className="min-w-0">{question}</span>
               <span className="shrink-0 text-brass-light opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                 →
               </span>
