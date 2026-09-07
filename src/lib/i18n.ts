@@ -154,8 +154,7 @@ interface Copy {
     }
     limitReached: {
       kicker: string
-      headingWithLimit: (limit: number) => string
-      headingWithoutLimit: string
+      heading: string
       body: string
       booking: string
       backToStart: string
@@ -164,8 +163,8 @@ interface Copy {
       kicker: string
       heading: string
       body: string
-      newDialog: string
       booking: string
+      backToStart: string
     }
     demoExpired: {
       kicker: string
@@ -395,24 +394,24 @@ const de: Copy = {
       cancel: 'Abbrechen',
     },
     limitReached: {
-      kicker: 'Demo-Version · Kontingent erreicht',
-      headingWithLimit: (limit) =>
-        `Die Demo-Version ist auf ${limit} Gespräche insgesamt begrenzt — Ihr Kontingent ist erreicht.`,
-      headingWithoutLimit: 'Ihr Kontingent in der Demo-Version ist erreicht.',
+      kicker: 'Demo-Version · Sitzung aufgebraucht',
+      heading: 'Die kostenlose Demo-Sitzung ist aufgebraucht.',
       body:
-        'Das ist bewusst so begrenzt: ein erstes Gespräch, alles Weitere gehört in einen echten ' +
-        'Austausch — nicht in eine endlose Demo-Schleife.',
+        'Mit einem Upgrade erhalten Sie Zugang zur erweiterten Version des Trust Room, unter anderem ' +
+        'mit vertiefter Entscheidungsanalyse, Speicherung und Fortsetzung Ihrer Dialoge sowie einer ' +
+        'persönlichen Memory-Funktion, die ausschliesslich Ihnen als Nutzer zur Verfügung steht.',
       booking: 'Erstgespräch buchen →',
       backToStart: 'Zurück zum Start',
     },
     conversationLimitReached: {
-      kicker: 'Demo-Version · Limite erreicht',
-      heading: 'Die Limite der Demo-Version für dieses Gespräch ist erreicht.',
+      kicker: 'Demo-Version · Sitzung aufgebraucht',
+      heading: 'Die kostenlose Demo-Sitzung ist aufgebraucht.',
       body:
-        'Dieses Gespräch endet hier bewusst — die volle Tiefe entsteht im persönlichen ' +
-        'Erstgespräch mit Tam Nguyen. Für einen vollen Zugang können Sie ein Erstgespräch vereinbaren.',
-      newDialog: 'Neues Gespräch starten',
+        'Mit einem Upgrade erhalten Sie Zugang zur erweiterten Version des Trust Room, unter anderem ' +
+        'mit vertiefter Entscheidungsanalyse, Speicherung und Fortsetzung Ihrer Dialoge sowie einer ' +
+        'persönlichen Memory-Funktion, die ausschliesslich Ihnen als Nutzer zur Verfügung steht.',
       booking: 'Erstgespräch buchen →',
+      backToStart: 'Zurück zum Start',
     },
     demoExpired: {
       kicker: 'Pilotphase abgeschlossen',
@@ -425,7 +424,7 @@ const de: Copy = {
       body:
         'Anders als die kurze Analyse: hier entsteht ein echtes, mehrteiliges Gespräch — TEI® hört ' +
         'zu, ordnet ein und bleibt mit Ihnen im Austausch.',
-      demoNote: 'Demo-Version · kostenlose Testphase, begrenzt auf wenige Gespräche insgesamt',
+      demoNote: 'Demo-Version · kostenlose Testphase, begrenzt auf 7 Chat-Anfragen insgesamt',
       placeholder: 'Beschreiben Sie in ein paar Sätzen, was Sie beschäftigt…',
       startButton: 'Dialog starten →',
       savedKicker: 'Lokal gespeicherte Gespräche auf diesem Gerät',
@@ -654,24 +653,24 @@ const en: Copy = {
       cancel: 'Cancel',
     },
     limitReached: {
-      kicker: 'Demo version · quota reached',
-      headingWithLimit: (limit) =>
-        `The demo version is limited to ${limit} conversations in total — your quota is reached.`,
-      headingWithoutLimit: 'Your quota for the demo version is reached.',
+      kicker: 'Demo version · session used up',
+      heading: 'The free demo session has been used up.',
       body:
-        "That's a deliberate limit: a first conversation — everything beyond that belongs in a real " +
-        'exchange, not an endless demo loop.',
+        'With an upgrade you get access to the extended version of the Trust Room, including deeper ' +
+        'decision analysis, saving and continuing your dialogues, and a personal memory function that ' +
+        'is available exclusively to you as a user.',
       booking: 'Book an intro call →',
       backToStart: 'Back to start',
     },
     conversationLimitReached: {
-      kicker: 'Demo version · limit reached',
-      heading: 'This conversation has reached the demo version limit.',
+      kicker: 'Demo version · session used up',
+      heading: 'The free demo session has been used up.',
       body:
-        'This conversation deliberately ends here — the full depth unfolds in a personal intro ' +
-        'call with Tam Nguyen. For full access, you can arrange an intro call.',
-      newDialog: 'Start new conversation',
+        'With an upgrade you get access to the extended version of the Trust Room, including deeper ' +
+        'decision analysis, saving and continuing your dialogues, and a personal memory function that ' +
+        'is available exclusively to you as a user.',
       booking: 'Book an intro call →',
+      backToStart: 'Back to start',
     },
     demoExpired: {
       kicker: 'Pilot phase concluded',
@@ -684,7 +683,7 @@ const en: Copy = {
       body:
         'Unlike the short analysis, this is a real, multi-turn conversation — TEI® listens, reflects, ' +
         'and stays in dialogue with you.',
-      demoNote: 'Demo version · free trial phase, limited to a few conversations in total',
+      demoNote: 'Demo version · free trial phase, limited to 7 chat requests in total',
       placeholder: "Describe in a few sentences what's on your mind…",
       startButton: 'Start dialogue →',
       savedKicker: 'Conversations saved locally on this device',

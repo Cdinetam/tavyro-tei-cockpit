@@ -75,8 +75,8 @@ export function useTrustRoomChat(lang: Lang = 'de') {
   // wurde (neues Kapitel beginnt) oder ein neues Gespräch startet.
   const [topicStreak, setTopicStreak] = useState(0)
   // Erst bekannt, sobald das Backend einmal "limit_reached" zurückgibt (mit
-  // der tatsächlich konfigurierten Gesamt-Grenze pro Code, siehe PILOT_WEEKLY_LIMIT) —
-  // vorher zeigt die UI nur allgemein "Demo-Version", ohne konkrete Zahl.
+  // der tatsächlich konfigurierten Lifetime-Grenze pro Code) — die UI zeigt
+  // die Zahl nicht mehr in der Meldung, der Wert bleibt für Diagnose/API.
   const [weeklyLimit, setWeeklyLimit] = useState<number | null>(null)
 
   async function send(content: ChatMessage['content']) {
@@ -99,16 +99,14 @@ export function useTrustRoomChat(lang: Lang = 'de') {
       setMessages((prev) => [...prev, { role: 'assistant', content: response.reply!, cliffhanger }])
       setTopicStreak(cliffhanger ? 0 : topicTurnHint)
       setStatus('idle')
-    } else if (response.status === 'limit_reached') {
+    } else if (response.status === 'limit_reached' || response.status === 'conversation_limit_reached') {
+      // Beide bedeuten: Demo-Sitzung aufgebraucht (Lifetime 7 Chat-Anfragen).
+      // Kein "Neues Gespräch"-Ausweg mehr — erneutes Einloggen hilft nicht,
+      // weil der Server pro Zugangscode zählt.
       if (typeof response.sessionAnalysesLimit === 'number') {
         setWeeklyLimit(response.sessionAnalysesLimit)
       }
       setStatus('limit_reached')
-    } else if (response.status === 'conversation_limit_reached') {
-      // Anders als 'limit_reached' (Wochenkontingent komplett erschöpft)
-      // betrifft dies nur DIESES eine Gespräch — die Person kann sofort ein
-      // neues starten, siehe TrustRoomChat.tsx.
-      setStatus('conversation_limit_reached')
     } else if (response.status === 'demo_expired') {
       setStatus('demo_expired')
     } else {

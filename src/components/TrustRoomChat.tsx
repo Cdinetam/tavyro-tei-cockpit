@@ -277,9 +277,8 @@ interface Props {
   savedConversations: SavedConversation[]
   initialDraft?: string
   /**
-   * Die tatsächlich konfigurierte Gesamt-Grenze pro Code (PILOT_WEEKLY_LIMIT), erst
-   * bekannt nachdem das Backend einmal "limit_reached" gemeldet hat. Bis
-   * dahin null — die UI zeigt dann nur allgemein "Demo-Version" ohne Zahl.
+   * Historisch: Backend-Limit (PILOT_WEEKLY_LIMIT). Die Meldung zeigt die Zahl
+   * nicht mehr — Prop bleibt für Kompatibilität mit App.tsx.
    */
   weeklyLimit: number | null
   send: (content: ChatMessage['content']) => void
@@ -296,11 +295,11 @@ export function TrustRoomChat({
   errorMessage,
   savedConversations,
   initialDraft,
-  weeklyLimit,
+  weeklyLimit: _weeklyLimit,
   send,
   resumeConversation,
   deleteSavedConversation,
-  onRequestNewChat,
+  onRequestNewChat: _onRequestNewChat,
   onExit,
 }: Props) {
   const copy = getCopy(lang)
@@ -331,9 +330,7 @@ export function TrustRoomChat({
           {copy.chat.limitReached.kicker}
         </p>
         <h2 className="mt-4 font-display text-2xl font-medium text-paper">
-          {weeklyLimit
-            ? copy.chat.limitReached.headingWithLimit(weeklyLimit)
-            : copy.chat.limitReached.headingWithoutLimit}
+          {copy.chat.limitReached.heading}
         </h2>
         <p className="mt-4 font-sans text-[14.5px] leading-relaxed text-paper-dim">{copy.chat.limitReached.body}</p>
         <div className="mt-7 flex flex-wrap gap-4">
@@ -378,10 +375,10 @@ export function TrustRoomChat({
             {copy.chat.conversationLimitReached.booking}
           </a>
           <button
-            onClick={onRequestNewChat}
+            onClick={onExit}
             className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
           >
-            {copy.chat.conversationLimitReached.newDialog}
+            {copy.chat.conversationLimitReached.backToStart}
           </button>
         </div>
       </section>

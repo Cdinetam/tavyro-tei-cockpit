@@ -38,15 +38,12 @@ const MAX_MESSAGE_LENGTH = 16000
 // Ab dieser Nachrichtenzahl zum selben Thema schliesst TEI® spätestens mit
 // einem klaren Cliffhanger ab, siehe CHAT_SYSTEM_PROMPT.
 const CLIFFHANGER_TOPIC_TURN_THRESHOLD = 5
-// Harte, rein technische Obergrenze für Nutzer-Nachrichten INNERHALB EINES
-// einzelnen Gesprächs — unabhängig vom PILOT_WEEKLY_LIMIT weiter unten, das
-// nur zählt, wie viele Gespräche begonnen wurden, nicht wie viele Nachrichten
-// ein einzelnes Gespräch enthält (bewusste frühere Design-Entscheidung, siehe
-// CLAUDE.md: "kein Nachrichtenlimit, Kostenschutz über Azure-Budget-Alert").
-// Live-Beobachtung: dadurch konnte eine einzelne, dauerhaft offene Konversation
-// beliebig viele kostenpflichtige Azure-OpenAI-Aufrufe auslösen, ohne je
-// gegen das Wochenlimit zu zählen. Dieser Wert ist bewusst als zusätzliche,
-// unabhängige Bremse gedacht, nicht als Ersatz für PILOT_WEEKLY_LIMIT.
+// Harte Obergrenze für Nutzer-Nachrichten INNERHALB EINES einzelnen Gesprächs
+// (zusätzlich zum Lifetime-Kontingent PILOT_WEEKLY_LIMIT, das jetzt JEDE
+// Chat-Anfrage zählt). Beide Caps liegen standardmässig bei 7 — wer das
+// Gesprächs-Cap erreicht, hat das Demo-Kontingent ohnehin aufgebraucht;
+// die Antwort ist deshalb dieselbe Upgrade-Meldung (limit_reached), nicht
+// mehr ein "Neues Gespräch starten"-Ausweg.
 const MAX_MESSAGES_PER_CONVERSATION = Number(process.env.MAX_MESSAGES_PER_CONVERSATION ?? '7')
 
 export async function chat(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -121,84 +118,47 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
       ? (body.topicTurnHint as number)
       : 1
 
-  // Das Gesprächskontingent gilt pro begonnenem Gespräch insgesamt (Lifetime
-  // pro Zugangscode), nicht pro einzelner Nachricht — ein echtes Gespräch
-  // besteht naturgemäss aus mehreren Hin-und-her-Nachrichten, die nicht
-  // einzeln gegen das Kontingent zählen dürfen. Geprüft und gezählt wird das
-  // Limit daher nur beim ersten Turn; ein bereits laufendes Gespräch darf zu
-  // Ende geführt werden, selbst wenn das Kontingent zwischenzeitlich durch
-  // andere Anfragen erreicht wird.
-  //
-  // Schlüssel für die Zählung ist der Zugangscode selbst (access.code), NICHT
-  // mehr die IP-Adresse — live festgestellt, dass eine reine IP-Bindung
-  // trivial umgehbar ist (z.B. per Handy-Hotspot mit neuer IP, aber
-  // demselben, dauerhaft gültigen Code). Ist Zugangskontrolle deaktiviert
-  // (kein PILOT_ACCESS_CODES gesetzt, access.code dann leer), bleibt die
-  // IP-Adresse als einzig sinnvoller Ersatzschlüssel. Nutzt denselben
-  // Schlüssel/dieselbe Tabelle wie die Einmal-Analyse (analyze.ts) — das
-  // Limit gilt für die Nutzung insgesamt, nicht separat pro Feature.
+  // Demo-Kontingent: Lifetime von PILOT_WEEKLY_LIMIT Chat-Anfragen (Default 7)
+  // pro Zugangscode — JEDE Nutzer-Nachricht, die eine KI-Antwort auslöst,
+  // zählt, nicht nur der Gesprächsstart. Sonst konnte man nach dem
+  // Nachrichten-Cap pro Gespräch (oder per erneutem Einloggen) beliebig oft
+  // neu starten und das Limit faktisch umgehen. Schlüssel bleibt der
+  // Zugangscode (access.code); IP nur als Fallback, wenn keine Codes gesetzt
+  // sind. PILOT_UNLIMITED_IPS bleibt an die Netzwerkverbindung gebunden.
   const totalUserMessages = messages.filter((m) => m.role === 'user').length
   const isFirstTurn = totalUserMessages <= 1
   const clientIp = getClientIp(req)
   const quotaKey = access.code || clientIp
   const limit = getWeeklyLimit()
-  // Die Ausnahme für interne Test-IPs (PILOT_UNLIMITED_IPS) bleibt bewusst an
-  // die tatsächliche Netzwerkverbindung gebunden, nicht an den Code — so
-  // bleibt z.B. Tams eigenes Testen unlimitiert, unabhängig davon, welchen
-  // Code er gerade benutzt.
   const exempt = isUnlimitedIp(clientIp)
 
-  // Genau die letzte noch erlaubte Nachricht dieses Gesprächs (z.B. die 7.
-  // von 7) — ab hier gibt es keine weitere Antwort mehr, siehe Block direkt
-  // darunter. Diese eine Antwort soll deshalb bewusst nicht einfach mitten im
-  // Thema abbrechen, sondern wie ein regulärer Cliffhanger (siehe
-  // CLIFFHANGER_TOPIC_TURN_THRESHOLD) sauber Richtung echtes Gespräch
-  // abschliessen.
-  const isFinalAllowedMessage = totalUserMessages === MAX_MESSAGES_PER_CONVERSATION && !exempt
+  // Letzte noch erlaubte Nachricht innerhalb des Demo-Kontingents bzw. des
+  // Gesprächs-Caps — Antwort soll als Cliffhanger sauber abschliessen.
+  const isFinalAllowedMessage =
+    !exempt &&
+    (totalUserMessages === MAX_MESSAGES_PER_CONVERSATION || totalUserMessages === limit)
 
-  // Nachrichten-Cap pro Gespräch — siehe MAX_MESSAGES_PER_CONVERSATION oben.
-  // Bewusst VOR dem Wochenlimit geprüft und unabhängig von isFirstTurn (greift
-  // ja gerade bei späteren Nachrichten desselben Gesprächs), aber genau wie
-  // das Wochenlimit für als unlimitiert markierte Test-IPs ausgenommen.
-  if (totalUserMessages > MAX_MESSAGES_PER_CONVERSATION && !exempt) {
-    return {
-      status: 200,
-      jsonBody: {
-        status: 'conversation_limit_reached',
-        message:
-          lang === 'en'
-            ? `This conversation has reached its maximum length (${MAX_MESSAGES_PER_CONVERSATION} messages). Please start a new conversation, or continue in a real conversation with Tam Nguyen.`
-            : `Dieses Gespräch hat seine maximale Länge erreicht (${MAX_MESSAGES_PER_CONVERSATION} Nachrichten). Bitte starten Sie ein neues Gespräch, oder führen Sie es in einem echten Gespräch mit Tam Nguyen weiter.`,
-      },
-    }
-  }
-
-  if (isFirstTurn && !exempt) {
-    // Der Kontingent-Check läuft bewusst in einem eigenen try/catch statt
-    // ungeschützt: ein Aussetzer in der Table-Storage-Anbindung (Netzwerk,
-    // Drosselung o.ä.) darf nicht die gesamte Anfrage mit einem nackten,
-    // nicht abgefangenen 500 ohne jede Nachricht zum Absturz bringen — live
-    // beobachtet. Fällt der Check aus, wird bewusst "offen" fehlgeschlagen
-    // (Anfrage durchgelassen): eine echte Person nicht wegen eines
-    // Infrastruktur-Hakelers zu blockieren wiegt schwerer als ein einzelnes,
-    // eventuell nicht gezähltes Gespräch.
+  if (!exempt) {
+    // Kontingent-Check in eigenem try/catch: Storage-Aussetzer dürfen die
+    // Anfrage nicht mit nacktem 500 killen. Bei Check-Fehler bewusst "offen"
+    // (durchlassen) — Person nicht wegen Infrastruktur blockieren.
     let used = 0
     try {
       used = await getUsageCount(quotaKey)
     } catch (err) {
       context.error('TEI chat: Kontingent-Prüfung fehlgeschlagen, lasse Anfrage durch', err)
     }
-    if (used >= limit) {
+    if (used >= limit || totalUserMessages > MAX_MESSAGES_PER_CONVERSATION) {
       return {
         status: 200,
         jsonBody: {
           status: 'limit_reached',
-          sessionAnalysesUsed: used,
+          sessionAnalysesUsed: Math.max(used, totalUserMessages - 1),
           sessionAnalysesLimit: limit,
           message:
             lang === 'en'
-              ? `The limit of ${limit} conversations for this ${access.code ? 'access code' : 'IP address'} has been reached.`
-              : `Das Limit von ${limit} Gesprächen für ${access.code ? 'diesen Zugangscode' : 'diese IP-Adresse'} ist erreicht.`,
+              ? 'The free demo session has been used up.'
+              : 'Die kostenlose Demo-Sitzung ist aufgebraucht.',
         },
       }
     }
@@ -219,17 +179,19 @@ export async function chat(req: HttpRequest, context: InvocationContext): Promis
     const cliffhanger =
       isFinalAllowedMessage || effectiveTopicTurnHint >= CLIFFHANGER_TOPIC_TURN_THRESHOLD || result.themenwechsel
 
-    if (isFirstTurn && !exempt) {
-      // Ebenfalls eigens abgefangen: eine bereits erfolgreich erzeugte,
-      // reale (kostenpflichtige) Antwort darf nicht an den Absender
-      // verlorengehen, nur weil das Verbuchen des Kontingents danach
-      // fehlschlägt — das würde die Person doppelt bestrafen (Antwort weg
-      // UND Kontingent evtl. trotzdem verbraucht).
+    if (!exempt) {
+      // Jede erfolgreiche Antwort verbuchen — sonst lässt sich das Limit durch
+      // neue Gespräche / erneutes Einloggen umgehen. Eigens abgefangen: eine
+      // bereits erzeugte (kostenpflichtige) Antwort darf nicht verloren gehen,
+      // nur weil die Verbuchung danach scheitert.
       try {
         await recordUsage(quotaKey)
       } catch (err) {
         context.error('TEI chat: Kontingent-Verbuchung fehlgeschlagen (Zählung evtl. ungenau)', err)
       }
+    }
+
+    if (isFirstTurn && !exempt) {
       try {
         await notify({
           kind: 'chat',

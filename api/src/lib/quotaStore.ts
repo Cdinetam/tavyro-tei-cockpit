@@ -1,10 +1,10 @@
 import { TableClient } from '@azure/data-tables'
 
 /**
- * Zählt begonnene Gespräche pro Zugangscode (= pro Person) insgesamt
- * (Lifetime) — nicht pro Browser-Sitzung, denn ein neuer Inkognito-Tab darf
- * das Limit nicht zurücksetzen, und nach Ablauf eines Zeitfensters darf derselbe
- * Code nicht erneut unbegrenzt neue Gespräche starten.
+ * Zählt Chat-Anfragen (KI-Antworten) pro Zugangscode insgesamt (Lifetime).
+ * Jede erfolgreiche Nutzer-Nachricht im Demo-Chat zählt — nicht nur der
+ * Gesprächsstart, und nicht pro Browser-Sitzung. Sonst ließe sich das Limit
+ * durch "Neues Gespräch" oder erneutes Einloggen zurücksetzen.
  *
  * Produktion: Azure Table Storage, über die Umgebungsvariable
  * QUOTA_STORAGE_CONNECTION_STRING (eigener Storage-Account, z.B.
@@ -61,7 +61,7 @@ async function getTableClient(): Promise<TableClient | null> {
   return tableClientPromise
 }
 
-/** Gesamt-Limit begonnener Gespräche pro Code (env-Name historisch "WEEKLY"). */
+/** Lifetime-Limit Chat-Anfragen pro Code (env-Name historisch "WEEKLY"). */
 export function getWeeklyLimit(): number {
   return Number(process.env.PILOT_WEEKLY_LIMIT ?? '7')
 }
