@@ -299,7 +299,7 @@ export function TrustRoomChat({
   send,
   resumeConversation,
   deleteSavedConversation,
-  onRequestNewChat: _onRequestNewChat,
+  onRequestNewChat: handleRequestNewChat,
   onExit,
 }: Props) {
   const copy = getCopy(lang)
@@ -495,7 +495,7 @@ export function TrustRoomChat({
             {copy.chat.active.booking}
           </a>
           <button
-            onClick={onRequestNewChat}
+            onClick={handleRequestNewChat}
             className="border border-line-strong px-2.5 py-1.5 font-sans text-[12px] font-medium text-paper-dim transition-all duration-300 ease-editorial hover:border-brass-dim hover:text-paper sm:px-3.5 sm:text-[12.5px]"
           >
             {copy.chat.active.newDialog}
