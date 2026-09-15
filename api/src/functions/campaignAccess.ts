@@ -33,14 +33,16 @@ export async function campaignAccess(req: HttpRequest): Promise<HttpResponseInit
       }
     }
 
-    const record = await recordCampaignScan(code)
-    if (!record) {
+    // lookupCampaignCode legt den eingebauten Testcode bei Bedarf an
+    const existing = await lookupCampaignCode(code)
+    if (!existing) {
       return {
         status: 401,
         jsonBody: { status: 'invalid', message: 'Zugangscode fehlt oder ist ungültig.' },
       }
     }
 
+    const record = (await recordCampaignScan(code)) ?? existing
     return {
       status: 200,
       jsonBody: {

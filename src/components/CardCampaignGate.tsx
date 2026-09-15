@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { storeAccessCode } from '../lib/aiClient'
 import { getCopy, hasEnPrefix, type Lang } from '../lib/i18n'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
+// Wie aiClient.ts: leerer String zählt als "kein Backend" — hier aber
+// fail-closed (kein Fake-Unlock), sonst landet man im Chat mit einem
+// Code, den /api/chat anschliessend mit 401 ablehnt.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '/api'
 
 /**
  * Gate für die physische Karte-Kampagne (Track 3).
@@ -15,41 +18,46 @@ function codeFromQuery(): string {
   return new URLSearchParams(window.location.search).get('code')?.trim() ?? ''
 }
 
+async function readCampaignStatus(response: Response): Promise<'ok' | 'invalid' | 'network'> {
+  // Nur echtes JSON mit status:ok akzeptieren — SWA kann bei fehlender
+  // Function-Route sonst index.html mit HTTP 200 liefern, was fälschlich
+  // als Freischaltung wirkte (Chat danach 401).
+  try {
+    const data = (await response.json()) as { status?: string }
+    if (response.ok && data.status === 'ok') return 'ok'
+    return 'invalid'
+  } catch {
+    return response.ok ? 'invalid' : 'network'
+  }
+}
+
 async function lookupCampaignCode(
   code: string,
 ): Promise<'ok' | 'invalid' | 'network'> {
-  if (!API_BASE_URL) return code.length > 0 ? 'ok' : 'invalid'
   try {
     const params = new URLSearchParams({ code })
     const response = await fetch(`${API_BASE_URL}/campaign-access?${params.toString()}`, {
       method: 'GET',
       credentials: 'same-origin',
     })
-    if (response.ok) return 'ok'
-    return 'invalid'
+    return readCampaignStatus(response)
   } catch {
     return 'network'
   }
 }
 
 async function redeemCampaignCode(code: string): Promise<'ok' | 'invalid' | 'network'> {
-  if (!API_BASE_URL) return code.length > 0 ? 'ok' : 'invalid'
-
-  async function tryPost(): Promise<'ok' | 'invalid' | 'network'> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/campaign-access`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      })
-      return response.ok ? 'ok' : 'invalid'
-    } catch {
-      return 'network'
-    }
+  try {
+    const response = await fetch(`${API_BASE_URL}/campaign-access`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+    return readCampaignStatus(response)
+  } catch {
+    return 'network'
   }
-
-  return tryPost()
 }
 
 interface Props {

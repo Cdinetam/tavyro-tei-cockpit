@@ -95,7 +95,7 @@ async function getRecord(code: string): Promise<CampaignCodeRecord | null> {
 
 /** Für accessGate.ts — Kampagnen-Codes als gültige Demo-Zugangscodes. */
 export async function resolveCampaignCode(code: string): Promise<string | null> {
-  const record = await getRecord(code)
+  const record = await lookupCampaignCode(code)
   return record ? displayName(record) : null
 }
 
@@ -195,6 +195,26 @@ export async function listCampaignCodes(): Promise<CampaignCodeRecord[]> {
   return results
 }
 
+/**
+ * Eingebauter Testcode für die Karte-Kampagne — wird beim ersten Lookup
+ * automatisch angelegt, damit man ohne manuellen campaign-seed-Aufruf
+ * testen kann. Spätere echte CEO-Codes kommen weiterhin nur über
+ * upsertCampaignCodes / campaign-seed.
+ */
+const BUILTIN_TEST_CODE = 'karte-test'
+
+async function ensureBuiltinTestCode(): Promise<void> {
+  const existing = await getRecord(BUILTIN_TEST_CODE)
+  if (existing) return
+  await upsertCampaignCodes([
+    { code: BUILTIN_TEST_CODE, name: 'Test CEO', company: 'TaVyro Test' },
+  ])
+}
+
 export async function lookupCampaignCode(code: string): Promise<CampaignCodeRecord | null> {
+  const normalized = normalizeAccessCode(code)
+  if (normalized === BUILTIN_TEST_CODE) {
+    await ensureBuiltinTestCode()
+  }
   return getRecord(code)
 }
