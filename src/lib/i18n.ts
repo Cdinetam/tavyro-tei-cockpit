@@ -305,6 +305,22 @@ interface Copy {
       }
     }
   }
+  /** Physische Karte-Kampagne (Track 3) — Gate unter /live/zugang. */
+  cardCampaign: {
+    kicker: string
+    heading: string
+    body: string
+    inputPlaceholder: string
+    invalidCode: string
+    networkError: string
+    checking: string
+    submit: string
+    footer: string
+    showCodeAria: string
+    hideCodeAria: string
+    showCodeLabel: string
+    hideCodeLabel: string
+  }
 }
 
 const de: Copy = {
@@ -564,6 +580,22 @@ const de: Copy = {
       },
     },
   },
+  cardCampaign: {
+    kicker: 'Persönliche Einladung',
+    heading: 'Willkommen im TEI® Trust Room.',
+    body: 'Scannen Sie den QR-Code auf Ihrer Karte oder geben Sie Ihren persönlichen Zugangscode ein.',
+    inputPlaceholder: 'Zugangscode',
+    invalidCode: 'Dieser Code ist nicht gültig. Bitte den Code von Ihrer Karte exakt übernehmen.',
+    networkError:
+      'Die Code-Prüfung ist fehlgeschlagen. Bitte Seite neu laden und erneut versuchen — idealerweise im Safari- oder Chrome-Browser.',
+    checking: 'Wird geprüft…',
+    submit: 'Dialog starten',
+    footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    showCodeAria: 'Zugangscode anzeigen',
+    hideCodeAria: 'Zugangscode verbergen',
+    showCodeLabel: 'Anzeigen',
+    hideCodeLabel: 'Verbergen',
+  },
 }
 
 const en: Copy = {
@@ -821,6 +853,22 @@ const en: Copy = {
         send: 'Send',
       },
     },
+  },
+  cardCampaign: {
+    kicker: 'Personal invitation',
+    heading: 'Welcome to the TEI® Trust Room.',
+    body: 'Scan the QR code on your card or enter your personal access code.',
+    inputPlaceholder: 'Access code',
+    invalidCode: 'This code is not valid. Please enter the code from your card exactly.',
+    networkError:
+      'Code verification failed. Please reload the page and try again — ideally in Safari or Chrome.',
+    checking: 'Checking…',
+    submit: 'Start dialogue',
+    footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    showCodeAria: 'Show access code',
+    hideCodeAria: 'Hide access code',
+    showCodeLabel: 'Show',
+    hideCodeLabel: 'Hide',
   },
 }
 

@@ -1,6 +1,7 @@
 import type { HttpRequest, HttpResponseInit } from '@azure/functions'
 import { normalizeAccessCode, resolveAccessCode, isAccessControlEnabled } from './accessCodes.js'
 import { resolveIssuedCode, verifyIssuedCodeForEmail } from './issuedCodesStore.js'
+import { resolveCampaignCode, recordCampaignFirstUse } from './campaignCodeStore.js'
 
 export interface AccessCheckResult {
   denied: HttpResponseInit | null
@@ -46,6 +47,10 @@ export function accessCodeCookieHeader(code: string): string {
  * weil manche Browser/WebViews Custom-Header blockieren und dann fälschlich
  * "Netzwerkfehler" melden (live beobachtet).
  *
+ * Auflösung: PILOT_ACCESS_CODES → Auto-Codes (issuedCodesStore) →
+ * Karte-Kampagne (campaignCodeStore). Kampagnen-Codes landen danach im
+ * normalen Demo-Chat inkl. Quota/Cliffhanger — ohne E-Mail-Gate.
+ *
  * Ist PILOT_ACCESS_CODES nicht gesetzt, ist die gesamte Prüfung deaktiviert
  * — so bleibt lokale Entwicklung ohne Zusatzschritt möglich.
  */
@@ -77,21 +82,36 @@ export async function checkAccessCode(
   }
 
   const staticOwnerName = resolveAccessCode(providedCode)
-  const ownerName =
-    staticOwnerName ??
-    (await resolveIssuedCode(providedCode)) ??
-    (email ? await verifyIssuedCodeForEmail(email, providedCode) : null)
+  if (staticOwnerName) {
+    return { denied: null, ownerName: staticOwnerName, code: providedCode }
+  }
 
-  if (!ownerName) {
-    return {
-      denied: {
-        status: 401,
-        jsonBody: { status: 'error', message: 'Zugangscode fehlt oder ist ungültig.' },
-      },
-      ownerName: null,
-      code: providedCode,
+  const issuedOwnerName = await resolveIssuedCode(providedCode)
+  if (issuedOwnerName) {
+    return { denied: null, ownerName: issuedOwnerName, code: providedCode }
+  }
+
+  const campaignOwnerName = await resolveCampaignCode(providedCode)
+  if (campaignOwnerName) {
+    void recordCampaignFirstUse(providedCode).catch(() => {
+      // absichtlich leer
+    })
+    return { denied: null, ownerName: campaignOwnerName, code: providedCode }
+  }
+
+  if (email) {
+    const emailOwnerName = await verifyIssuedCodeForEmail(email, providedCode)
+    if (emailOwnerName) {
+      return { denied: null, ownerName: emailOwnerName, code: providedCode }
     }
   }
 
-  return { denied: null, ownerName, code: providedCode }
+  return {
+    denied: {
+      status: 401,
+      jsonBody: { status: 'error', message: 'Zugangscode fehlt oder ist ungültig.' },
+    },
+    ownerName: null,
+    code: providedCode,
+  }
 }

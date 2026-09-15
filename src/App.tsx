@@ -11,6 +11,7 @@ import {
   LiveResetPasswordScreen,
 } from './components/LiveAuth'
 import { LiveChat } from './components/LiveChat'
+import { CardCampaignGate } from './components/CardCampaignGate'
 import { useTrustRoomChat } from './hooks/useTrustRoomChat'
 import { useLiveChat } from './hooks/useLiveChat'
 import { getLiveToken, liveLogout } from './lib/liveClient'
@@ -32,6 +33,7 @@ type View =
   | 'liveForgotPassword'
   | 'liveResetPassword'
   | 'liveRoom'
+  | 'cardCampaign'
 
 // Der echte, mehrteilige Trust-Room-Gespräch-Flow bekommt eine eigene URL
 // (/gespraech), damit er direkt verlinkt/geteilt werden kann. Er ist der
@@ -68,6 +70,7 @@ function pathToView(pathname: string): View {
   if (withoutLangPrefix.startsWith('/live/forgot-password')) return 'liveForgotPassword'
   if (withoutLangPrefix.startsWith('/live/reset-password')) return 'liveResetPassword'
   if (withoutLangPrefix.startsWith('/live/gespraech')) return 'liveRoom'
+  if (withoutLangPrefix.startsWith('/live/zugang')) return 'cardCampaign'
   return withoutLangPrefix.startsWith('/gespraech') ? 'room' : 'landing'
 }
 
@@ -79,6 +82,7 @@ const LIVE_VIEW_PATHS: Partial<Record<View, string>> = {
   liveForgotPassword: '/live/forgot-password',
   liveResetPassword: '/live/reset-password',
   liveRoom: '/live/gespraech',
+  cardCampaign: '/live/zugang',
 }
 
 function buildPath(lang: Lang, view: View): string {
@@ -262,7 +266,8 @@ export default function App() {
     view === 'liveActivate' ||
     view === 'liveForgotPassword' ||
     view === 'liveResetPassword' ||
-    view === 'liveRoom'
+    view === 'liveRoom' ||
+    view === 'cardCampaign'
 
   // Live-Bildschirme bringen ihr eigenes Logo/Branding mit (siehe
   // LiveAuth.tsx → Shell, LiveChat.tsx-Kopfzeile) — der globale <Header>
@@ -306,6 +311,7 @@ export default function App() {
             onNavigateLogin={() => goToLiveView('liveLogin')}
           />
         )}
+        {view === 'cardCampaign' && <CardCampaignGate lang={lang} onToggleLang={toggleLang} />}
         {view === 'liveRoom' && liveLoggedIn && (
           <LiveChat
             lang={lang}
