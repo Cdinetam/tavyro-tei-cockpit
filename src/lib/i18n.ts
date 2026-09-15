@@ -583,7 +583,7 @@ const de: Copy = {
   cardCampaign: {
     kicker: 'Persönliche Einladung',
     heading: 'Willkommen im TEI® Trust Room.',
-    body: 'Scannen Sie den QR-Code auf Ihrer Karte oder geben Sie Ihren persönlichen Zugangscode ein.',
+    body: 'Scannen Sie den QR-Code auf Ihrer Karte oder geben Sie Ihren persönlichen Zugangscode ein. Danach starten Sie ein vertrauliches Gespräch — begrenzt auf 7 Nachrichten in dieser Vorschau.',
     inputPlaceholder: 'Zugangscode',
     invalidCode: 'Dieser Code ist nicht gültig. Bitte den Code von Ihrer Karte exakt übernehmen.',
     networkError:
@@ -857,7 +857,7 @@ const en: Copy = {
   cardCampaign: {
     kicker: 'Personal invitation',
     heading: 'Welcome to the TEI® Trust Room.',
-    body: 'Scan the QR code on your card or enter your personal access code.',
+    body: 'Scan the QR code on your card or enter your personal access code. You will then start a confidential conversation — limited to 7 messages in this preview.',
     inputPlaceholder: 'Access code',
     invalidCode: 'This code is not valid. Please enter the code from your card exactly.',
     networkError:

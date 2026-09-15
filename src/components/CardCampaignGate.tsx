@@ -72,7 +72,6 @@ export function CardCampaignGate({ lang, onToggleLang }: Props) {
   const [status, setStatus] = useState<'idle' | 'checking' | 'invalid' | 'network'>('idle')
   const [lookupHint, setLookupHint] = useState<'idle' | 'ok' | 'invalid'>('idle')
   const codeInputRef = useRef<HTMLInputElement>(null)
-  const autoStarted = useRef(false)
 
   useEffect(() => {
     const fromQuery = codeFromQuery().trim().toLowerCase()
@@ -90,17 +89,6 @@ export function CardCampaignGate({ lang, onToggleLang }: Props) {
       cancelled = true
     }
   }, [])
-
-  // QR mit gültigem Code: einmalig automatisch freischalten (weniger Reibung
-  // auf dem Handy nach dem Scan).
-  useEffect(() => {
-    const fromQuery = codeFromQuery().trim().toLowerCase()
-    if (!fromQuery || autoStarted.current || lookupHint !== 'ok') return
-    autoStarted.current = true
-    void unlock(fromQuery)
-    // unlock ist stabil genug für diesen Mount-Pfad
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lookupHint])
 
   async function unlock(rawCode: string) {
     const normalized = rawCode.trim().toLowerCase()
