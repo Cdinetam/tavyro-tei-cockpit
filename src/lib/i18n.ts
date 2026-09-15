@@ -320,6 +320,10 @@ interface Copy {
     hideCodeAria: string
     showCodeLabel: string
     hideCodeLabel: string
+    /** Kicker/Hinweis im Gespräch nach Freischaltung (statt „Demo-Version“). */
+    chatKicker: string
+    chatNote: string
+    limitKicker: string
   }
 }
 
@@ -595,6 +599,9 @@ const de: Copy = {
     hideCodeAria: 'Zugangscode verbergen',
     showCodeLabel: 'Anzeigen',
     hideCodeLabel: 'Verbergen',
+    chatKicker: 'TEI® Trust Room · Persönliche Einladung',
+    chatNote: 'Begrenzt auf 7 Chat-Anfragen · vertrauliche Vorschau',
+    limitKicker: 'Vorschau · Kontingent aufgebraucht',
   },
 }
 
@@ -869,6 +876,9 @@ const en: Copy = {
     hideCodeAria: 'Hide access code',
     showCodeLabel: 'Show',
     hideCodeLabel: 'Hide',
+    chatKicker: 'TEI® Trust Room · Personal invitation',
+    chatNote: 'Limited to 7 chat requests · confidential preview',
+    limitKicker: 'Preview · allowance used up',
   },
 }
 

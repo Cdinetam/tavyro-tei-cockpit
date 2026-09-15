@@ -9,11 +9,15 @@ export const isMockMode = !API_BASE_URL
 
 const SESSION_STORAGE_KEY = 'tei-session-id'
 const ACCESS_CODE_STORAGE_KEY = 'tei-access-code'
+const ACCESS_SOURCE_STORAGE_KEY = 'tei-access-source'
 const PENDING_EMAIL_STORAGE_KEY = 'tei-pending-email'
+
+export type AccessSource = 'campaign' | 'demo'
 
 /** Fallback, falls sessionStorage auf dem Gerät blockiert ist (z.B. iOS
  * Privatmodus) — gilt nur für die laufende Browser-Sitzung. */
 let memoryAccessCode = ''
+let memoryAccessSource: AccessSource | '' = ''
 let memoryPendingEmail = ''
 
 function readSessionItem(key: string): string {
@@ -46,9 +50,17 @@ export function getStoredAccessCode(): string {
   return readSessionItem(ACCESS_CODE_STORAGE_KEY) || memoryAccessCode
 }
 
-export function storeAccessCode(code: string): void {
+export function storeAccessCode(code: string, source: AccessSource = 'demo'): void {
   memoryAccessCode = code
   writeSessionItem(ACCESS_CODE_STORAGE_KEY, code)
+  memoryAccessSource = source
+  writeSessionItem(ACCESS_SOURCE_STORAGE_KEY, source)
+}
+
+/** true, wenn der aktuelle Zugang über die Karte-Kampagne kam (Track 3). */
+export function isCampaignAccess(): boolean {
+  const stored = (readSessionItem(ACCESS_SOURCE_STORAGE_KEY) || memoryAccessSource) as string
+  return stored === 'campaign'
 }
 
 export function getPendingAccessEmail(): string {

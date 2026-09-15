@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { chatMessageImageUrls, chatMessageText, type ChatMessage } from '../types'
 import type { ChatFlowStatus, SavedConversation } from '../hooks/useTrustRoomChat'
-import { extractDocument, isMockMode } from '../lib/aiClient'
+import { extractDocument, isCampaignAccess, isMockMode } from '../lib/aiClient'
 import { BOOKING_URL, DATE_LOCALE, getCopy, type Lang } from '../lib/i18n'
 import { useDocumentAttachment } from '../hooks/useDocumentAttachment'
 import {
@@ -303,6 +303,7 @@ export function TrustRoomChat({
   onExit,
 }: Props) {
   const copy = getCopy(lang)
+  const campaign = isCampaignAccess()
   const [draft, setDraft] = useState(initialDraft ?? '')
   const listRef = useRef<HTMLDivElement>(null)
   const attachment = useDocumentAttachment(extractDocument, lang)
@@ -327,7 +328,7 @@ export function TrustRoomChat({
     return (
       <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
-          {copy.chat.limitReached.kicker}
+          {campaign ? copy.cardCampaign.limitKicker : copy.chat.limitReached.kicker}
         </p>
         <h2 className="mt-4 font-display text-2xl font-medium text-paper">
           {copy.chat.limitReached.heading}
@@ -357,7 +358,7 @@ export function TrustRoomChat({
     return (
       <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
-          {copy.chat.conversationLimitReached.kicker}
+          {campaign ? copy.cardCampaign.limitKicker : copy.chat.conversationLimitReached.kicker}
         </p>
         <h2 className="mt-4 font-display text-2xl font-medium text-paper">
           {copy.chat.conversationLimitReached.heading}
@@ -407,13 +408,15 @@ export function TrustRoomChat({
   if (messages.length === 0) {
     return (
       <section className="mx-auto flex min-h-screen-header max-w-2xl flex-col justify-center overflow-x-hidden safe-px py-16">
-        <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{copy.chat.empty.kicker}</p>
+        <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
+          {campaign ? copy.cardCampaign.chatKicker : copy.chat.empty.kicker}
+        </p>
         <h1 className="mt-4 font-display text-[1.75rem] font-medium leading-snug text-paper">
           {copy.chat.empty.heading}
         </h1>
         <p className="mt-3 max-w-lg font-sans text-[15px] leading-relaxed text-paper-dim">{copy.chat.empty.body}</p>
         <p className="mt-2 font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">
-          {copy.chat.empty.demoNote}
+          {campaign ? copy.cardCampaign.chatNote : copy.chat.empty.demoNote}
         </p>
         <form onSubmit={handleSubmit} className="mt-8">
           <AttachmentBar attachment={attachment} lang={lang} />

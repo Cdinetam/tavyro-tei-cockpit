@@ -96,7 +96,7 @@ export function CardCampaignGate({ lang, onToggleLang }: Props) {
     setStatus('checking')
     const result = await redeemCampaignCode(normalized)
     if (result === 'ok') {
-      storeAccessCode(normalized)
+      storeAccessCode(normalized, 'campaign')
       const prefix = hasEnPrefix(window.location.pathname) ? '/en' : ''
       window.location.assign(`${prefix}/gespraech`)
       return

@@ -67,7 +67,7 @@ export function AccessGate({ children }: Props) {
     try {
       const result = await verifyAccessCode(normalizedCode, emailHint || undefined)
       if (result === 'ok') {
-        storeAccessCode(normalizedCode)
+        storeAccessCode(normalizedCode, 'demo')
         storePendingAccessEmail('')
         setUnlocked(true)
         const prefix = hasEnPrefix(window.location.pathname) ? '/en' : ''
