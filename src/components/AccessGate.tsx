@@ -2,14 +2,15 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { verifyAccessCode, storeAccessCode, getStoredAccessCode, requestAutoAccess, storePendingAccessEmail, getPendingAccessEmail } from '../lib/aiClient'
 import { applyDocumentMeta, detectInitialLang, getCopy, hasEnPrefix } from '../lib/i18n'
 
-/** /live-Pfade (Live-Version, siehe App.tsx/LiveAuth.tsx) haben ein
- * komplett eigenständiges Login-System (E-Mail+Passwort statt
- * Zugangscode) — das Demo-Zugangscode-Gate hier darf sie deshalb gar nicht
- * erst abfangen, sonst bräuchte man BEIDE Systeme, um an den Live-Bereich
- * zu kommen. */
-function isLivePath(pathname: string): boolean {
+/** /live-Pfade (Live-Version) und kurze Karte-Kampagne-Pfade (/k, /karte)
+ * haben eigene Gates — das Demo-Zugangscode-Gate hier darf sie nicht
+ * abfangen. */
+function isGateBypassPath(pathname: string): boolean {
   const withoutLangPrefix = hasEnPrefix(pathname) ? pathname.slice(3) : pathname
-  return withoutLangPrefix === '/live' || withoutLangPrefix.startsWith('/live/')
+  if (withoutLangPrefix === '/live' || withoutLangPrefix.startsWith('/live/')) return true
+  if (withoutLangPrefix === '/k' || withoutLangPrefix.startsWith('/k/')) return true
+  if (withoutLangPrefix === '/karte' || withoutLangPrefix.startsWith('/karte/')) return true
+  return false
 }
 
 interface Props {
@@ -52,7 +53,7 @@ export function AccessGate({ children }: Props) {
     applyDocumentMeta(lang)
   }, [lang])
 
-  if (isLivePath(window.location.pathname)) return <>{children}</>
+  if (isGateBypassPath(window.location.pathname)) return <>{children}</>
 
   if (unlocked) return <>{children}</>
 

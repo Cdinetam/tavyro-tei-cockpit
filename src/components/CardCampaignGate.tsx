@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { storeAccessCode } from '../lib/aiClient'
+import { campaignCodeFromLocation } from '../lib/campaignAccess'
 import { getCopy, hasEnPrefix, type Lang } from '../lib/i18n'
 
 // Wie aiClient.ts: leerer String zählt als "kein Backend" — hier aber
@@ -9,13 +10,13 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.
 
 /**
  * Gate für die physische Karte-Kampagne (Track 3).
- * Route: /live/zugang?code=… — liegt hinter isLivePath, daher kein
- * Demo-AccessGate. Nach OK: Code wie Demo in sessionStorage, Redirect
- * nach /gespraech (7er-Limit + Cliffhanger unverändert).
+ * Kurze URLs: /k , /k/CODE , /karte , /karte/CODE
+ * Alias: /live/zugang?code=…
+ * Nach OK → /gespraech (7er-Limit + Cliffhanger).
  */
 
-function codeFromQuery(): string {
-  return new URLSearchParams(window.location.search).get('code')?.trim() ?? ''
+function codeFromLocation(): string {
+  return campaignCodeFromLocation()
 }
 
 async function readCampaignStatus(response: Response): Promise<'ok' | 'invalid' | 'network'> {
@@ -67,19 +68,19 @@ interface Props {
 
 export function CardCampaignGate({ lang, onToggleLang }: Props) {
   const copy = getCopy(lang).cardCampaign
-  const [code, setCode] = useState(() => codeFromQuery())
+  const [code, setCode] = useState(() => codeFromLocation())
   const [showCode, setShowCode] = useState(false)
   const [status, setStatus] = useState<'idle' | 'checking' | 'invalid' | 'network'>('idle')
   const [lookupHint, setLookupHint] = useState<'idle' | 'ok' | 'invalid'>('idle')
   const codeInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const fromQuery = codeFromQuery().trim().toLowerCase()
-    if (!fromQuery) return
+    const fromLocation = codeFromLocation().trim().toLowerCase()
+    if (!fromLocation) return
 
     let cancelled = false
     void (async () => {
-      const result = await lookupCampaignCode(fromQuery)
+      const result = await lookupCampaignCode(fromLocation)
       if (cancelled) return
       if (result === 'ok') setLookupHint('ok')
       else if (result === 'invalid') setLookupHint('invalid')
@@ -156,7 +157,7 @@ export function CardCampaignGate({ lang, onToggleLang }: Props) {
               spellCheck={false}
               autoCapitalize="none"
               autoCorrect="off"
-              autoFocus={!codeFromQuery()}
+              autoFocus={!codeFromLocation()}
               className="w-full border border-line bg-ink-800/60 px-4 py-3 pr-14 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[15px]"
             />
             <button

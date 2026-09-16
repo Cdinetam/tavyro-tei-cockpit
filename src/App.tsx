@@ -16,6 +16,7 @@ import { useTrustRoomChat } from './hooks/useTrustRoomChat'
 import { useLiveChat } from './hooks/useLiveChat'
 import { getLiveToken, liveLogout } from './lib/liveClient'
 import { applyDocumentMeta, detectInitialLang, getLangFromPath, hasEnPrefix, type Lang } from './lib/i18n'
+import { campaignCodeFromLocation } from './lib/campaignAccess'
 
 // Live-Version-Views (siehe LiveAuth.tsx/LiveChat.tsx) sind bewusst
 // unabhängig vom Demo-Zugangscode-Gate (siehe AccessGate.tsx: /live-Pfade
@@ -70,7 +71,15 @@ function pathToView(pathname: string): View {
   if (withoutLangPrefix.startsWith('/live/forgot-password')) return 'liveForgotPassword'
   if (withoutLangPrefix.startsWith('/live/reset-password')) return 'liveResetPassword'
   if (withoutLangPrefix.startsWith('/live/gespraech')) return 'liveRoom'
-  if (withoutLangPrefix.startsWith('/live/zugang')) return 'cardCampaign'
+  if (
+    withoutLangPrefix === '/k' ||
+    withoutLangPrefix.startsWith('/k/') ||
+    withoutLangPrefix === '/karte' ||
+    withoutLangPrefix.startsWith('/karte/') ||
+    withoutLangPrefix.startsWith('/live/zugang')
+  ) {
+    return 'cardCampaign'
+  }
   return withoutLangPrefix.startsWith('/gespraech') ? 'room' : 'landing'
 }
 
@@ -82,11 +91,15 @@ const LIVE_VIEW_PATHS: Partial<Record<View, string>> = {
   liveForgotPassword: '/live/forgot-password',
   liveResetPassword: '/live/reset-password',
   liveRoom: '/live/gespraech',
-  cardCampaign: '/live/zugang',
+  cardCampaign: '/k',
 }
 
 function buildPath(lang: Lang, view: View): string {
-  const base = LIVE_VIEW_PATHS[view] ?? (view === 'room' ? '/gespraech' : '/')
+  let base = LIVE_VIEW_PATHS[view] ?? (view === 'room' ? '/gespraech' : '/')
+  if (view === 'cardCampaign') {
+    const code = campaignCodeFromLocation()
+    if (code) base = `/k/${encodeURIComponent(code.toLowerCase())}`
+  }
   if (lang !== 'en') return base
   return base === '/' ? '/en' : `/en${base}`
 }
