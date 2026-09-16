@@ -126,6 +126,84 @@
     height: 100dvh;
   }
 
+  /*
+   * Desktop (≥768px): klassisches Chat-Layout.
+   * Shell füllt den Viewport (fixed → keine Dokument-Scroll / abgeschnittene Leiste).
+   * Topbar volle Breite; Nachrichten+Eingabe in breiterer zentrierter Spalte.
+   * Mobile-Styles (Tailwind) bleiben unverändert.
+   */
+  @media (min-width: 768px) {
+    body:has(.chat-shell) {
+      overflow: hidden;
+    }
+
+    .chat-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+      background-color: #0A192F; /* ink-900 — deckt darunterliegende Seite ab */
+    }
+
+    .chat-shell--demo {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: var(--header-offset);
+      height: auto;
+      max-height: none;
+      padding-left: max(1.5rem, var(--safe-left));
+      padding-right: max(1.5rem, var(--safe-right));
+    }
+
+    .chat-shell--live {
+      position: fixed;
+      inset: 0;
+      height: auto;
+      max-height: none;
+      padding-top: max(1.25rem, var(--safe-top));
+      padding-left: max(1.5rem, var(--safe-left));
+      padding-right: max(1.5rem, var(--safe-right));
+    }
+
+    .chat-topbar {
+      flex-shrink: 0;
+      width: 100%;
+      max-width: 1120px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .chat-column {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0%;
+      min-height: 0;
+      width: 100%;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .chat-messages {
+      flex: 1 1 0%;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .chat-composer {
+      flex-shrink: 0;
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+      background-color: #0A192F;
+    }
+  }
+
   .case-number {
     font-variant-numeric: tabular-nums;
   }

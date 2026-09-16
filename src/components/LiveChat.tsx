@@ -216,7 +216,7 @@ function LiveTopBar({
   }
 
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 border-b border-line-soft py-3 sm:py-4">
+    <div className="chat-topbar flex min-w-0 items-center justify-between gap-3 border-b border-line-soft py-3 sm:py-4">
       <div className="flex min-w-0 items-center gap-2.5">
         <img src="/tavyro-logo.png" alt="TaVyro" className="h-7 w-auto shrink-0 sm:h-8" />
         {showPulse && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-brass" />}
@@ -303,13 +303,23 @@ function ChatInputForm({
 }) {
   const placeholder = variant === 'empty' ? liveCopy.empty.placeholder : liveCopy.active.placeholder
   const isEmpty = variant === 'empty'
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // preventScroll: sonst schiebt der Browser die Seite nach unten und die
+  // Top-Leiste wird am Viewport-Rand abgeschnitten.
+  useEffect(() => {
+    textareaRef.current?.focus({ preventScroll: true })
+  }, [])
 
   return (
-    <form onSubmit={onSubmit} className={isEmpty ? 'mt-8' : 'border-t border-line-soft pt-3 sm:pt-4 safe-pb-form'}>
+    <form
+      onSubmit={onSubmit}
+      className={isEmpty ? 'mt-8' : 'chat-composer border-t border-line-soft pt-3 sm:pt-4 safe-pb-form'}
+    >
       <AttachmentBar attachment={attachment} lang={lang} />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
         <textarea
-          autoFocus
+          ref={textareaRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={
@@ -594,7 +604,7 @@ export function LiveChat({
   ]
 
   return (
-    <div className="mx-auto flex h-dvh-safe max-w-3xl flex-col overflow-x-hidden safe-px-sm safe-pt sm:safe-px">
+    <div className="chat-shell chat-shell--live mx-auto flex h-dvh-safe max-w-3xl flex-col overflow-x-hidden safe-px-sm safe-pt sm:safe-px">
       <LiveTopBar
         lang={lang}
         liveCopy={liveCopy}
@@ -613,39 +623,41 @@ export function LiveChat({
         />
       )}
 
-      <div ref={listRef} className="flex-1 overflow-y-auto py-6">
-        <div className="flex flex-col gap-4">
-          {messages.map((m, i) => (
-            <Bubble key={i} message={m} lang={lang} />
-          ))}
-          {status === 'sending' && (
-            <div className="flex justify-start">
-              <div className="flex gap-1.5 border border-line-soft bg-ink-800/60 px-5 py-3.5">
-                {[0, 1, 2].map((i) => (
-                  <span
-                    key={i}
-                    className="h-1.5 w-1.5 animate-pulse rounded-full bg-brass-dim"
-                    style={{ animationDelay: `${i * 180}ms` }}
-                  />
-                ))}
+      <div className="chat-column flex min-h-0 flex-1 flex-col">
+        <div ref={listRef} className="chat-messages flex-1 overflow-y-auto py-6">
+          <div className="flex flex-col gap-4">
+            {messages.map((m, i) => (
+              <Bubble key={i} message={m} lang={lang} />
+            ))}
+            {status === 'sending' && (
+              <div className="flex justify-start">
+                <div className="flex gap-1.5 border border-line-soft bg-ink-800/60 px-5 py-3.5">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-brass-dim"
+                      style={{ animationDelay: `${i * 180}ms` }}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {status === 'error' && <p className="font-sans text-[13px] text-paper-faint">{errorMessage}</p>}
+            )}
+            {status === 'error' && <p className="font-sans text-[13px] text-paper-faint">{errorMessage}</p>}
+          </div>
         </div>
-      </div>
 
-      <ChatInputForm
-        lang={lang}
-        liveCopy={liveCopy}
-        draft={draft}
-        setDraft={setDraft}
-        attachment={attachment}
-        canSubmit={canSubmit}
-        status={status}
-        onSubmit={handleSubmit}
-        variant="active"
-      />
+        <ChatInputForm
+          lang={lang}
+          liveCopy={liveCopy}
+          draft={draft}
+          setDraft={setDraft}
+          attachment={attachment}
+          canSubmit={canSubmit}
+          status={status}
+          onSubmit={handleSubmit}
+          variant="active"
+        />
+      </div>
     </div>
   )
 }

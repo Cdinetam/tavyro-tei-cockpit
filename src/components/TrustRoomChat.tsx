@@ -306,11 +306,18 @@ export function TrustRoomChat({
   const campaign = isCampaignAccess()
   const [draft, setDraft] = useState(initialDraft ?? '')
   const listRef = useRef<HTMLDivElement>(null)
+  const composerRef = useRef<HTMLTextAreaElement>(null)
   const attachment = useDocumentAttachment(extractDocument, lang)
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, status])
+
+  // preventScroll: sonst schiebt der Browser die Seite und schneidet die Leiste ab.
+  useEffect(() => {
+    if (messages.length === 0) return
+    composerRef.current?.focus({ preventScroll: true })
+  }, [messages.length])
 
   const overLimit = draft.length > MAX_MESSAGE_LENGTH
   const canSubmit = (draft.trim() || attachment.attachments.length > 0) && attachment.status !== 'uploading' && !overLimit
@@ -480,8 +487,8 @@ export function TrustRoomChat({
   }
 
   return (
-    <div className="mx-auto flex h-screen-header max-w-3xl flex-col overflow-x-hidden safe-px">
-      <div className="flex min-w-0 items-center justify-between gap-3 border-b border-line-soft py-3 sm:py-4">
+    <div className="chat-shell chat-shell--demo mx-auto flex h-screen-header max-w-3xl flex-col overflow-x-hidden safe-px">
+      <div className="chat-topbar flex min-w-0 items-center justify-between gap-3 border-b border-line-soft py-3 sm:py-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
           <span className="hidden truncate font-mono text-[10px] uppercase tracking-widest2 text-paper-faint sm:inline">
@@ -506,63 +513,65 @@ export function TrustRoomChat({
         </div>
       </div>
 
-      <div ref={listRef} className="flex-1 overflow-y-auto py-6">
-        <div className="flex flex-col gap-4">
-          {messages.map((m, i) => (
-            <div key={i} className="flex flex-col gap-2">
-              <Bubble message={m} lang={lang} />
-              {m.role === 'assistant' && m.cliffhanger && <CliffhangerCta lang={lang} />}
-            </div>
-          ))}
-          {status === 'sending' && (
-            <div className="flex justify-start">
-              <div className="flex gap-1.5 border border-line-soft bg-ink-800/60 px-5 py-3.5">
-                {[0, 1, 2].map((i) => (
-                  <span
-                    key={i}
-                    className="h-1.5 w-1.5 animate-pulse rounded-full bg-brass-dim"
-                    style={{ animationDelay: `${i * 180}ms` }}
-                  />
-                ))}
+      <div className="chat-column flex min-h-0 flex-1 flex-col">
+        <div ref={listRef} className="chat-messages flex-1 overflow-y-auto py-6">
+          <div className="flex flex-col gap-4">
+            {messages.map((m, i) => (
+              <div key={i} className="flex flex-col gap-2">
+                <Bubble message={m} lang={lang} />
+                {m.role === 'assistant' && m.cliffhanger && <CliffhangerCta lang={lang} />}
               </div>
-            </div>
-          )}
-          {status === 'error' && (
-            <p className="font-sans text-[13px] text-paper-faint">{errorMessage}</p>
-          )}
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="border-t border-line-soft pt-4 safe-pb-form">
-        <AttachmentBar attachment={attachment} lang={lang} />
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
-          <textarea
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSubmit(e)
-              }
-            }}
-            placeholder={copy.chat.active.placeholder}
-            rows={2}
-            className="min-h-[88px] w-full min-w-0 flex-1 resize-none border border-line bg-ink-800/40 px-4 py-3 font-sans text-[16px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim sm:min-h-[72px] sm:text-[14.5px]"
-          />
-          <div className="flex items-center gap-2 sm:shrink-0">
-            <AttachButton attachment={attachment} lang={lang} />
-            <button
-              type="submit"
-              disabled={!canSubmit || status === 'sending'}
-              className="h-9 flex-1 border border-brass-dim bg-brass/[0.08] px-4 font-sans text-[14px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:flex-none sm:px-5 sm:text-[13px]"
-            >
-              {copy.chat.active.send}
-            </button>
+            ))}
+            {status === 'sending' && (
+              <div className="flex justify-start">
+                <div className="flex gap-1.5 border border-line-soft bg-ink-800/60 px-5 py-3.5">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-brass-dim"
+                      style={{ animationDelay: `${i * 180}ms` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {status === 'error' && (
+              <p className="font-sans text-[13px] text-paper-faint">{errorMessage}</p>
+            )}
           </div>
         </div>
-        <CharCounter length={draft.length} lang={lang} />
-      </form>
+
+        <form onSubmit={handleSubmit} className="chat-composer border-t border-line-soft pt-4 safe-pb-form">
+          <AttachmentBar attachment={attachment} lang={lang} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+            <textarea
+              ref={composerRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSubmit(e)
+                }
+              }}
+              placeholder={copy.chat.active.placeholder}
+              rows={2}
+              className="min-h-[88px] w-full min-w-0 flex-1 resize-none border border-line bg-ink-800/40 px-4 py-3 font-sans text-[16px] leading-relaxed text-paper placeholder:text-paper-faint/70 focus:border-brass-dim sm:min-h-[72px] sm:text-[14.5px]"
+            />
+            <div className="flex items-center gap-2 sm:shrink-0">
+              <AttachButton attachment={attachment} lang={lang} />
+              <button
+                type="submit"
+                disabled={!canSubmit || status === 'sending'}
+                className="h-9 flex-1 border border-brass-dim bg-brass/[0.08] px-4 font-sans text-[14px] font-medium text-paper transition-all duration-300 ease-editorial hover:border-brass hover:bg-brass/[0.14] disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:flex-none sm:px-5 sm:text-[13px]"
+              >
+                {copy.chat.active.send}
+              </button>
+            </div>
+          </div>
+          <CharCounter length={draft.length} lang={lang} />
+        </form>
+      </div>
     </div>
   )
 }
