@@ -163,7 +163,7 @@ function LangToggle({ lang, onToggleLang, className }: { lang: Lang; onToggleLan
     <button
       onClick={onToggleLang}
       aria-label={copy.header.langToggleAria}
-      className={`flex shrink-0 items-center gap-1 font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper ${className ?? ''}`}
+      className={`flex shrink-0 items-center gap-1 pr-1 font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper ${className ?? ''}`}
     >
       <span className={lang === 'de' ? 'text-paper' : undefined}>DE</span>
       <span aria-hidden="true">|</span>
@@ -218,7 +218,7 @@ function LiveTopBar({
   return (
     <div className="chat-topbar flex min-w-0 items-center justify-between gap-3 border-b border-line-soft py-3 sm:py-4">
       <div className="flex min-w-0 items-center gap-2.5">
-        <img src="/tavyro-logo.png" alt="TaVyro" className="h-7 w-auto shrink-0 sm:h-8" />
+        <img src="/tavyro-logo.png" alt="TaVyro" className="h-8 w-auto shrink-0 sm:h-9" />
         {showPulse && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-brass" />}
         <span className="hidden truncate font-mono text-[10px] uppercase tracking-widest2 text-paper-faint sm:inline">
           {liveCopy.statusLabel}
@@ -226,7 +226,7 @@ function LiveTopBar({
       </div>
 
       {/* Desktop-Navigation */}
-      <div className="hidden min-w-0 items-center gap-3 md:flex">
+      <div className="hidden shrink-0 items-center gap-3 md:flex">
         {menuActions.map((action) => (
           <button
             key={action.label}
@@ -537,7 +537,7 @@ export function LiveChat({
     ]
 
     return (
-      <section className="mx-auto flex min-h-dvh-safe max-w-2xl flex-col justify-center overflow-x-hidden safe-px-sm safe-pt safe-pb py-10 sm:safe-px sm:py-16">
+      <section className="mx-auto flex min-h-dvh-safe max-w-3xl flex-col justify-center safe-px-sm safe-pt safe-pb py-10 sm:safe-px sm:py-16">
         <LiveTopBar
           lang={lang}
           liveCopy={liveCopy}
