@@ -1,14 +1,17 @@
 import { app, HttpRequest, HttpResponseInit } from '@azure/functions'
 import { checkAccessCode } from '../lib/accessGate.js'
 import { upsertOutreachCode, listOutreachCodes } from '../lib/outreachCodeStore.js'
-import { sendAccessCodeEmail } from '../lib/emailSender.js'
 import { getUsageCount, getWeeklyLimit } from '../lib/quotaStore.js'
 import { notify } from '../lib/notify.js'
 
 /**
  * Outreach / Kaltakquise:
- *   POST /api/outreach-seed  — Code anlegen (+ optional E-Mail)
+ *   POST /api/outreach-seed  — Code anlegen (keine E-Mail an die Person)
  *   GET  /api/outreach-debug — Liste inkl. Nutzung
+ *
+ * Produktregel: E-Mails mit Zugangscode gehen NUR über die Homepage-Demo
+ * ("Code per E-Mail anfordern", autoAccess.ts). Outreach-Codes teilt Tam
+ * manuell — hier wird bewusst nichts verschickt.
  *
  * Auth wie campaign-seed / auto-access-debug (gültiger Zugangscode).
  */
@@ -20,9 +23,6 @@ interface OutreachSeedBody {
   code?: string
   /** Bestehenden Code ersetzen (z.B. neuer Prefix). */
   replace?: boolean
-  /** Standard true — Code per E-Mail an die Person schicken. */
-  sendEmail?: boolean
-  lang?: 'de' | 'en'
 }
 
 export async function outreachSeed(req: HttpRequest): Promise<HttpResponseInit> {
@@ -56,29 +56,13 @@ export async function outreachSeed(req: HttpRequest): Promise<HttpResponseInit> 
     replace: body.replace,
   })
 
-  const shouldSend = body.sendEmail !== false
-  let emailSent = false
-  let emailError: string | null = null
-  if (shouldSend) {
-    try {
-      await sendAccessCodeEmail({
-        to: record.email,
-        code: record.code,
-        lang: body.lang === 'en' ? 'en' : 'de',
-      })
-      emailSent = true
-    } catch (err) {
-      emailError = err instanceof Error ? err.message : String(err)
-    }
-  }
-
   if (isNew || previousCode) {
     void notify({
       kind: 'access',
       sessionId: 'outreach-seed',
       question: previousCode
         ? `Outreach-Code ${previousCode} → ${record.code} für ${record.email}`
-        : `Outreach-Code ${record.code} an ${record.email}${record.company ? ` (${record.company})` : ''}`,
+        : `Outreach-Code ${record.code} für ${record.email}${record.company ? ` (${record.company})` : ''} (ohne E-Mail-Versand)`,
       personName: record.name,
       email: record.email,
     }).catch(() => {
@@ -96,8 +80,7 @@ export async function outreachSeed(req: HttpRequest): Promise<HttpResponseInit> 
       name: record.name,
       email: record.email,
       company: record.company,
-      emailSent,
-      emailError,
+      emailSent: false,
       gateUrl: 'https://tei.tavyro.ch',
     },
   }
