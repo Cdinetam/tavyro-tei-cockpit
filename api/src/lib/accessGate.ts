@@ -2,6 +2,7 @@ import type { HttpRequest, HttpResponseInit } from '@azure/functions'
 import { normalizeAccessCode, resolveAccessCode, isAccessControlEnabled } from './accessCodes.js'
 import { resolveIssuedCode, verifyIssuedCodeForEmail } from './issuedCodesStore.js'
 import { resolveCampaignCode, recordCampaignFirstUse } from './campaignCodeStore.js'
+import { resolveOutreachCode, recordOutreachFirstUse } from './outreachCodeStore.js'
 
 export interface AccessCheckResult {
   denied: HttpResponseInit | null
@@ -48,8 +49,7 @@ export function accessCodeCookieHeader(code: string): string {
  * "Netzwerkfehler" melden (live beobachtet).
  *
  * Auflösung: PILOT_ACCESS_CODES → Auto-Codes (issuedCodesStore) →
- * Karte-Kampagne (campaignCodeStore). Kampagnen-Codes landen danach im
- * normalen Demo-Chat inkl. Quota/Cliffhanger — ohne E-Mail-Gate.
+ * Outreach (outreachCodeStore) → Karte-Kampagne (campaignCodeStore).
  *
  * Ist PILOT_ACCESS_CODES nicht gesetzt, ist die gesamte Prüfung deaktiviert
  * — so bleibt lokale Entwicklung ohne Zusatzschritt möglich.
@@ -89,6 +89,14 @@ export async function checkAccessCode(
   const issuedOwnerName = await resolveIssuedCode(providedCode)
   if (issuedOwnerName) {
     return { denied: null, ownerName: issuedOwnerName, code: providedCode }
+  }
+
+  const outreachOwnerName = await resolveOutreachCode(providedCode)
+  if (outreachOwnerName) {
+    void recordOutreachFirstUse(providedCode).catch(() => {
+      // absichtlich leer
+    })
+    return { denied: null, ownerName: outreachOwnerName, code: providedCode }
   }
 
   const campaignOwnerName = await resolveCampaignCode(providedCode)
