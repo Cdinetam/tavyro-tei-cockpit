@@ -18,6 +18,8 @@ interface OutreachSeedBody {
   email?: string
   company?: string
   code?: string
+  /** Bestehenden Code ersetzen (z.B. neuer Prefix). */
+  replace?: boolean
   /** Standard true — Code per E-Mail an die Person schicken. */
   sendEmail?: boolean
   lang?: 'de' | 'en'
@@ -46,11 +48,12 @@ export async function outreachSeed(req: HttpRequest): Promise<HttpResponseInit> 
     }
   }
 
-  const { record, isNew } = await upsertOutreachCode({
+  const { record, isNew, previousCode } = await upsertOutreachCode({
     name,
     email,
     company: body.company,
     code: body.code,
+    replace: body.replace,
   })
 
   const shouldSend = body.sendEmail !== false
@@ -69,11 +72,13 @@ export async function outreachSeed(req: HttpRequest): Promise<HttpResponseInit> 
     }
   }
 
-  if (isNew) {
+  if (isNew || previousCode) {
     void notify({
       kind: 'access',
       sessionId: 'outreach-seed',
-      question: `Outreach-Code ${record.code} an ${record.email}${record.company ? ` (${record.company})` : ''}`,
+      question: previousCode
+        ? `Outreach-Code ${previousCode} → ${record.code} für ${record.email}`
+        : `Outreach-Code ${record.code} an ${record.email}${record.company ? ` (${record.company})` : ''}`,
       personName: record.name,
       email: record.email,
     }).catch(() => {
@@ -86,6 +91,7 @@ export async function outreachSeed(req: HttpRequest): Promise<HttpResponseInit> 
     jsonBody: {
       status: 'ok',
       isNew,
+      previousCode,
       code: record.code,
       name: record.name,
       email: record.email,

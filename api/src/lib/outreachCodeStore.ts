@@ -3,7 +3,7 @@ import { normalizeAccessCode } from './accessCodes.js'
 
 /**
  * Outreach / Kaltakquise-Codes: von Tam vorab vergebene persönliche Codes
- * (z.B. akquise-001). Einstieg über dieselbe AccessGate-Seite wie die
+ * (z.B. trust-001). Einstieg über dieselbe AccessGate-Seite wie die
  * Homepage-Demo — bewusst getrennt von Auto-Codes (issuedCodesStore) und
  * Karte-Kampagne (campaignCodeStore).
  *
@@ -31,6 +31,8 @@ export interface OutreachCodeInput {
   name: string
   email: string
   company?: string
+  /** Bestehenden Code für diese E-Mail ersetzen (z.B. Prefix-Wechsel). */
+  replace?: boolean
 }
 
 let tableClientPromise: Promise<TableClient | null> | null = null
@@ -68,7 +70,8 @@ function normalizeEmailKey(email: string): string {
 }
 
 function formatOutreachCode(n: number): string {
-  return `akquise-${String(n).padStart(3, '0')}`
+  // Neutraler Prefix — bewusst nicht "akquise" (wirkt abschreckend beim Kunden).
+  return `trust-${String(n).padStart(3, '0')}`
 }
 
 function displayName(record: OutreachCodeRecord): string {
@@ -177,68 +180,88 @@ export async function recordOutreachFirstUse(code: string): Promise<void> {
   await persistRecord({ ...record, firstUsedAt: new Date().toISOString() })
 }
 
+async function deleteCodeIndex(code: string): Promise<void> {
+  const normalized = normalizeAccessCode(code)
+  if (!normalized) return
+  const client = await getTableClient()
+  if (!client) {
+    memoryByCode.delete(normalized)
+    return
+  }
+  try {
+    await client.deleteEntity(CODE_PARTITION, normalized)
+  } catch {
+    // bereits weg
+  }
+}
+
 /**
  * Legt einen Outreach-Code an. Existiert bereits ein Code für diese E-Mail,
- * wird derselbe zurückgegeben (kein zweiter Code pro Adresse). Sonst nächste
- * fortlaufende Nummer akquise-NNN — oder ein explizit übergebenes `code`.
+ * wird derselbe zurückgegeben — ausser `replace: true` oder ein explizit
+ * anderes `code` wird übergeben (dann wird der alte Code-Index entfernt).
+ * Sonst nächste fortlaufende Nummer trust-NNN.
  */
 export async function upsertOutreachCode(
   input: OutreachCodeInput,
-): Promise<{ record: OutreachCodeRecord; isNew: boolean }> {
+): Promise<{ record: OutreachCodeRecord; isNew: boolean; previousCode: string | null }> {
   const email = input.email.trim().toLowerCase()
   const emailKey = normalizeEmailKey(email)
   const name = input.name.trim()
   const company = (input.company ?? '').trim()
   const now = new Date().toISOString()
+  const explicitCode = normalizeAccessCode(input.code ?? '')
+  const shouldReplace = Boolean(input.replace || explicitCode)
 
+  let existing: OutreachCodeRecord | null = null
   const client = await getTableClient()
   if (emailKey) {
     if (!client) {
       const existingCode = memoryByEmail.get(emailKey)
-      if (existingCode) {
-        const existing = memoryByCode.get(existingCode)
-        if (existing) return { record: existing, isNew: false }
-      }
+      if (existingCode) existing = memoryByCode.get(existingCode) ?? null
     } else {
       try {
         const pointer = await client.getEntity<Record<string, unknown>>(EMAIL_PARTITION, emailKey)
         const existingCode = normalizeAccessCode(String(pointer.code ?? ''))
-        const existing = existingCode ? await getRecord(existingCode) : null
-        if (existing) return { record: existing, isNew: false }
+        existing = existingCode ? await getRecord(existingCode) : null
       } catch {
-        // kein Eintrag — neu vergeben
+        existing = null
       }
     }
   }
 
-  let code = normalizeAccessCode(input.code ?? '')
-  if (!code) {
-    const n = await nextSequence()
-    code = formatOutreachCode(n)
+  if (existing && !shouldReplace) {
+    return { record: existing, isNew: false, previousCode: null }
   }
 
-  const existingSameCode = await getRecord(code)
-  if (existingSameCode) {
-    const merged: OutreachCodeRecord = {
-      ...existingSameCode,
-      name: name || existingSameCode.name,
-      email: email || existingSameCode.email,
-      company: company || existingSameCode.company,
+  let code = explicitCode
+  if (!code) {
+    if (existing && shouldReplace) {
+      // Prefix-Wechsel: gleiche laufende Nummer behalten, wenn möglich
+      const m = existing.code.match(/(\d+)$/)
+      code = m ? formatOutreachCode(Number(m[1])) : formatOutreachCode(await nextSequence())
+    } else {
+      code = formatOutreachCode(await nextSequence())
     }
-    await persistRecord(merged)
-    return { record: merged, isNew: false }
+  }
+
+  const previousCode = existing && existing.code !== code ? existing.code : null
+  if (previousCode) {
+    await deleteCodeIndex(previousCode)
+    if (!client) {
+      // memoryByEmail wird in persistRecord neu gesetzt
+    }
   }
 
   const record: OutreachCodeRecord = {
     code,
-    name,
-    email,
-    company,
-    firstUsedAt: null,
-    createdAt: now,
+    name: name || existing?.name || '',
+    email: email || existing?.email || '',
+    company: company || existing?.company || '',
+    firstUsedAt: existing?.firstUsedAt ?? null,
+    createdAt: existing?.createdAt || now,
   }
   await persistRecord(record)
-  return { record, isNew: true }
+  return { record, isNew: !existing, previousCode }
 }
 
 export async function listOutreachCodes(): Promise<OutreachCodeRecord[]> {
