@@ -72,8 +72,10 @@ export async function outreachSeed(req: HttpRequest): Promise<HttpResponseInit> 
   if (isNew) {
     void notify({
       kind: 'access',
-      personName: record.name,
+      sessionId: 'outreach-seed',
       question: `Outreach-Code ${record.code} an ${record.email}${record.company ? ` (${record.company})` : ''}`,
+      personName: record.name,
+      email: record.email,
     }).catch(() => {
       // absichtlich leer
     })
