@@ -172,13 +172,11 @@ export function hasBannedOpener(reply: string, lang: GuardLang = 'de'): boolean 
 // (Verb zuerst) genauso vorkommt wie "ein offenes Gespräch führen" (Verb
 // zuletzt) — die blosse Kombination aus Adjektiv und "Gespräch" ist schon
 // der eigentliche Signalgeber, unabhängig von der Satzstellung.
-// "Externe Berater/Expertise hinzuziehen" ist selbst eine Ausweich-Antwort
-// (siehe Steuerungsblock Punkt 14 im Prompt) — live beobachtet: das Modell
-// wich bei wiederholter Nachfrage nach konkreten Tools/Vorschlägen mehrfach
-// hintereinander auf genau diese Formulierung aus, statt reale Kategorien
-// oder Beispiele zu nennen ("Wieso machst du kein Excel?"-Feedback von Tam).
-// Kein legitimer Vorkommens-Fall dieser Formulierung im Prompt selbst (siehe
-// Grep-Check), daher bewusst grosszügig gehalten.
+// "Externe Berater/Expertise/Anwalt/Coach hinzuziehen" ist selbst eine
+// Ausweich-Antwort (siehe Steuerungsblock Punkt 14 im Prompt) — live
+// beobachtet: das Modell wich bei sensiblen Themen und bei wiederholter
+// Nachfrage nach konkreten Tools/Vorschlägen mehrfach hintereinander auf
+// genau diese Formulierungen aus, statt im Raum zu bleiben.
 const VAGUE_ACTION_PATTERNS_DE: RegExp[] = [
   /(kl[äa]rendes|ehrliches|offenes)\s+gespr[äa]ch/i,
   /transparent\s+(zu\s+)?kommunizieren/i,
@@ -187,8 +185,9 @@ const VAGUE_ACTION_PATTERNS_DE: RegExp[] = [
   /langfristige\s+ziele\s+(zu\s+)?ber[üu]cksichtigen/i,
   /vor-?\s*und\s+nachteile\s+(ab)?w[äa]gen/i,
   /externe[nr]?\s+(berater(in)?|beratung|expert(en|innen|ise)?|unterst[üu]tzung|hilfe)/i,
-  /(einen?\s+)?(experten|berater(in)?|spezialisten|coach|mediator(in)?)\s+(hinzu)?(zuziehen|beiziehen|einschalten|engagieren|holen)/i,
-  /ziehen\s+sie\s+(einen?\s+)?(experten|berater|spezialisten|coach)/i,
+  /(einen?\s+)?(experten|berater(in)?|spezialisten|coach|mediator(in)?|anwalt|anw[äa]ltin|rechtsanwalt|therapeut(in)?|psycholog(e|in)|hr[- ]?(spezialist(in)?|berater(in)?))\s+(hinzu)?(zuziehen|beiziehen|einschalten|engagieren|holen)/i,
+  /ziehen\s+sie\s+(einen?\s+)?(experten|berater|spezialisten|coach|anwalt|mediator|therapeut)/i,
+  /(anwalt|anw[äa]ltin|rechtsbeistand|therapeut(in)?|coach|mediator(in)?)\s+(hinzu)?(zuziehen|beiziehen|konsultieren|aufsuchen)/i,
 ]
 
 const VAGUE_ACTION_PATTERNS_EN: RegExp[] = [
@@ -198,8 +197,9 @@ const VAGUE_ACTION_PATTERNS_EN: RegExp[] = [
   /take\s+long-?term\s+goals\s+into\s+account/i,
   /weigh(ing)?\s+(the\s+)?pros\s+and\s+cons/i,
   /external\s+(consultant|advisor|expert|support|help)/i,
-  /bring(ing)?\s+in\s+(an?\s+)?(external\s+)?(consultant|advisor|expert|coach|specialist)/i,
-  /engage\s+(an?\s+)?(external\s+)?(consultant|advisor|expert|specialist)/i,
+  /bring(ing)?\s+in\s+(an?\s+)?(external\s+)?(consultant|advisor|expert|coach|specialist|lawyer|attorney|therapist|mediator|hr\s+(specialist|advisor))/i,
+  /engage\s+(an?\s+)?(external\s+)?(consultant|advisor|expert|specialist|lawyer|coach|therapist)/i,
+  /(consult|see|speak\s+to|talk\s+to)\s+(an?\s+)?(lawyer|attorney|therapist|coach|mediator|hr\s+specialist)/i,
 ]
 
 /** Erkennt, ob eine Antwort eine der nicht-konkretisierten Pauschal-
