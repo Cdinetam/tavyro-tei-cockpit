@@ -19,6 +19,9 @@ const MAX_SUMMARY = 420
 
 export interface LiveMemoryIdentity {
   ceoName: string
+  /** Nur true, wenn ceoName per detectSelfIntroducedName aus einer eigenen
+   * Vorstellung stammt. Unbestätigte Namen werden beim Laden verworfen. */
+  ceoNameConfirmed: boolean
   company: string
   industry: string
   companySize: string
@@ -65,7 +68,7 @@ export interface LiveMemory {
 
 export function emptyLiveMemory(): LiveMemory {
   return {
-    identity: { ceoName: '', company: '', industry: '', companySize: '' },
+    identity: { ceoName: '', ceoNameConfirmed: false, company: '', industry: '', companySize: '' },
     keyPeople: [],
     openTopics: [],
     decisions: [],
@@ -112,9 +115,15 @@ export function sanitizeLiveMemory(input: Partial<LiveMemory> | null | undefined
   const observations = Array.isArray(input?.observations) ? input.observations : []
   const sessions = Array.isArray(input?.sessions) ? input.sessions : []
 
+  // Live beobachtet: das Modell hat den Namen eines Kunden als Namen der
+  // Person gespeichert. Ein Name zählt deshalb nur mit Bestätigungs-Flag,
+  // das ausschliesslich refreshLiveMemory setzt.
+  const ceoNameConfirmed = identity.ceoNameConfirmed === true && Boolean(clip(identity.ceoName))
+
   return {
     identity: {
-      ceoName: clip(identity.ceoName),
+      ceoName: ceoNameConfirmed ? clip(identity.ceoName, 80) : '',
+      ceoNameConfirmed,
       company: clip(identity.company),
       industry: clip(identity.industry),
       companySize: clip(identity.companySize, 80),
@@ -214,13 +223,51 @@ Gib NUR JSON zurück, exakt in diesem Schema:
 }
 Regeln:
 - identity, keyPeople, openTopics, decisions, preferences: nur was die Person selbst gesagt oder klar bestätigt hat. Sonst leerer String / weglassen.
-- identity.ceoName: NUR wenn sich die Person ausdrücklich selbst mit Namen vorstellt oder unterschreibt ("Ich bin …", "Ich heisse …", "Gruss, …"). Namen von Mitarbeitenden, Kolleginnen, Kunden, Familienmitgliedern oder anderen erwähnten Personen gehören NIE in ceoName, sondern höchstens in keyPeople. Im Zweifel leer lassen. Ein bestehender ceoName bleibt nur, wenn nichts im Ausschnitt ihm widerspricht.
+- identity.ceoName: immer leer lassen, das System setzt ihn selbst. Namen von Mitarbeitenden, Kunden, Familienmitgliedern oder anderen erwähnten Personen gehören höchstens in keyPeople, mit Rolle (z.B. "Kunde").
 - observations dürfen Hypothesen enthalten; dann status=hypothesis, confirmedByUser=false, confidence=low oder medium. evidence kurz belegen.
 - Erfinde keine Namen, Zahlen, Firmen.
 - Bestehende Einträge nicht stillschweigend verwerfen: openTopics, decisions und keyPeople aus der bisherigen Notiz behalten, solange sie nicht erledigt oder widerlegt sind.
 - currentSession: knappe Zusammenfassung NUR dieses aktuellen Gesprächs (Thema, Stand, vereinbarte oder vorgeschlagene nächste Schritte). Frühere Sessions verwaltet das System selbst, gib sie nicht zurück.
 - Wenn nichts Neues vorliegt: gib die bisherige Notiz bereinigt zurück.
 - Kurz halten. Keine Fliesstexte.`
+
+const ATTACHMENT_MARKER_PREFIX = '[TEI-ATTACHMENT:'
+const NAME_WORD = "[A-ZÄÖÜ][\\p{L}'’-]+"
+const SELF_INTRO_PATTERNS = [
+  new RegExp(`\\b(?:mein name ist|ich heisse|ich heiße|my name is)\\s+(${NAME_WORD}(?:\\s+${NAME_WORD})?)`, 'iu'),
+  new RegExp(`\\b(?:[Ii]ch bin|I am|[Ii]['’]m)\\s+(${NAME_WORD}(?:\\s+${NAME_WORD})?)\\s*(?:[,.!;]|$|\\s+(?:und|and|der|die|CEO|Inhaber|Gründer|Founder|von|of|bei|at)\\b)`, 'u'),
+]
+// "Ich bin CEO", "Ich bin Inhaber" o.ä. sind Rollen, keine Namen.
+const NOT_A_NAME = new Set(
+  [
+    'ceo', 'cfo', 'coo', 'chro', 'cto', 'inhaber', 'inhaberin', 'gründer', 'gründerin', 'geschäftsführer',
+    'geschäftsführerin', 'unternehmer', 'unternehmerin', 'verwaltungsrat', 'verwaltungsrätin', 'mitglied',
+    'partner', 'partnerin', 'founder', 'owner', 'head', 'director', 'manager', 'teil', 'neu', 'new', 'not',
+    'nicht', 'unsicher', 'sicher', 'froh', 'hier', 'here', 'sure', 'unsure', 'happy',
+  ],
+)
+
+function userTextWithoutAttachments(message: ChatMessage): string {
+  const text = chatMessageText(message.content)
+  const markerAt = text.indexOf(ATTACHMENT_MARKER_PREFIX)
+  return markerAt >= 0 ? text.slice(0, markerAt) : text
+}
+
+/** Liefert den Namen nur, wenn die Person sich in einer eigenen Nachricht
+ * ausdrücklich selbst vorstellt — Dokument-Anhänge (z.B. eingefügte
+ * Kunden-E-Mails) werden bewusst ignoriert. Die jüngste Vorstellung gewinnt. */
+export function detectSelfIntroducedName(messages: ChatMessage[]): string {
+  for (const message of [...messages].reverse()) {
+    if (message.role !== 'user') continue
+    const text = userTextWithoutAttachments(message)
+    for (const pattern of SELF_INTRO_PATTERNS) {
+      const match = pattern.exec(text)
+      const name = match?.[1]?.trim()
+      if (name && !NOT_A_NAME.has(name.split(/\s+/)[0].toLowerCase())) return clip(name, 80)
+    }
+  }
+  return ''
+}
 
 export async function loadLiveMemory(email: string): Promise<LiveMemory> {
   const user = await getUserByEmail(email)
@@ -268,6 +315,13 @@ export async function refreshLiveMemory(
   }
   const sessions = session.summary ? [...earlierSessions, session] : previousSessions
 
-  const next = sanitizeLiveMemory({ ...parsed, sessions })
+  const ceoName = detectSelfIntroducedName(messages) || previous.identity.ceoName
+  const identity = {
+    ...(parsed.identity ?? previous.identity),
+    ceoName,
+    ceoNameConfirmed: Boolean(ceoName),
+  }
+
+  const next = sanitizeLiveMemory({ ...parsed, identity, sessions })
   await saveLiveMemoryJson(email, JSON.stringify(next))
 }
