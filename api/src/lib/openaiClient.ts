@@ -6,7 +6,7 @@ import {
   type ChatMessage,
   type ChatReplyResult,
 } from './schema.js'
-import { SYSTEM_PROMPT, buildUserPrompt, getChatSystemPrompt } from './prompt.js'
+import { SYSTEM_PROMPT, buildUserPrompt, getChatSystemPrompt, getLiveModeInstruction } from './prompt.js'
 import {
   getAdviceReinforcement,
   hasListFormatting,
@@ -169,6 +169,7 @@ async function callChatReplyCompletion(
   reinforcement?: string,
   temperature = 0.5,
   memoryContext = '',
+  live = false,
 ): Promise<string> {
   const url = `${config.endpoint}/openai/deployments/${config.deployment}/chat/completions?api-version=${config.apiVersion}`
 
@@ -176,8 +177,9 @@ async function callChatReplyCompletion(
   // angehängt statt als eigene Chat-Nachricht eingefügt — so bleibt die
   // Nachrichtenliste sauber (System zuerst, dann abwechselnd User/Assistant)
   // und der Hinweis ist eindeutig dem aktuellen Turn zugeordnet.
-  const turnHintText =
-    lang === 'en'
+  const turnHintText = live
+    ? `\n\n${getLiveModeInstruction(lang)}`
+    : lang === 'en'
       ? `\n\nCURRENT TURN HINT (internal context, not visible to the person): If the latest user message continues the existing topic, it would be message number ${topicTurnHint} on this topic — see CLIFFHANGER NOTE FOR THIS REPLY above.`
       : `\n\nAKTUELLER TURN-HINWEIS (interner Kontext, nicht für die Person sichtbar): Falls die neueste Nutzer-Nachricht das bisherige Thema fortsetzt, wäre sie die ${topicTurnHint}. Nachricht zu diesem Thema — siehe CLIFFHANGER-HINWEIS FÜR DIESE ANTWORT oben.`
   const languageLockText =
@@ -279,17 +281,18 @@ export async function requestChatReply(
   lang: GuardLang = 'de',
   log?: (message: string) => void,
   memoryContext = '',
+  live = false,
 ): Promise<ChatReplyResult> {
   const config = readConfig()
 
   async function callOnce(reinforcement?: string, temperature?: number): Promise<ChatReplyResult> {
     let raw: string
     try {
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, lang, reinforcement, temperature, memoryContext)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, true, lang, reinforcement, temperature, memoryContext, live)
     } catch {
       // Fällt zurück auf json_object, falls das Deployment strict structured
       // outputs (json_schema) nicht unterstützt.
-      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, lang, reinforcement, temperature, memoryContext)
+      raw = await callChatReplyCompletion(config, history, topicTurnHint, false, lang, reinforcement, temperature, memoryContext, live)
     }
 
     let parsed: Partial<ChatReplyResult>

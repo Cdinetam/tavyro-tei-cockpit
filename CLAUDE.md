@@ -460,6 +460,22 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
   Formulierungen (kein neuer Code-Pfad nötig, nur eine weitere Regex in der
   bestehenden Liste).
 
+- **Live: Cliffhanger-Leck, falsche Anrede, lückenhafte Erinnerung** — live
+ gemeldet (Tam, eigenes Konto). (1) Ein konstanter `topicTurnHint` von 1
+ reichte nicht: die CLIFFHANGER-Regel greift auch bei erkanntem
+ Themenwechsel, Live-Antworten endeten dann ohne Vorschlag/Frage mit Verweis
+ auf Tam. `requestChatReply(..., live=true)` ersetzt den Turn-Hinweis jetzt
+ durch `getLiveModeInstruction` (`prompt.ts`): kein Cliffhanger, Pflicht zu
+ Lösungsweg + gemeinsamem nächsten Arbeitsschritt, Anrede nur mit selbst
+ genanntem Namen. (2) `liveMemory.ts`: `ceoName` nur bei ausdrücklicher
+ Selbstvorstellung; Sessions werden im Code gepflegt (ein Eintrag pro
+ `conversationId`, `MAX_SESSIONS` 8) statt vom Modell pro Antwort
+ angehängt (hatte frühere Gespräche verdrängt); Transkript 12 statt 8
+ Nachrichten; TEI darf aktiv an frühere Sessions anknüpfen. (3) Memory-Update
+ in `liveChat.ts` erst ab 25 s statt 18 s übersprungen. Zusätzlich in beiden
+ Haupt-Prompts (Demo + Live): jede substanzielle Antwort endet mit einem
+ gemeinsamen nächsten Arbeitsschritt (ausser Cliffhanger-Antworten).
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde

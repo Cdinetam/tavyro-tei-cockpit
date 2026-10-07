@@ -80,9 +80,10 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
     const memory = await loadLiveMemory(auth.email)
     const memoryContext = formatMemoryForPrompt(memory, replyLang)
 
-    // topicTurnHint bewusst konstant 1 — siehe Kommentar oben, verhindert
-    // jede Cliffhanger-/Abschluss-Tendenz im Modell für Live-Nutzer.
-    const result = await requestChatReply(messages, 1, replyLang, (msg) => context.log(msg), memoryContext)
+    // live=true ersetzt den Turn-Hinweis durch den Live-Modus-Zusatz (siehe
+    // getLiveModeInstruction), der die Cliffhanger-Regel auch bei
+    // Themenwechseln ausser Kraft setzt.
+    const result = await requestChatReply(messages, 1, replyLang, (msg) => context.log(msg), memoryContext, true)
 
     const fullHistory: ChatMessage[] = [...messages, { role: 'assistant', content: result.reply, cliffhanger: false }]
 
@@ -98,9 +99,12 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
       // nach.
     }
 
-    if (Date.now() - startedAt < 18000) {
+    // Der Memory-Merge hat selbst ein 8-s-Timeout (siehe refreshLiveMemory);
+    // 25 s + 8 s bleibt unter dem SWA-Proxy-Timeout. Die frühere 18-s-Grenze
+    // liess das Update bei fast jeder Antwort mit Nachforderungs-Retry aus.
+    if (Date.now() - startedAt < 25000) {
       try {
-        await refreshLiveMemory(auth.email, fullHistory)
+        await refreshLiveMemory(auth.email, fullHistory, savedConversationId)
       } catch (err) {
         context.error('TEI live chat: Erinnerung konnte nicht aktualisiert werden', err)
       }
