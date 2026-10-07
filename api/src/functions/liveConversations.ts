@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit } from '@azure/functions'
 import { checkLiveSession } from '../lib/liveAuth.js'
 import { listConversations, getConversation, deleteConversation } from '../lib/liveConversationStore.js'
+import { removeConversationFromMemory } from '../lib/liveMemory.js'
 
 /** Listet alle gespeicherten Live-Gespräche der eingeloggten Person (ohne
  * Nachrichteninhalt, nur Übersicht — für eine Seitenleiste o.ä.). */
@@ -27,6 +28,12 @@ export async function liveConversationDetail(req: HttpRequest): Promise<HttpResp
 
   if (req.method === 'DELETE') {
     await deleteConversation(auth.email, id)
+    try {
+      await removeConversationFromMemory(auth.email, id)
+    } catch {
+      // Das Gespräch selbst ist gelöscht; die Sitzungs-Zusammenfassung kann
+      // die Person notfalls in der Erinnerungs-Ansicht entfernen.
+    }
     return { status: 200, jsonBody: { status: 'ok' } }
   }
 

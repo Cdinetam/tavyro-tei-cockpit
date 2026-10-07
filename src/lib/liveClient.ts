@@ -216,6 +216,74 @@ export async function hasLiveMemory(): Promise<boolean> {
   }
 }
 
+// Frontend-Pendant zu LiveMemory in api/src/lib/liveMemory.ts — synchron halten.
+export interface LiveMemoryProfile {
+  identity: {
+    ceoName: string
+    ceoNameConfirmed: boolean
+    role: string
+    company: string
+    industry: string
+    companySize: string
+  }
+  keyPeople: { name: string; role: string }[]
+  strategicThemes: string[]
+  openTopics: string[]
+  decisions: string[]
+  preferences: { communicationStyle: string; decisionStyle: string; preferredApproach: string }
+  observations: {
+    type: string
+    observation: string
+    evidence: string
+    confidence: 'low' | 'medium' | 'high'
+    status: 'hypothesis' | 'confirmed' | 'revised' | 'dropped'
+    createdAt: string
+    confirmedByUser: boolean
+  }[]
+  sessions: { date: string; conversationId: string; summary: string; newInsights: string[]; nextSteps: string[] }[]
+}
+
+export async function getLiveMemory(): Promise<LiveMemoryProfile | null> {
+  if (!API_BASE_URL) return null
+  try {
+    const response = await fetch(`${API_BASE_URL}/live/memory`, { headers: liveHeaders() })
+    if (!response.ok) return null
+    const data = (await response.json()) as { memory?: LiveMemoryProfile }
+    return data.memory ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function saveLiveMemory(memory: LiveMemoryProfile): Promise<LiveMemoryProfile | null> {
+  if (!API_BASE_URL) return null
+  try {
+    const response = await fetch(`${API_BASE_URL}/live/memory`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...liveHeaders() },
+      body: JSON.stringify({ memory }),
+    })
+    if (!response.ok) return null
+    const data = (await response.json()) as { memory?: LiveMemoryProfile }
+    return data.memory ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Ein Sync-Schritt (siehe api/src/functions/liveMemory.ts → liveMemorySync). */
+export async function syncLiveMemoryStep(): Promise<{ processed: number; remaining: number } | null> {
+  if (!API_BASE_URL) return null
+  try {
+    const response = await fetch(`${API_BASE_URL}/live/memory/sync`, { method: 'POST', headers: liveHeaders() })
+    if (!response.ok) return null
+    const data = (await response.json()) as { processed?: number; remaining?: number }
+    return { processed: Number(data.processed ?? 0), remaining: Number(data.remaining ?? 0) }
+  } catch {
+    return null
+  }
+}
+
 export async function clearLiveMemory(): Promise<boolean> {
   if (!API_BASE_URL) return false
   try {

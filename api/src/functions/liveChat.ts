@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { requestChatReply } from '../lib/openaiClient.js'
 import { chatMessageHasContent, chatMessageText, type ChatMessage } from '../lib/schema.js'
 import { checkLiveSession } from '../lib/liveAuth.js'
-import { saveConversation } from '../lib/liveConversationStore.js'
+import { markConversationMemorySynced, saveConversation } from '../lib/liveConversationStore.js'
 import { detectReplyLang } from '../lib/replyLang.js'
 import { formatMemoryForPrompt, loadLiveMemory, refreshLiveMemory } from '../lib/liveMemory.js'
 
@@ -105,6 +105,9 @@ export async function liveChat(req: HttpRequest, context: InvocationContext): Pr
     if (Date.now() - startedAt < 25000) {
       try {
         await refreshLiveMemory(auth.email, fullHistory, savedConversationId)
+        // Übersprungene oder fehlgeschlagene Updates bleiben unmarkiert und
+        // werden beim nächsten Öffnen per /live/memory/sync nachgeholt.
+        if (savedConversationId) await markConversationMemorySynced(auth.email, savedConversationId)
       } catch (err) {
         context.error('TEI live chat: Erinnerung konnte nicht aktualisiert werden', err)
       }

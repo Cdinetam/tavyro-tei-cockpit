@@ -293,6 +293,36 @@ interface Copy {
       memoryNote: string
       clearMemory: string
       clearMemoryConfirm: string
+      memoryView: string
+      memoryPanel: {
+        kicker: string
+        intro: string
+        loading: string
+        empty: string
+        person: string
+        name: string
+        role: string
+        company: string
+        industry: string
+        companySize: string
+        keyPeople: string
+        strategicThemes: string
+        openTopics: string
+        decisions: string
+        preferences: string
+        communicationStyle: string
+        decisionStyle: string
+        preferredApproach: string
+        observations: string
+        observationsHint: string
+        sessions: string
+        removeAria: string
+        save: string
+        saving: string
+        saved: string
+        saveError: string
+        closeAria: string
+      }
       empty: {
         heading: string
         body: string
@@ -572,6 +602,37 @@ const de: Copy = {
         'TEI merkt sich den Faden über Ihre Live-Gespräche hinweg — als Sparring, nicht als Akte. Sie können das jederzeit löschen.',
       clearMemory: 'Erinnerung löschen',
       clearMemoryConfirm: 'Die Erinnerung über frühere Gespräche wirklich löschen?',
+      memoryView: 'Was TEI über mich weiss',
+      memoryPanel: {
+        kicker: 'Was TEI über mich weiss',
+        intro:
+          'TEI verbindet Ihre Live-Gespräche über diese Notiz. Sie sehen hier alles, was gespeichert ist, und können Einträge korrigieren oder entfernen.',
+        loading: 'Wird geladen…',
+        empty: 'Noch keine Erinnerung vorhanden. Sie entsteht aus Ihren Gesprächen.',
+        person: 'Person & Unternehmen',
+        name: 'Ihr Name',
+        role: 'Ihre Funktion',
+        company: 'Unternehmen',
+        industry: 'Branche',
+        companySize: 'Grösse',
+        keyPeople: 'Wichtige Personen',
+        strategicThemes: 'Strategische Themen',
+        openTopics: 'Offene Punkte',
+        decisions: 'Entscheidungen',
+        preferences: 'Arbeitsweise',
+        communicationStyle: 'Kommunikation',
+        decisionStyle: 'Entscheidungsstil',
+        preferredApproach: 'Bevorzugtes Vorgehen',
+        observations: 'Arbeitshypothesen von TEI',
+        observationsHint: 'Vorläufige Beobachtungen, keine Tatsachen.',
+        sessions: 'Frühere Gespräche',
+        removeAria: 'Eintrag entfernen',
+        save: 'Änderungen speichern',
+        saving: 'Wird gespeichert…',
+        saved: 'Gespeichert.',
+        saveError: 'Speichern fehlgeschlagen. Bitte erneut versuchen.',
+        closeAria: 'Schliessen',
+      },
       empty: {
         heading: 'Worüber möchten Sie nachdenken?',
         body: 'Ihr Gespräch wird automatisch gespeichert und ist bei jedem Login wieder abrufbar.',
@@ -849,6 +910,37 @@ const en: Copy = {
         'TEI remembers the thread across your Live conversations — as sparring, not a file. You can delete it at any time.',
       clearMemory: 'Clear memory',
       clearMemoryConfirm: 'Really delete the memory of earlier conversations?',
+      memoryView: 'What TEI knows about me',
+      memoryPanel: {
+        kicker: 'What TEI knows about me',
+        intro:
+          'TEI connects your Live conversations through this note. You can see everything that is stored here and correct or remove entries.',
+        loading: 'Loading…',
+        empty: 'No memory yet. It builds up from your conversations.',
+        person: 'Person & company',
+        name: 'Your name',
+        role: 'Your role',
+        company: 'Company',
+        industry: 'Industry',
+        companySize: 'Size',
+        keyPeople: 'Key people',
+        strategicThemes: 'Strategic themes',
+        openTopics: 'Open points',
+        decisions: 'Decisions',
+        preferences: 'Working style',
+        communicationStyle: 'Communication',
+        decisionStyle: 'Decision style',
+        preferredApproach: 'Preferred approach',
+        observations: "TEI's working hypotheses",
+        observationsHint: 'Provisional observations, not facts.',
+        sessions: 'Earlier conversations',
+        removeAria: 'Remove entry',
+        save: 'Save changes',
+        saving: 'Saving…',
+        saved: 'Saved.',
+        saveError: 'Saving failed. Please try again.',
+        closeAria: 'Close',
+      },
       empty: {
         heading: "What's on your mind?",
         body: 'Your conversation is saved automatically and available again every time you log in.',

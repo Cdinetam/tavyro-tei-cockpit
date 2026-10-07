@@ -476,6 +476,30 @@ Settings → Git ermitteln. Die Homepage verlinkt via Button/Icon
  Haupt-Prompts (Demo + Live): jede substanzielle Antwort endet mit einem
  gemeinsamen nächsten Arbeitsschritt (ausser Cliffhanger-Antworten).
 
+- **Live: gesprächsübergreifendes Nutzerprofil** — alle Gespräche eines
+ Kontos fliessen in die Konto-Erinnerung (`liveMemory.ts`), nicht nur das
+ gerade aktive. Jedes Gespräch hat `memorySyncedAt` in
+ `TeiLiveConversations` (`markConversationMemorySynced`,
+ `listConversationsNeedingMemorySync`); `saveConversation` ersetzt die
+ Entität und setzt das Feld bewusst zurück (neuer Inhalt = nicht
+ eingearbeitet). Nach jeder Antwort markiert `liveChat.ts` das Gespräch nach
+ erfolgreichem Memory-Update; übersprungene/alte Gespräche holt
+ `POST /api/live/memory/sync` nach (max. 3 Gespräche bzw. 22 s pro Aufruf
+ wegen SWA-Proxy-Timeout, längerer Transkript-Ausschnitt). `LiveChat.tsx`
+ ruft den Sync beim Öffnen automatisch in einer Schleife auf, bis nichts
+ mehr offen ist. Profil erweitert um `identity.role` und `strategicThemes`,
+ Limits 12 statt 8. `serializeForStorage` kürzt vor dem Speichern (ältere
+ Session-Details zuerst), weil eine Table-Storage-String-Eigenschaft nur
+ ~32'000 Zeichen fasst. Neue Ansicht "Was TEI über mich weiss"
+ (`MemoryPanel` in `LiveChat.tsx`, Menüeintrag): `GET /api/live/memory`
+ liefert jetzt den vollen Inhalt, `PUT` speichert Korrekturen
+ (`applyUserMemoryEdit`, selbst eingetragener Name gilt als bestätigt).
+ Beim Löschen eines Gesprächs wird dessen Session-Zusammenfassung aus der
+ Erinnerung entfernt (`removeConversationFromMemory`). Bekannte
+ Einschränkung: Sync und Chat-Update schreiben die Erinnerung ohne Sperre —
+ tippt die Person während des Syncs, kann ein einzelnes Update verloren
+ gehen (wird beim nächsten Turn wieder ergänzt).
+
 ## Bekannte offene Punkte
 
 - **Azure Storage Account für Quota-Persistenz**: `tavyroteiquota` wurde

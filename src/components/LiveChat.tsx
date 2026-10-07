@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { chatMessageImageUrls, chatMessageText, type ChatMessage } from '../types'
 import type { LiveChatStatus } from '../hooks/useLiveChat'
-import { extractDocument, hasLiveMemory, clearLiveMemory, type LiveConversationSummary } from '../lib/liveClient'
+import {
+  extractDocument,
+  hasLiveMemory,
+  clearLiveMemory,
+  getLiveMemory,
+  saveLiveMemory,
+  syncLiveMemoryStep,
+  type LiveConversationSummary,
+  type LiveMemoryProfile,
+} from '../lib/liveClient'
 import { getCopy, type Lang } from '../lib/i18n'
 import { useDocumentAttachment } from '../hooks/useDocumentAttachment'
 import {
@@ -458,6 +467,266 @@ function HistoryPanel({
   )
 }
 
+const MEMORY_INPUT_CLASS =
+  'w-full border border-line bg-ink-800/60 px-3 py-2 font-sans text-[16px] text-paper placeholder:text-paper-faint/70 transition-colors focus:border-brass-dim sm:text-[14px]'
+
+function MemorySection({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="border-t border-line-soft pt-4">
+      <p className="font-mono text-[10.5px] uppercase tracking-widest2 text-paper-faint">{title}</p>
+      {hint && <p className="mt-1 font-sans text-[12px] text-paper-faint">{hint}</p>}
+      <div className="mt-2.5 flex flex-col gap-2">{children}</div>
+    </div>
+  )
+}
+
+function MemoryItem({ text, meta, removeAria, onRemove }: { text: string; meta?: string; removeAria: string; onRemove: () => void }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border border-line-soft bg-ink-800/30 px-3.5 py-2.5">
+      <div className="min-w-0 flex-1">
+        {meta && <p className="font-mono text-[10px] uppercase tracking-widest2 text-paper-faint">{meta}</p>}
+        <p className="font-sans text-[13.5px] leading-snug text-paper-dim">{text}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={removeAria}
+        className="shrink-0 font-mono text-[11px] text-paper-faint transition-colors hover:text-paper"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
+/**
+ * Ansicht "Was TEI über mich weiss": zeigt die komplette Konto-Erinnerung
+ * und erlaubt Korrekturen (Felder bearbeiten, einzelne Einträge entfernen).
+ * Gespeichert wird erst per Button, damit mehrere Änderungen ein PUT ergeben.
+ */
+function MemoryPanel({
+  lang,
+  onClose,
+  onClear,
+  onSaved,
+}: {
+  lang: Lang
+  onClose: () => void
+  onClear: () => void
+  onSaved: (hasMemory: boolean) => void
+}) {
+  const liveCopy = getCopy(lang).live.room
+  const t = liveCopy.memoryPanel
+  const [memory, setMemory] = useState<LiveMemoryProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+
+  useEffect(() => {
+    void getLiveMemory().then((loaded) => {
+      setMemory(loaded)
+      setLoading(false)
+    })
+  }, [])
+
+  function update(change: (current: LiveMemoryProfile) => LiveMemoryProfile) {
+    setMemory((current) => (current ? change(current) : current))
+    setSaveState('idle')
+  }
+
+  function setIdentity(field: keyof LiveMemoryProfile['identity'], value: string) {
+    update((m) => ({ ...m, identity: { ...m.identity, [field]: value } }))
+  }
+
+  function setPreference(field: keyof LiveMemoryProfile['preferences'], value: string) {
+    update((m) => ({ ...m, preferences: { ...m.preferences, [field]: value } }))
+  }
+
+  function removeAt<K extends 'keyPeople' | 'strategicThemes' | 'openTopics' | 'decisions' | 'observations' | 'sessions'>(
+    key: K,
+    index: number,
+  ) {
+    update((m) => ({ ...m, [key]: (m[key] as unknown[]).filter((_, i) => i !== index) }))
+  }
+
+  async function handleSave() {
+    if (!memory) return
+    setSaveState('saving')
+    const saved = await saveLiveMemory(memory)
+    if (!saved) {
+      setSaveState('error')
+      return
+    }
+    setMemory(saved)
+    setSaveState('saved')
+    const isEmpty =
+      !Object.entries(saved.identity).some(([k, v]) => k !== 'ceoNameConfirmed' && Boolean(v)) &&
+      !Object.values(saved.preferences).some(Boolean) &&
+      [saved.keyPeople, saved.strategicThemes, saved.openTopics, saved.decisions, saved.observations, saved.sessions].every(
+        (list) => list.length === 0,
+      )
+    onSaved(!isEmpty)
+  }
+
+  const stringLists: { key: 'strategicThemes' | 'openTopics' | 'decisions'; title: string }[] = [
+    { key: 'strategicThemes', title: t.strategicThemes },
+    { key: 'openTopics', title: t.openTopics },
+    { key: 'decisions', title: t.decisions },
+  ]
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/80 safe-inset backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-xl flex-col border border-line-strong bg-ink-800 p-6 shadow-panel sm:p-7"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">{t.kicker}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t.closeAria}
+            className="shrink-0 font-mono text-[13px] text-paper-faint transition-colors hover:text-paper"
+          >
+            ✕
+          </button>
+        </div>
+        <p className="mt-3 font-sans text-[13.5px] leading-relaxed text-paper-dim">{t.intro}</p>
+
+        <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+          {loading ? (
+            <p className="font-sans text-[13.5px] text-paper-faint">{t.loading}</p>
+          ) : !memory ? (
+            <p className="font-sans text-[13.5px] text-paper-faint">{t.empty}</p>
+          ) : (
+            <>
+              <MemorySection title={t.person}>
+                {(
+                  [
+                    ['ceoName', t.name],
+                    ['role', t.role],
+                    ['company', t.company],
+                    ['industry', t.industry],
+                    ['companySize', t.companySize],
+                  ] as const
+                ).map(([field, label]) => (
+                  <label key={field} className="flex flex-col gap-1">
+                    <span className="font-sans text-[12px] text-paper-faint">{label}</span>
+                    <input
+                      value={memory.identity[field]}
+                      onChange={(e) => setIdentity(field, e.target.value)}
+                      className={MEMORY_INPUT_CLASS}
+                    />
+                  </label>
+                ))}
+              </MemorySection>
+
+              {memory.keyPeople.length > 0 && (
+                <MemorySection title={t.keyPeople}>
+                  {memory.keyPeople.map((person, i) => (
+                    <MemoryItem
+                      key={`${person.name}-${i}`}
+                      text={person.role ? `${person.name} — ${person.role}` : person.name}
+                      removeAria={t.removeAria}
+                      onRemove={() => removeAt('keyPeople', i)}
+                    />
+                  ))}
+                </MemorySection>
+              )}
+
+              {stringLists.map(
+                ({ key, title }) =>
+                  memory[key].length > 0 && (
+                    <MemorySection key={key} title={title}>
+                      {memory[key].map((entry, i) => (
+                        <MemoryItem key={`${key}-${i}`} text={entry} removeAria={t.removeAria} onRemove={() => removeAt(key, i)} />
+                      ))}
+                    </MemorySection>
+                  ),
+              )}
+
+              <MemorySection title={t.preferences}>
+                {(
+                  [
+                    ['communicationStyle', t.communicationStyle],
+                    ['decisionStyle', t.decisionStyle],
+                    ['preferredApproach', t.preferredApproach],
+                  ] as const
+                ).map(([field, label]) => (
+                  <label key={field} className="flex flex-col gap-1">
+                    <span className="font-sans text-[12px] text-paper-faint">{label}</span>
+                    <input
+                      value={memory.preferences[field]}
+                      onChange={(e) => setPreference(field, e.target.value)}
+                      className={MEMORY_INPUT_CLASS}
+                    />
+                  </label>
+                ))}
+              </MemorySection>
+
+              {memory.observations.length > 0 && (
+                <MemorySection title={t.observations} hint={t.observationsHint}>
+                  {memory.observations.map((item, i) => (
+                    <MemoryItem
+                      key={`obs-${i}`}
+                      text={item.observation}
+                      removeAria={t.removeAria}
+                      onRemove={() => removeAt('observations', i)}
+                    />
+                  ))}
+                </MemorySection>
+              )}
+
+              {memory.sessions.length > 0 && (
+                <MemorySection title={t.sessions}>
+                  {[...memory.sessions]
+                    .map((session, i) => ({ session, i }))
+                    .reverse()
+                    .map(({ session, i }) => (
+                      <MemoryItem
+                        key={`session-${i}`}
+                        meta={session.date}
+                        text={session.summary}
+                        removeAria={t.removeAria}
+                        onRemove={() => removeAt('sessions', i)}
+                      />
+                    ))}
+                </MemorySection>
+              )}
+            </>
+          )}
+        </div>
+
+        {memory && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-4">
+            <button
+              type="button"
+              onClick={onClear}
+              className="font-sans text-[12.5px] text-paper-faint underline-offset-4 transition-colors hover:text-paper hover:underline"
+            >
+              {liveCopy.clearMemory}
+            </button>
+            <div className="flex items-center gap-3">
+              {saveState === 'saved' && <span className="font-sans text-[12.5px] text-paper-faint">{t.saved}</span>}
+              {saveState === 'error' && <span className="font-sans text-[12.5px] text-paper-faint">{t.saveError}</span>}
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saveState === 'saving'}
+                className="border border-brass-dim px-4 py-2 font-sans text-[13px] font-medium text-paper transition-colors hover:bg-brass/[0.08] disabled:opacity-50"
+              >
+                {saveState === 'saving' ? t.saving : t.save}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   lang: Lang
   onToggleLang: () => void
@@ -498,6 +767,7 @@ export function LiveChat({
   const [draft, setDraft] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [hasMemory, setHasMemory] = useState(false)
+  const [showMemory, setShowMemory] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const attachment = useDocumentAttachment(extractDocument, lang)
 
@@ -509,11 +779,40 @@ export function LiveChat({
     void hasLiveMemory().then(setHasMemory)
   }, [messages.length])
 
+  // Holt beim Öffnen alle gespeicherten Gespräche nach, die noch nicht in die
+  // Erinnerung eingeflossen sind — schrittweise, siehe liveMemorySync.
+  useEffect(() => {
+    let cancelled = false
+    async function run() {
+      for (let step = 0; step < 20 && !cancelled; step++) {
+        const result = await syncLiveMemoryStep()
+        if (!result || result.processed === 0 || result.remaining === 0) break
+      }
+      if (!cancelled) setHasMemory(await hasLiveMemory())
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   async function handleClearMemory() {
     if (!window.confirm(liveCopy.clearMemoryConfirm)) return
     const ok = await clearLiveMemory()
-    if (ok) setHasMemory(false)
+    if (ok) {
+      setHasMemory(false)
+      setShowMemory(false)
+    }
   }
+
+  const memoryPanel = showMemory && (
+    <MemoryPanel
+      lang={lang}
+      onClose={() => setShowMemory(false)}
+      onClear={() => void handleClearMemory()}
+      onSaved={setHasMemory}
+    />
+  )
 
   const overLimit = draft.length > MAX_MESSAGE_LENGTH
   const canSubmit =
@@ -532,6 +831,7 @@ export function LiveChat({
 
   if (messages.length === 0) {
     const emptyMenuActions: LiveMenuAction[] = [
+      { label: liveCopy.memoryView, onClick: () => setShowMemory(true) },
       ...(hasMemory ? [{ label: liveCopy.clearMemory, onClick: () => void handleClearMemory() }] : []),
       { label: liveCopy.logout, onClick: onLogout },
     ]
@@ -544,6 +844,7 @@ export function LiveChat({
           menuActions={emptyMenuActions}
           onToggleLang={onToggleLang}
         />
+        {memoryPanel}
         <h1 className="mt-6 font-display text-[1.5rem] font-medium leading-snug text-paper sm:text-[1.75rem]">
           {liveCopy.empty.heading}
         </h1>
@@ -599,6 +900,7 @@ export function LiveChat({
   const activeMenuActions: LiveMenuAction[] = [
     { label: liveCopy.historyButton, onClick: () => setShowHistory(true) },
     { label: liveCopy.newDialog, onClick: reset },
+    { label: liveCopy.memoryView, onClick: () => setShowMemory(true) },
     ...(hasMemory ? [{ label: liveCopy.clearMemory, onClick: () => void handleClearMemory() }] : []),
     { label: liveCopy.logout, onClick: onLogout },
   ]
@@ -612,6 +914,8 @@ export function LiveChat({
         menuActions={activeMenuActions}
         onToggleLang={onToggleLang}
       />
+
+      {memoryPanel}
 
       {showHistory && (
         <HistoryPanel

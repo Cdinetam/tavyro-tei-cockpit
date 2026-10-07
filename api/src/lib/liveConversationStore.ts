@@ -25,6 +25,11 @@ export interface LiveConversationSummary {
 
 export interface LiveConversation extends LiveConversationSummary {
   messages: ChatMessage[]
+  /** Zeitpunkt, zu dem dieses Gespräch zuletzt in die Konto-Erinnerung
+   * eingeflossen ist (siehe liveMemory.ts). saveConversation ersetzt die
+   * Entität komplett und setzt das Feld damit bewusst zurück: neuer Inhalt
+   * gilt als noch nicht eingearbeitet. */
+  memorySyncedAt?: number
 }
 
 let tableClientPromise: Promise<TableClient | null> | null = null
@@ -206,6 +211,46 @@ export async function getConversation(email: string, conversationId: string): Pr
   } catch {
     return null
   }
+}
+
+export async function markConversationMemorySynced(email: string, conversationId: string): Promise<void> {
+  const key = normalizeEmailKey(email)
+  const syncedAt = Date.now()
+  const client = await getTableClient()
+
+  if (!client) {
+    const existing = memoryStore.get(key)?.get(conversationId)
+    if (existing) existing.memorySyncedAt = syncedAt
+    return
+  }
+
+  await client.upsertEntity({ partitionKey: key, rowKey: conversationId, memorySyncedAt: syncedAt }, 'Merge')
+}
+
+/** Gespräche, deren aktueller Stand noch nicht in die Konto-Erinnerung
+ * eingeflossen ist — älteste zuerst, damit das Profil chronologisch wächst. */
+export async function listConversationsNeedingMemorySync(email: string): Promise<string[]> {
+  const key = normalizeEmailKey(email)
+  const client = await getTableClient()
+
+  if (!client) {
+    return [...(memoryStore.get(key)?.values() ?? [])]
+      .filter((c) => (c.memorySyncedAt ?? 0) < c.updatedAt)
+      .sort((a, b) => a.updatedAt - b.updatedAt)
+      .map((c) => c.id)
+  }
+
+  const pending: { id: string; updatedAt: number }[] = []
+  const entities = client.listEntities<Record<string, unknown>>({
+    queryOptions: { filter: `PartitionKey eq '${key}'`, select: ['RowKey', 'updatedAt', 'memorySyncedAt'] },
+  })
+  for await (const entity of entities) {
+    const updatedAt = Number(entity.updatedAt ?? 0)
+    if (Number(entity.memorySyncedAt ?? 0) < updatedAt) {
+      pending.push({ id: String(entity.rowKey ?? entity.RowKey), updatedAt })
+    }
+  }
+  return pending.sort((a, b) => a.updatedAt - b.updatedAt).map((c) => c.id)
 }
 
 export async function deleteConversation(email: string, conversationId: string): Promise<void> {
