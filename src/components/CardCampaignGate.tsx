@@ -1,13 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { storeAccessCode } from '../lib/aiClient'
 import { campaignCodeFromLocation } from '../lib/campaignAccess'
-import { BOOKING_URL, getCopy, hasEnPrefix, PRIVACY_URL, type Lang } from '../lib/i18n'
-
-const CONTACT_EMAIL = 'hello@tavyro.ch'
-const TAVYRO_URL: Record<Lang, string> = {
-  de: 'https://tavyro.ch/de',
-  en: 'https://tavyro.ch/en',
-}
+import { BOOKING_URL, CONTACT_EMAIL, getCopy, hasEnPrefix, PRIVACY_URL, TAVYRO_URL, type Lang } from '../lib/i18n'
 
 // Wie aiClient.ts: leerer String zählt als "kein Backend" — hier aber
 // fail-closed (kein Fake-Unlock), sonst landet man im Chat mit einem

@@ -25,6 +25,13 @@ export const PRIVACY_URL: Record<Lang, string> = {
   en: 'https://tavyro.ch/en/datenschutz',
 }
 
+export const TAVYRO_URL: Record<Lang, string> = {
+  de: 'https://tavyro.ch/de',
+  en: 'https://tavyro.ch/en',
+}
+
+export const CONTACT_EMAIL = 'hello@tavyro.ch'
+
 /** Locale für Datum/Zeit-Formatierung (z.B. gespeicherte Gespräche). */
 export const DATE_LOCALE: Record<Lang, string> = {
   de: 'de-CH',
@@ -366,7 +373,13 @@ interface Copy {
     /** Kicker/Hinweis im Gespräch nach Freischaltung (statt „Demo-Version“). */
     chatKicker: string
     chatNote: string
+    chatStatus: string
     limitKicker: string
+    limitHeading: string
+    limitBody: string
+    limitUpgrade: string
+    limitEmailCta: string
+    limitMoreCta: string
   }
 }
 
@@ -708,7 +721,19 @@ const de: Copy = {
     hideCodeLabel: 'Verbergen',
     chatKicker: 'TEI® Trust Room · Persönliche Einladung',
     chatNote: 'Begrenzt auf 7 Chat-Anfragen · vertrauliche Vorschau',
-    limitKicker: 'Vorschau · Kontingent aufgebraucht',
+    chatStatus: 'Persönliche Einladung · vertrauliches Gespräch',
+    limitKicker: 'Persönliche Einladung · Ihre 7 Anfragen sind genutzt',
+    limitHeading: 'Vom Gedanken zum nächsten Schritt.',
+    limitBody:
+      'Wenn Sie Ihr Thema vertiefen oder konkret umsetzen möchten, begleite ich Sie gerne persönlich — als ' +
+      'Sparringpartner oder als Fractional CHRO.',
+    limitUpgrade:
+      'Ihre vertrauliche Sitzung im TEI® Trust Room ist abgeschlossen. Mit einem Upgrade erhalten Sie Zugang ' +
+      'zur erweiterten Version des Trust Room, unter anderem mit ' +
+      'vertiefter Entscheidungsanalyse, Speicherung und Fortsetzung Ihrer Dialoge sowie einer persönlichen ' +
+      'Memory-Funktion, die ausschliesslich Ihnen zur Verfügung steht.',
+    limitEmailCta: 'E-Mail an hello@tavyro.ch',
+    limitMoreCta: 'Mehr über TaVyro →',
   },
 }
 
@@ -1048,7 +1073,17 @@ const en: Copy = {
     hideCodeLabel: 'Hide',
     chatKicker: 'TEI® Trust Room · Personal invitation',
     chatNote: 'Limited to 7 chat requests · confidential preview',
-    limitKicker: 'Preview · allowance used up',
+    chatStatus: 'Personal invitation · confidential conversation',
+    limitKicker: 'Personal invitation · your 7 requests are used',
+    limitHeading: 'From thought to next step.',
+    limitBody:
+      'If you would like to explore your topic further or put it into practice, I would be glad to support you ' +
+      'personally — as a sparring partner or as a Fractional CHRO.',
+    limitUpgrade:
+      'Your confidential session in the TEI® Trust Room is complete. With an upgrade you get access to the extended version of the Trust Room, including deeper decision ' +
+      'analysis, saving and continuing your dialogues, and a personal memory function available exclusively to you.',
+    limitEmailCta: 'Email hello@tavyro.ch',
+    limitMoreCta: 'More about TaVyro →',
   },
 }
 

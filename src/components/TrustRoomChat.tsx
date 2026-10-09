@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { chatMessageImageUrls, chatMessageText, type ChatMessage } from '../types'
 import type { ChatFlowStatus, SavedConversation } from '../hooks/useTrustRoomChat'
 import { extractDocument, isCampaignAccess, isMockMode } from '../lib/aiClient'
-import { BOOKING_URL, DATE_LOCALE, getCopy, type Lang } from '../lib/i18n'
+import { BOOKING_URL, CONTACT_EMAIL, DATE_LOCALE, getCopy, TAVYRO_URL, type Lang } from '../lib/i18n'
 import { useDocumentAttachment } from '../hooks/useDocumentAttachment'
 import {
   ACCEPTED_ATTACHMENT_ACCEPT,
@@ -331,11 +331,52 @@ export function TrustRoomChat({
     attachment.clear()
   }
 
+  if (campaign && (status === 'limit_reached' || status === 'conversation_limit_reached')) {
+    return (
+      <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
+        <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
+          {copy.cardCampaign.limitKicker}
+        </p>
+        <h2 className="mt-4 font-display text-2xl font-medium text-paper sm:text-[1.75rem]">
+          {copy.cardCampaign.limitHeading}
+        </h2>
+        <p className="mt-4 font-sans text-[15px] leading-relaxed text-paper-dim">{copy.cardCampaign.limitUpgrade}</p>
+        <p className="mt-4 border-l border-brass-dim pl-4 font-sans text-[14px] leading-relaxed text-paper-dim">
+          {copy.cardCampaign.limitBody}
+        </p>
+        <a
+          href={BOOKING_URL[lang]}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-8 block w-full border border-brass bg-gradient-to-b from-brass/[0.2] to-brass/[0.08] px-6 py-3.5 text-center font-sans text-[15px] font-medium text-paper transition-all duration-300 ease-editorial hover:from-brass/[0.28] hover:to-brass/[0.12] sm:w-auto sm:self-start"
+        >
+          {copy.chat.limitReached.booking}
+        </a>
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="font-sans text-[13.5px] text-paper-dim underline decoration-line underline-offset-4 transition-colors hover:text-paper hover:decoration-brass"
+          >
+            {copy.cardCampaign.limitEmailCta}
+          </a>
+          <a
+            href={TAVYRO_URL[lang]}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-[11px] uppercase tracking-widest2 text-paper-faint transition-colors hover:text-paper"
+          >
+            {copy.cardCampaign.limitMoreCta}
+          </a>
+        </div>
+      </section>
+    )
+  }
+
   if (status === 'limit_reached') {
     return (
       <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
-          {campaign ? copy.cardCampaign.limitKicker : copy.chat.limitReached.kicker}
+          {copy.chat.limitReached.kicker}
         </p>
         <h2 className="mt-4 font-display text-2xl font-medium text-paper">
           {copy.chat.limitReached.heading}
@@ -365,7 +406,7 @@ export function TrustRoomChat({
     return (
       <section className="mx-auto flex min-h-screen-header max-w-xl flex-col justify-center safe-px">
         <p className="font-mono text-[11px] uppercase tracking-widest2 text-brass-light">
-          {campaign ? copy.cardCampaign.limitKicker : copy.chat.conversationLimitReached.kicker}
+          {copy.chat.conversationLimitReached.kicker}
         </p>
         <h2 className="mt-4 font-display text-2xl font-medium text-paper">
           {copy.chat.conversationLimitReached.heading}
@@ -492,7 +533,11 @@ export function TrustRoomChat({
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
           <span className="hidden truncate font-mono text-[10px] uppercase tracking-widest2 text-paper-faint sm:inline">
-            {isMockMode ? copy.chat.active.statusMock : copy.chat.active.statusLive}
+            {isMockMode
+              ? copy.chat.active.statusMock
+              : campaign
+                ? copy.cardCampaign.chatStatus
+                : copy.chat.active.statusLive}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
