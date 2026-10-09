@@ -339,7 +339,20 @@ interface Copy {
   cardCampaign: {
     kicker: string
     heading: string
+    lead: string
     body: string
+    trustPoints: Array<{ title: string; text: string }>
+    ctaHeading: string
+    ctaBody: string
+    chroKicker: string
+    chroHeading: string
+    chroBody: string
+    chroLink: string
+    contactKicker: string
+    contactHeading: string
+    contactBody: string
+    bookingCta: string
+    privacyLinkText: string
     inputPlaceholder: string
     invalidCode: string
     networkError: string
@@ -647,15 +660,48 @@ const de: Copy = {
   },
   cardCampaign: {
     kicker: 'Persönliche Einladung',
-    heading: 'Willkommen im TEI® Trust Room.',
-    body: 'Auf der Karte: tei.tavyro.ch/k — Zugangscode eingeben. Oder QR scannen.',
+    heading: 'Willkommen im TaVyro Trust Room – Ihrem geschützten Raum für sensible Führungsfragen.',
+    lead: 'Nicht jede Führungsfrage gehört in eine öffentliche oder unternehmensinterne KI.',
+    body:
+      'Im TEI® Trust Room können Sie sensible Themen und schwierige Entscheidungen in einem geschützten Raum ' +
+      'durchdenken. Sie schildern Ihre Situation, TEI® hört zu, ordnet ein und stellt gezielte Fragen, die neue ' +
+      'Perspektiven eröffnen. Ein vertraulicher Dialog, der Sie bei Ihrer Entscheidungsfindung unterstützt.',
+    trustPoints: [
+      {
+        title: 'Vertraulich',
+        text: 'Kein Konto, keine Anmeldung. Ihr Gesprächsverlauf bleibt in Ihrem Browser.',
+      },
+      {
+        title: 'Unabhängig',
+        text: 'Ausserhalb Ihrer eigenen Systeme — niemand in Ihrer Organisation sieht mit.',
+      },
+      {
+        title: 'Technisch geschützt',
+        text: 'Verarbeitung über Azure OpenAI in der Region Switzerland North. Kein KI-Training mit Ihren Daten.',
+      },
+    ],
+    ctaHeading: 'Starten Sie Ihre kostenlose Sitzung',
+    ctaBody: 'Geben Sie den Zugangscode von Ihrer Karte ein. Ihre Sitzung umfasst bis zu 7 Anfragen.',
+    chroKicker: 'TaVyro · Fractional CHRO',
+    chroHeading: 'Vom Gedanken zur Umsetzung',
+    chroBody:
+      'Hinter dem Trust Room steht die Erfahrung von TaVyro als Fractional CHRO: Wir begleiten ' +
+      'Geschäftsleitungen von KMU auf C-Level-Ebene bei Führungs-, Organisations- und Personalfragen — ' +
+      'flexibel, ohne Vollzeitanstellung. Wenn aus einem Gespräch im Trust Room ein konkretes Vorhaben wird, ' +
+      'gehen wir den nächsten Schritt gerne gemeinsam.',
+    chroLink: 'Erfahren Sie, wie wir Führungskräfte bei der Umsetzung ihrer strategischen Ziele unterstützen →',
+    contactKicker: 'Kontakt',
+    contactHeading: 'Lieber direkt sprechen?',
+    contactBody: 'Schreiben Sie uns oder buchen Sie ein unverbindliches Erstgespräch mit Tam Nguyen.',
+    bookingCta: 'Erstgespräch buchen →',
+    privacyLinkText: 'Datenschutz',
     inputPlaceholder: 'Zugangscode',
     invalidCode: 'Dieser Code ist nicht gültig. Bitte den Code von Ihrer Karte exakt übernehmen.',
     networkError:
       'Die Code-Prüfung ist fehlgeschlagen. Bitte Seite neu laden und erneut versuchen — idealerweise im Safari- oder Chrome-Browser.',
     checking: 'Wird geprüft…',
-    submit: 'Dialog starten',
-    footer: "Processed within TaVyro's protected Azure OpenAI environment",
+    submit: 'Sitzung starten →',
+    footer: 'Verarbeitet in der geschützten Azure-OpenAI-Umgebung von TaVyro (Schweiz)',
     showCodeAria: 'Zugangscode anzeigen',
     hideCodeAria: 'Zugangscode verbergen',
     showCodeLabel: 'Anzeigen',
@@ -955,14 +1001,46 @@ const en: Copy = {
   },
   cardCampaign: {
     kicker: 'Personal invitation',
-    heading: 'Welcome to the TEI® Trust Room.',
-    body: 'On the card: tei.tavyro.ch/k — enter your access code. Or scan the QR.',
+    heading: 'Welcome to the TaVyro Trust Room – your protected space for sensitive leadership questions.',
+    lead: 'Not every leadership question belongs in a public or company-internal AI.',
+    body:
+      'In the TEI® Trust Room you can think through sensitive topics and difficult decisions in a protected ' +
+      'space. You describe your situation, TEI® listens, puts it into perspective and asks targeted questions ' +
+      'that open up new perspectives. A confidential dialogue that supports your decision-making.',
+    trustPoints: [
+      {
+        title: 'Confidential',
+        text: 'No account, no sign-up. Your conversation history stays in your browser.',
+      },
+      {
+        title: 'Independent',
+        text: 'Outside your own systems — nobody in your organisation is looking over your shoulder.',
+      },
+      {
+        title: 'Technically protected',
+        text: 'Processed via Azure OpenAI in the Switzerland North region. Your data is never used for AI training.',
+      },
+    ],
+    ctaHeading: 'Start your free session',
+    ctaBody: 'Enter the access code from your card. Your session includes up to 7 requests.',
+    chroKicker: 'TaVyro · Fractional CHRO',
+    chroHeading: 'From reflection to execution',
+    chroBody:
+      "Behind the Trust Room is TaVyro's experience as a Fractional CHRO: we support SME leadership teams at " +
+      'C-level on leadership, organisational and people matters — flexibly, without a full-time hire. When a ' +
+      'conversation in the Trust Room turns into a concrete initiative, we are glad to take the next step together.',
+    chroLink: 'Learn how we help executives deliver on their strategic goals →',
+    contactKicker: 'Contact',
+    contactHeading: 'Prefer to talk directly?',
+    contactBody: 'Write to us or book a no-obligation introductory call with Tam Nguyen.',
+    bookingCta: 'Book an introductory call →',
+    privacyLinkText: 'Privacy',
     inputPlaceholder: 'Access code',
     invalidCode: 'This code is not valid. Please enter the code from your card exactly.',
     networkError:
       'Code verification failed. Please reload the page and try again — ideally in Safari or Chrome.',
     checking: 'Checking…',
-    submit: 'Start dialogue',
+    submit: 'Start session →',
     footer: "Processed within TaVyro's protected Azure OpenAI environment",
     showCodeAria: 'Show access code',
     hideCodeAria: 'Hide access code',
