@@ -178,6 +178,44 @@ export async function upsertCampaignCodes(
   return { upserted, skipped }
 }
 
+/** Setzt scannedAt/firstUsedAt zurück (z.B. nach internem Test einer Karte). */
+export async function resetCampaignCodes(codes: string[]): Promise<{ reset: string[]; notFound: string[] }> {
+  const reset: string[] = []
+  const notFound: string[] = []
+  for (const raw of codes) {
+    const record = await getRecord(raw)
+    if (!record) {
+      notFound.push(normalizeAccessCode(raw))
+      continue
+    }
+    await persistRecord({ ...record, scannedAt: null, firstUsedAt: null })
+    reset.push(record.code)
+  }
+  return { reset, notFound }
+}
+
+export async function deleteCampaignCodes(codes: string[]): Promise<{ deleted: string[]; notFound: string[] }> {
+  const deleted: string[] = []
+  const notFound: string[] = []
+  const client = await getTableClient()
+  for (const raw of codes) {
+    const code = normalizeAccessCode(raw)
+    if (!code) continue
+    if (!client) {
+      if (memoryByCode.delete(code)) deleted.push(code)
+      else notFound.push(code)
+      continue
+    }
+    try {
+      await client.deleteEntity(CODE_PARTITION, code)
+      deleted.push(code)
+    } catch {
+      notFound.push(code)
+    }
+  }
+  return { deleted, notFound }
+}
+
 export async function listCampaignCodes(): Promise<CampaignCodeRecord[]> {
   const client = await getTableClient()
 

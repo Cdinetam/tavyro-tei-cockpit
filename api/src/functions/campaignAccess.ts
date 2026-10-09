@@ -6,9 +6,11 @@ import {
   recordCampaignFirstUse,
   upsertCampaignCodes,
   listCampaignCodes,
+  resetCampaignCodes,
+  deleteCampaignCodes,
   type CampaignCodeInput,
 } from '../lib/campaignCodeStore.js'
-import { normalizeAccessCode } from '../lib/accessCodes.js'
+import { normalizeAccessCode, resolveAccessCode } from '../lib/accessCodes.js'
 
 /**
  * Gate-API für die physische Karte-Kampagne (Track 3).
@@ -17,6 +19,7 @@ import { normalizeAccessCode } from '../lib/accessCodes.js'
  * POST /api/campaign-access         — Freischaltung wie verify-access
  * POST /api/campaign-seed           — Import Name/Firma/Code (Zugangscode-Auth)
  * GET  /api/campaign-debug          — Tracking-Übersicht (Zugangscode-Auth)
+ * POST /api/campaign-admin          — { action: 'reset'|'delete', codes } (Zugangscode-Auth)
  */
 
 function readCodeFromRequest(req: HttpRequest, bodyCode?: string): string {
@@ -140,6 +143,46 @@ export async function campaignDebug(req: HttpRequest): Promise<HttpResponseInit>
     },
   }
 }
+
+export async function campaignAdmin(req: HttpRequest): Promise<HttpResponseInit> {
+  // Nur statische Pilot-Codes — Karten-/Demo-/Outreach-Codes dürfen keine Codes löschen.
+  const headerCode = req.headers.get('x-tei-access-code') ?? ''
+  if (!resolveAccessCode(headerCode)) {
+    return { status: 401, jsonBody: { status: 'error', message: 'Nicht berechtigt.' } }
+  }
+
+  let action = ''
+  let codes: string[] = []
+  try {
+    const body = (await req.json()) as { action?: string; codes?: unknown }
+    action = body.action ?? ''
+    if (Array.isArray(body.codes)) codes = body.codes.map((c) => String(c))
+  } catch {
+    return {
+      status: 400,
+      jsonBody: { status: 'error', message: "JSON-Body mit { action: 'reset'|'delete', codes: [...] } erwartet." },
+    }
+  }
+
+  if (codes.length === 0) {
+    return { status: 400, jsonBody: { status: 'error', message: 'codes-Array ist leer.' } }
+  }
+
+  if (action === 'reset') {
+    return { status: 200, jsonBody: { status: 'ok', action, ...(await resetCampaignCodes(codes)) } }
+  }
+  if (action === 'delete') {
+    return { status: 200, jsonBody: { status: 'ok', action, ...(await deleteCampaignCodes(codes)) } }
+  }
+  return { status: 400, jsonBody: { status: 'error', message: "action muss 'reset' oder 'delete' sein." } }
+}
+
+app.http('campaignAdmin', {
+  methods: ['POST'],
+  authLevel: 'anonymous',
+  route: 'campaign-admin',
+  handler: campaignAdmin,
+})
 
 app.http('campaignAccess', {
   methods: ['GET', 'POST'],
